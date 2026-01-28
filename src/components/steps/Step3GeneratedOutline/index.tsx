@@ -134,9 +134,9 @@ function SortableSection({ section, index, onRemove, onEdit }: SortableSectionPr
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
                     {index + 1}
                 </span>
-                <div className="flex-1 space-y-1">
-                    <h4 className="font-semibold text-gray-900">{section.title}</h4>
-                    <p className="text-sm text-gray-500">{section.purpose}</p>
+                <div className="flex-1">
+                    <h4 className="font-semibold text-gray-900" style={{ margin: 0, marginBottom: '0.125rem' }}>{section.title}</h4>
+                    <p className="text-sm text-gray-500" style={{ margin: 0 }}>{section.purpose}</p>
                 </div>
                 <div className="flex shrink-0 gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
