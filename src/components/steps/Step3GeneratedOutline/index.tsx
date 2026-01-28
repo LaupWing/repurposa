@@ -202,11 +202,11 @@ export default function Step3GeneratedOutline({
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             {/* Topic Header */}
-            <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Your Blog</p>
-                <h2 className="text-lg font-bold text-gray-900">{topic}</h2>
+            <div>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide" style={{ margin: 0, marginBottom: '0.25rem' }}>Your Blog</p>
+                <h2 className="text-lg font-bold text-gray-900" style={{ margin: 0 }}>{topic}</h2>
             </div>
 
             {/* Outline Sections */}
