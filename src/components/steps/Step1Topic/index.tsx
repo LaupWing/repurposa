@@ -2,7 +2,7 @@
  * Step 1: Topic Selection
  *
  * User enters what the blog is about.
- * Includes AI-powered topic generation (inline style).
+ * Includes AI-powered topic generation.
  */
 
 import { useState, useRef } from '@wordpress/element';
@@ -24,7 +24,6 @@ interface Step1TopicProps {
 
 export default function Step1Topic({ topic, onTopicChange }: Step1TopicProps) {
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-    const [ideaPrompt, setIdeaPrompt] = useState('');
     const buttonRef = useRef<HTMLButtonElement>(null);
 
     return (
@@ -35,44 +34,32 @@ export default function Step1Topic({ topic, onTopicChange }: Step1TopicProps) {
                 What's this blog about?
             </label>
 
-            {/* Inline Input + Generate Button (Option C) */}
-            <div className="flex gap-2">
-                <input
-                    type="text"
-                    value={ideaPrompt}
-                    onChange={(e) => setIdeaPrompt(e.target.value)}
-                    placeholder="Describe your idea... e.g., weight loss for busy moms"
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <button
-                    ref={buttonRef}
-                    onClick={() => setIsPopoverOpen(true)}
-                    className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                >
-                    <Sparkles size={16} />
-                    Generate
-                </button>
-            </div>
-
-            {/* Popover */}
-            <TopicGeneratorPopover
-                isOpen={isPopoverOpen}
-                onClose={() => setIsPopoverOpen(false)}
-                onSelectTopic={(selectedTopic) => {
-                    onTopicChange(selectedTopic);
-                    setIdeaPrompt('');
-                }}
-                initialPrompt={ideaPrompt}
-                anchorRef={buttonRef}
-            />
-
-            {/* Final Topic Textarea */}
+            {/* Textarea */}
             <textarea
                 value={topic}
                 onChange={(e) => onTopicChange(e.target.value)}
-                placeholder="Your final topic will appear here, or type directly..."
-                rows={3}
+                placeholder="e.g., 5 mistakes beginners make that sabotage their weight loss"
+                rows={4}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+
+            {/* Generate Button (Option B - visible below) */}
+            <button
+                ref={buttonRef}
+                onClick={() => setIsPopoverOpen(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors border border-gray-200"
+            >
+                <Sparkles size={16} className="text-blue-600" />
+                Generate Topic Ideas
+            </button>
+
+            {/* Popover - uses textarea content as initial prompt */}
+            <TopicGeneratorPopover
+                isOpen={isPopoverOpen}
+                onClose={() => setIsPopoverOpen(false)}
+                onSelectTopic={onTopicChange}
+                initialPrompt={topic}
+                anchorRef={buttonRef}
             />
 
             {/* Tip Box */}
