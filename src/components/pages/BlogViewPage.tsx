@@ -174,8 +174,27 @@ function BlogEditor({
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Blog title..."
                         rows={1}
-                        className="mb-4 w-full resize-none border-0 bg-transparent text-3xl font-bold text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                        style={{ fieldSizing: 'content' } as React.CSSProperties}
+                        style={{
+                            width: '100%',
+                            marginBottom: '1.5rem',
+                            padding: '0.5rem 0',
+                            border: 'none',
+                            borderBottom: '2px solid transparent',
+                            borderRadius: 0,
+                            backgroundColor: 'transparent',
+                            fontSize: '1.75rem',
+                            fontWeight: 700,
+                            color: '#111827',
+                            outline: 'none',
+                            boxShadow: 'none',
+                            resize: 'none',
+                            overflow: 'hidden',
+                            lineHeight: 1.3,
+                            transition: 'border-color 0.2s',
+                            fieldSizing: 'content',
+                        } as React.CSSProperties}
+                        onFocus={(e) => e.target.style.borderBottomColor = '#2271b1'}
+                        onBlur={(e) => e.target.style.borderBottomColor = 'transparent'}
                     />
 
                     {/* TipTap Editor */}
