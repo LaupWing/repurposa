@@ -3,7 +3,7 @@
  *
  * Multi-step wizard for creating blog posts:
  * - Step 1: Topic selection
- * - Step 2: Rough outline (coming soon)
+ * - Step 2: Rough outline (add your ideas)
  * - Step 3: Review & generate (coming soon)
  */
 
@@ -12,6 +12,7 @@ import { ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
 
 // Steps
 import Step1Topic from './steps/Step1Topic';
+import Step2RoughOutline from './steps/Step2RoughOutline';
 
 // ============================================
 // TYPES
@@ -52,6 +53,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     // ============================================
     const canProceed = (): boolean => {
         if (currentStep === 1) return data.topic.trim().length > 0;
+        // Step 2: can proceed even with no ideas (optional)
         return true;
     };
 
@@ -65,6 +67,10 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
 
     const updateTopic = (topic: string): void => {
         setData(prev => ({ ...prev, topic }));
+    };
+
+    const updateRoughOutline = (roughOutline: string[]): void => {
+        setData(prev => ({ ...prev, roughOutline }));
     };
 
     // ============================================
@@ -106,20 +112,20 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                     )}
 
                     {currentStep === 2 && (
-                        <div className="space-y-4">
-                            <p className="text-sm text-gray-500">
-                                Your topic: <span className="font-medium text-gray-900">{data.topic}</span>
-                            </p>
-                            <div className="bg-gray-50 rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
-                                <p className="text-gray-500">Step 2: Rough Outline - Coming soon!</p>
-                            </div>
-                        </div>
+                        <Step2RoughOutline
+                            topic={data.topic}
+                            roughOutline={data.roughOutline}
+                            onRoughOutlineChange={updateRoughOutline}
+                        />
                     )}
 
                     {currentStep === 3 && (
                         <div className="space-y-4">
                             <p className="text-sm text-gray-500">
                                 Your topic: <span className="font-medium text-gray-900">{data.topic}</span>
+                            </p>
+                            <p className="text-sm text-gray-500">
+                                Ideas: <span className="font-medium text-gray-900">{data.roughOutline.length} added</span>
                             </p>
                             <div className="bg-gray-50 rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
                                 <p className="text-gray-500">Step 3: Review & Generate - Coming soon!</p>
