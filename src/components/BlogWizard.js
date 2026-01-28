@@ -1,159 +1,152 @@
 /**
- * Blog Wizard Component
- *
- * A multi-step wizard for creating blog posts:
- * - Step 1: Enter topic (what's the blog about?)
- * - Step 2: Add rough outline ideas (coming soon)
- * - Step 3: Review & generate (coming soon)
- *
- * We're building this step by step so you can understand each part.
+ * Blog Wizard Component - Tailwind v4
  */
 
 import { useState } from '@wordpress/element';
-import { Button, TextareaControl } from '@wordpress/components';
 import { FileText, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function BlogWizard({ onComplete }) {
     // ============================================
-    // STATE - All the data we're tracking
+    // STATE
     // ============================================
-
-    // Which step are we on? (1, 2, or 3)
     const [currentStep, setCurrentStep] = useState(1);
-
-    // The wizard data - this will grow as we add more steps
     const [data, setData] = useState({
-        topic: '',           // Step 1: What's the blog about?
-        roughOutline: [],    // Step 2: User's ideas (coming soon)
-        outline: [],         // Step 3: AI-generated outline (coming soon)
+        topic: '',
+        roughOutline: [],
+        outline: [],
     });
 
     // ============================================
-    // HELPER FUNCTIONS
+    // HELPERS
     // ============================================
-
-    // Can we proceed to next step?
-    const canProceed = () => {
-        if (currentStep === 1) {
-            return data.topic.trim().length > 0;
-        }
-        return true;
-    };
-
-    // Go to next step
-    const nextStep = () => {
-        if (currentStep < 3) {
-            setCurrentStep(currentStep + 1);
-        }
-    };
-
-    // Go to previous step
-    const prevStep = () => {
-        if (currentStep > 1) {
-            setCurrentStep(currentStep - 1);
-        }
-    };
-
-    // Update a field in our data
-    const updateField = (field, value) => {
-        setData(prev => ({ ...prev, [field]: value }));
-    };
+    const canProceed = () => data.topic.trim().length > 0;
+    const nextStep = () => currentStep < 3 && setCurrentStep(currentStep + 1);
+    const prevStep = () => currentStep > 1 && setCurrentStep(currentStep - 1);
+    const updateField = (field, value) => setData(prev => ({ ...prev, [field]: value }));
 
     // ============================================
-    // RENDER - What the user sees
+    // RENDER
     // ============================================
-
     return (
-        <div className="wbrp-wizard">
-            {/* ====== HEADER ====== */}
-            <div className="wbrp-wizard-header">
-                <h2>
-                    Create <em>New Blog</em>
-                </h2>
-                <span className="wbrp-step-badge">
-                    Step {currentStep} of 3
-                </span>
-            </div>
+        <div className="max-w-3xl mx-auto mt-6">
+            {/* Card Container */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
 
-            {/* ====== PROGRESS BAR ====== */}
-            <div className="wbrp-progress">
-                <div className={`wbrp-progress-step ${currentStep >= 1 ? 'active' : ''}`} />
-                <div className={`wbrp-progress-step ${currentStep >= 2 ? 'active' : ''}`} />
-                <div className={`wbrp-progress-step ${currentStep >= 3 ? 'active' : ''}`} />
-            </div>
+                {/* ====== HEADER ====== */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                        Create <em className="font-normal italic">New Blog</em>
+                    </h2>
+                    <span className="bg-gray-100 px-3 py-1 rounded-full text-xs text-gray-600">
+                        Step {currentStep} of 3
+                    </span>
+                </div>
 
-            {/* ====== STEP CONTENT ====== */}
-            <div className="wbrp-wizard-content">
-                {/* STEP 1: Topic */}
-                {currentStep === 1 && (
-                    <div className="wbrp-step wbrp-step-topic">
-                        <div className="wbrp-input-group">
-                            <label className="wbrp-input-label">
-                                <FileText size={16} />
-                                <span>What's this blog about?</span>
+                {/* ====== PROGRESS BAR ====== */}
+                <div className="flex gap-1.5 px-6 py-4">
+                    {[1, 2, 3].map((step) => (
+                        <div
+                            key={step}
+                            className={`flex-1 h-1 rounded-full transition-colors ${
+                                currentStep >= step
+                                    ? 'bg-blue-600'
+                                    : 'bg-gray-200'
+                            }`}
+                        />
+                    ))}
+                </div>
+
+                {/* ====== CONTENT ====== */}
+                <div className="px-6 py-6 min-h-[300px]">
+
+                    {/* STEP 1: Topic */}
+                    {currentStep === 1 && (
+                        <div className="space-y-5">
+                            {/* Label */}
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                <FileText size={16} className="text-blue-600" />
+                                What's this blog about?
                             </label>
-                            <TextareaControl
+
+                            {/* Textarea */}
+                            <textarea
                                 value={data.topic}
-                                onChange={(value) => updateField('topic', value)}
+                                onChange={(e) => updateField('topic', e.target.value)}
                                 placeholder="e.g., 5 mistakes beginners make that sabotage their weight loss"
                                 rows={4}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                             />
+
+                            {/* Tip Box */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                                <p className="text-sm text-gray-700">
+                                    <span className="font-semibold text-blue-600">Tip:</span>{' '}
+                                    Be specific! Instead of "weight loss tips", try
+                                    "5 mistakes busy moms make when trying to lose weight"
+                                </p>
+                            </div>
                         </div>
+                    )}
 
-                        <div className="wbrp-tip">
-                            <strong>Tip:</strong> Be specific! Instead of "weight loss tips",
-                            try "5 mistakes busy moms make when trying to lose weight"
+                    {/* STEP 2: Rough Outline (placeholder) */}
+                    {currentStep === 2 && (
+                        <div className="space-y-4">
+                            <p className="text-sm text-gray-500">
+                                Your topic: <span className="font-medium text-gray-900">{data.topic}</span>
+                            </p>
+                            <div className="bg-gray-50 rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
+                                <p className="text-gray-500">Step 2: Rough Outline - Coming soon!</p>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* STEP 2: Rough Outline (placeholder) */}
-                {currentStep === 2 && (
-                    <div className="wbrp-step wbrp-step-outline">
-                        <p>Step 2: Rough Outline - Coming soon!</p>
-                        <p>Current topic: {data.topic}</p>
-                    </div>
-                )}
+                    {/* STEP 3: Generate (placeholder) */}
+                    {currentStep === 3 && (
+                        <div className="space-y-4">
+                            <p className="text-sm text-gray-500">
+                                Your topic: <span className="font-medium text-gray-900">{data.topic}</span>
+                            </p>
+                            <div className="bg-gray-50 rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
+                                <p className="text-gray-500">Step 3: Review & Generate - Coming soon!</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
-                {/* STEP 3: Generate (placeholder) */}
-                {currentStep === 3 && (
-                    <div className="wbrp-step wbrp-step-generate">
-                        <p>Step 3: Review & Generate - Coming soon!</p>
-                        <p>Current topic: {data.topic}</p>
-                    </div>
-                )}
-            </div>
+                {/* ====== FOOTER ====== */}
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                    {/* Back Button */}
+                    {currentStep > 1 ? (
+                        <button
+                            onClick={prevStep}
+                            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            Back
+                        </button>
+                    ) : (
+                        <div />
+                    )}
 
-            {/* ====== FOOTER NAVIGATION ====== */}
-            <div className="wbrp-wizard-footer">
-                {/* Back button (hidden on step 1) */}
-                {currentStep > 1 ? (
-                    <Button variant="secondary" onClick={prevStep}>
-                        Back
-                    </Button>
-                ) : (
-                    <div /> /* Empty div to maintain spacing */
-                )}
-
-                {/* Next/Generate button */}
-                {currentStep < 3 ? (
-                    <Button
-                        variant="primary"
-                        onClick={nextStep}
-                        disabled={!canProceed()}
-                    >
-                        Next
-                        <ArrowRight size={16} style={{ marginLeft: '8px' }} />
-                    </Button>
-                ) : (
-                    <Button
-                        variant="primary"
-                        onClick={() => onComplete(data)}
-                    >
-                        <Sparkles size={16} style={{ marginRight: '8px' }} />
-                        Generate Blog
-                    </Button>
-                )}
+                    {/* Next/Generate Button */}
+                    {currentStep < 3 ? (
+                        <button
+                            onClick={nextStep}
+                            disabled={!canProceed()}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Next
+                            <ArrowRight size={16} />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => onComplete(data)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            <Sparkles size={16} />
+                            Generate Blog
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
