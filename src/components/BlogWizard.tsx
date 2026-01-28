@@ -1,9 +1,17 @@
 /**
- * Blog Wizard Component - TypeScript + Tailwind v4
+ * Blog Wizard Component
+ *
+ * Multi-step wizard for creating blog posts:
+ * - Step 1: Topic selection
+ * - Step 2: Rough outline (coming soon)
+ * - Step 3: Review & generate (coming soon)
  */
 
 import { useState } from '@wordpress/element';
-import { FileText, ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
+
+// Steps
+import Step1Topic from './steps/Step1Topic';
 
 // ============================================
 // TYPES
@@ -32,9 +40,6 @@ interface BlogWizardProps {
 // ============================================
 
 export default function BlogWizard({ onComplete }: BlogWizardProps) {
-    // ============================================
-    // STATE
-    // ============================================
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [data, setData] = useState<WizardData>({
         topic: '',
@@ -45,12 +50,21 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     // ============================================
     // HELPERS
     // ============================================
-    const canProceed = (): boolean => data.topic.trim().length > 0;
-    const nextStep = (): void => { if (currentStep < 3) setCurrentStep(currentStep + 1); };
-    const prevStep = (): void => { if (currentStep > 1) setCurrentStep(currentStep - 1); };
+    const canProceed = (): boolean => {
+        if (currentStep === 1) return data.topic.trim().length > 0;
+        return true;
+    };
 
-    const updateField = <K extends keyof WizardData>(field: K, value: WizardData[K]): void => {
-        setData(prev => ({ ...prev, [field]: value }));
+    const nextStep = (): void => {
+        if (currentStep < 3) setCurrentStep(currentStep + 1);
+    };
+
+    const prevStep = (): void => {
+        if (currentStep > 1) setCurrentStep(currentStep - 1);
+    };
+
+    const updateTopic = (topic: string): void => {
+        setData(prev => ({ ...prev, topic }));
     };
 
     // ============================================
@@ -58,10 +72,9 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     // ============================================
     return (
         <div className="max-w-3xl mx-auto mt-6">
-            {/* Card Container */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
 
-                {/* ====== HEADER ====== */}
+                {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900">
                         Create <em className="font-normal italic">New Blog</em>
@@ -71,50 +84,27 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                     </span>
                 </div>
 
-                {/* ====== PROGRESS BAR ====== */}
+                {/* Progress Bar */}
                 <div className="flex gap-1.5 px-6 py-4">
                     {[1, 2, 3].map((step) => (
                         <div
                             key={step}
                             className={`flex-1 h-1 rounded-full transition-colors ${
-                                currentStep >= step
-                                    ? 'bg-blue-600'
-                                    : 'bg-gray-200'
+                                currentStep >= step ? 'bg-blue-600' : 'bg-gray-200'
                             }`}
                         />
                     ))}
                 </div>
 
-                {/* ====== CONTENT ====== */}
+                {/* Content */}
                 <div className="px-6 py-6 min-h-75">
-
-                    {/* STEP 1: Topic */}
                     {currentStep === 1 && (
-                        <div className="space-y-5">
-                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                                <FileText size={16} className="text-blue-600" />
-                                What's this blog about?
-                            </label>
-
-                            <textarea
-                                value={data.topic}
-                                onChange={(e) => updateField('topic', e.target.value)}
-                                placeholder="e.g., 5 mistakes beginners make that sabotage their weight loss"
-                                rows={4}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                            />
-
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                                <p className="text-sm text-gray-700">
-                                    <span className="font-semibold text-blue-600">Tip:</span>{' '}
-                                    Be specific! Instead of "weight loss tips", try
-                                    "5 mistakes busy moms make when trying to lose weight"
-                                </p>
-                            </div>
-                        </div>
+                        <Step1Topic
+                            topic={data.topic}
+                            onTopicChange={updateTopic}
+                        />
                     )}
 
-                    {/* STEP 2: Rough Outline (placeholder) */}
                     {currentStep === 2 && (
                         <div className="space-y-4">
                             <p className="text-sm text-gray-500">
@@ -126,7 +116,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                         </div>
                     )}
 
-                    {/* STEP 3: Generate (placeholder) */}
                     {currentStep === 3 && (
                         <div className="space-y-4">
                             <p className="text-sm text-gray-500">
@@ -139,13 +128,14 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                     )}
                 </div>
 
-                {/* ====== FOOTER ====== */}
+                {/* Footer */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
                     {currentStep > 1 ? (
                         <button
                             onClick={prevStep}
-                            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                         >
+                            <ArrowLeft size={16} />
                             Back
                         </button>
                     ) : (
