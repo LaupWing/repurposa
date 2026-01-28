@@ -256,14 +256,14 @@ export default function BlogsPage() {
 
                     {/* Search */}
                     <div className="relative">
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
                             placeholder="Search blogs..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-56 h-8 pl-9 pr-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-56 h-8 pl-3 pr-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
+                        <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     </div>
 
                     {/* Filter */}
