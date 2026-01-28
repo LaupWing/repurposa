@@ -1,16 +1,42 @@
 /**
- * Blog Wizard Component - Tailwind v4
+ * Blog Wizard Component - TypeScript + Tailwind v4
  */
 
 import { useState } from '@wordpress/element';
 import { FileText, ArrowRight, Sparkles } from 'lucide-react';
 
-export default function BlogWizard({ onComplete }) {
+// ============================================
+// TYPES
+// ============================================
+
+export interface OutlineSection {
+    id: string;
+    title: string;
+    purpose: string;
+}
+
+export interface WizardData {
+    topic: string;
+    roughOutline: string[];
+    outline: OutlineSection[];
+    generatedTitle?: string;
+    generatedContent?: string;
+}
+
+interface BlogWizardProps {
+    onComplete: (data: WizardData) => void;
+}
+
+// ============================================
+// COMPONENT
+// ============================================
+
+export default function BlogWizard({ onComplete }: BlogWizardProps) {
     // ============================================
     // STATE
     // ============================================
-    const [currentStep, setCurrentStep] = useState(1);
-    const [data, setData] = useState({
+    const [currentStep, setCurrentStep] = useState<number>(1);
+    const [data, setData] = useState<WizardData>({
         topic: '',
         roughOutline: [],
         outline: [],
@@ -19,10 +45,13 @@ export default function BlogWizard({ onComplete }) {
     // ============================================
     // HELPERS
     // ============================================
-    const canProceed = () => data.topic.trim().length > 0;
-    const nextStep = () => currentStep < 3 && setCurrentStep(currentStep + 1);
-    const prevStep = () => currentStep > 1 && setCurrentStep(currentStep - 1);
-    const updateField = (field, value) => setData(prev => ({ ...prev, [field]: value }));
+    const canProceed = (): boolean => data.topic.trim().length > 0;
+    const nextStep = (): void => { if (currentStep < 3) setCurrentStep(currentStep + 1); };
+    const prevStep = (): void => { if (currentStep > 1) setCurrentStep(currentStep - 1); };
+
+    const updateField = <K extends keyof WizardData>(field: K, value: WizardData[K]): void => {
+        setData(prev => ({ ...prev, [field]: value }));
+    };
 
     // ============================================
     // RENDER
@@ -57,18 +86,16 @@ export default function BlogWizard({ onComplete }) {
                 </div>
 
                 {/* ====== CONTENT ====== */}
-                <div className="px-6 py-6 min-h-[300px]">
+                <div className="px-6 py-6 min-h-75">
 
                     {/* STEP 1: Topic */}
                     {currentStep === 1 && (
                         <div className="space-y-5">
-                            {/* Label */}
                             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                                 <FileText size={16} className="text-blue-600" />
                                 What's this blog about?
                             </label>
 
-                            {/* Textarea */}
                             <textarea
                                 value={data.topic}
                                 onChange={(e) => updateField('topic', e.target.value)}
@@ -77,7 +104,6 @@ export default function BlogWizard({ onComplete }) {
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                             />
 
-                            {/* Tip Box */}
                             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
                                 <p className="text-sm text-gray-700">
                                     <span className="font-semibold text-blue-600">Tip:</span>{' '}
@@ -115,7 +141,6 @@ export default function BlogWizard({ onComplete }) {
 
                 {/* ====== FOOTER ====== */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-                    {/* Back Button */}
                     {currentStep > 1 ? (
                         <button
                             onClick={prevStep}
@@ -127,7 +152,6 @@ export default function BlogWizard({ onComplete }) {
                         <div />
                     )}
 
-                    {/* Next/Generate Button */}
                     {currentStep < 3 ? (
                         <button
                             onClick={nextStep}
