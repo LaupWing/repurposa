@@ -18,7 +18,6 @@ import {
     Calendar,
     Pencil,
     ImagePlus,
-    MoreHorizontal,
 } from 'lucide-react';
 
 // ============================================
@@ -326,7 +325,6 @@ interface RepurposePanelProps {
 }
 
 export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposePanelProps) {
-    const [activeTab, setActiveTab] = useState<TabType>(initialTab);
     const [isGenerating, setIsGenerating] = useState(false);
     const [hasGenerated, setHasGenerated] = useState(false);
 
@@ -338,84 +336,61 @@ export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposeP
         setIsGenerating(false);
     };
 
-    const tabs = [
-        { id: 'short' as const, label: 'Short Posts', icon: Share2 },
-        { id: 'threads' as const, label: 'Threads', icon: FileText },
-        { id: 'visuals' as const, label: 'Visuals', icon: Image },
-        { id: 'video' as const, label: 'Video', icon: Video },
-    ];
+    // Show content based on initialTab (parent controls the tab)
+    const renderContent = () => {
+        switch (initialTab) {
+            case 'short':
+                return !hasGenerated ? (
+                    <EmptyState type="short" onGenerate={handleGenerate} isGenerating={isGenerating} />
+                ) : (
+                    <div>
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-gray-500">Selected Patterns</h3>
+                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                {samplePatterns.length} patterns
+                            </span>
+                        </div>
+                        <div className="pl-2">
+                            {samplePatterns.map((pattern, index) => (
+                                <TweetCard key={pattern.id} pattern={pattern} index={index} />
+                            ))}
+                        </div>
+                    </div>
+                );
+
+            case 'threads':
+                return !hasGenerated ? (
+                    <EmptyState type="threads" onGenerate={handleGenerate} isGenerating={isGenerating} />
+                ) : (
+                    <div>
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-gray-500">Thread Variations</h3>
+                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                {sampleThreads.length} generated
+                            </span>
+                        </div>
+                        {sampleThreads.map((thread, index) => (
+                            <ThreadCard key={thread.id} thread={thread} index={index} />
+                        ))}
+                    </div>
+                );
+
+            case 'visuals':
+                return <EmptyState type="visuals" onGenerate={handleGenerate} isGenerating={isGenerating} />;
+
+            case 'video':
+                return <EmptyState type="video" onGenerate={handleGenerate} isGenerating={isGenerating} />;
+
+            default:
+                return null;
+        }
+    };
 
     return (
-        <div className="flex h-full flex-col bg-gray-50">
-            {/* Tab Header */}
-            <div className="flex items-center gap-1 p-2 border-b border-gray-200 bg-white">
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                            activeTab === tab.id
-                                ? 'bg-gray-100 text-gray-900'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                    >
-                        <tab.icon size={16} />
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Tab Content */}
-            <div className="flex-1 overflow-y-auto p-4">
-                {activeTab === 'short' && (
-                    <>
-                        {!hasGenerated ? (
-                            <EmptyState type="short" onGenerate={handleGenerate} isGenerating={isGenerating} />
-                        ) : (
-                            <div>
-                                <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="text-sm font-medium text-gray-500">Selected Patterns</h3>
-                                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                        {samplePatterns.length} patterns
-                                    </span>
-                                </div>
-                                <div className="pl-2">
-                                    {samplePatterns.map((pattern, index) => (
-                                        <TweetCard key={pattern.id} pattern={pattern} index={index} />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </>
-                )}
-
-                {activeTab === 'threads' && (
-                    <>
-                        {!hasGenerated ? (
-                            <EmptyState type="threads" onGenerate={handleGenerate} isGenerating={isGenerating} />
-                        ) : (
-                            <div>
-                                <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="text-sm font-medium text-gray-500">Thread Variations</h3>
-                                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                        {sampleThreads.length} generated
-                                    </span>
-                                </div>
-                                {sampleThreads.map((thread, index) => (
-                                    <ThreadCard key={thread.id} thread={thread} index={index} />
-                                ))}
-                            </div>
-                        )}
-                    </>
-                )}
-
-                {activeTab === 'visuals' && (
-                    <EmptyState type="visuals" onGenerate={handleGenerate} isGenerating={isGenerating} />
-                )}
-
-                {activeTab === 'video' && (
-                    <EmptyState type="video" onGenerate={handleGenerate} isGenerating={isGenerating} />
-                )}
+        <div className="flex h-full flex-col bg-white">
+            {/* Content - No internal tabs, parent controls which content to show */}
+            <div className="flex-1 overflow-y-auto p-6">
+                {renderContent()}
             </div>
         </div>
     );

@@ -1,11 +1,11 @@
 /**
  * Blog View Page
  *
- * Single blog view with TipTap editor on left and repurpose panel on right.
- * Similar to Laravel app's ContentWorkspace.
+ * Single blog view with tabs on top and content below.
+ * Blog Post tab shows editor, other tabs show repurpose content.
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState } from '@wordpress/element';
 import {
     ChevronLeft,
     PenTool,
@@ -139,7 +139,7 @@ function BlogEditor({
     return (
         <div className="flex h-full flex-col min-h-0 bg-white">
             {/* Top Bar */}
-            <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
+            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2">
                 <div className="flex items-center gap-3">
                     <span className="text-xs px-2 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-600">
                         Draft
@@ -194,10 +194,10 @@ function BlogEditor({
 // MAIN COMPONENT
 // ============================================
 
-export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
+export default function BlogViewPage({ onBack }: BlogViewPageProps) {
     const [activeTab, setActiveTab] = useState<ContentTab>('blog');
-    const [post, setPost] = useState<BlogPost>(mockPost);
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [post] = useState<BlogPost>(mockPost);
+    const [isGenerating] = useState(false);
 
     // Navigation back to blogs list
     const handleBack = () => {
@@ -217,58 +217,58 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
     ];
 
     return (
-        <div className="h-[calc(100vh-100px)] flex flex-col overflow-hidden">
-            {/* Header with Tabs */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50">
-                {/* Back button */}
-                <button
-                    onClick={handleBack}
-                    className="group flex items-center h-8 px-2 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
-                >
-                    <ChevronLeft size={16} />
-                    <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm group-hover:max-w-[40px] group-hover:ml-1 transition-all duration-200">
-                        Back
-                    </span>
-                </button>
+        <div className="h-[calc(100vh-100px)] flex flex-col overflow-hidden p-4">
+            {/* Card container - tabs and content connected */}
+            <div className="flex-1 min-h-0 flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                {/* Header with Back + Tabs */}
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50">
+                    {/* Back button */}
+                    <button
+                        onClick={handleBack}
+                        className="group flex items-center h-8 px-2 rounded text-gray-400 hover:text-gray-600 hover:bg-white transition-all"
+                    >
+                        <ChevronLeft size={16} />
+                        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm group-hover:max-w-10 group-hover:ml-1 transition-all duration-200">
+                            Back
+                        </span>
+                    </button>
 
-                {/* Tabs */}
-                <div className="flex items-center gap-1 ml-2 p-1 bg-gray-100 rounded-lg">
-                    {tabs.map((tab) => (
-                        <TabButton
-                            key={tab.id}
-                            active={activeTab === tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            icon={tab.icon}
-                            label={tab.label}
-                        />
-                    ))}
-                </div>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 min-h-0 flex overflow-hidden">
-                {activeTab === 'blog' ? (
-                    /* Two-column layout: Editor + Repurpose Panel */
-                    <>
-                        {/* Left: Editor */}
-                        <div className="flex-1 min-w-0 border-r border-gray-200">
-                            <BlogEditor post={post} isGenerating={isGenerating} />
-                        </div>
-
-                        {/* Right: Repurpose Panel */}
-                        <div className="w-[400px] shrink-0">
-                            <RepurposePanel blogContent={post.content} />
-                        </div>
-                    </>
-                ) : (
-                    /* Full-width repurpose panel for other tabs */
-                    <div className="flex-1">
-                        <RepurposePanel
-                            initialTab={activeTab === 'short' ? 'short' : activeTab === 'threads' ? 'threads' : activeTab === 'visuals' ? 'visuals' : 'video'}
-                            blogContent={post.content}
-                        />
+                    {/* Tabs */}
+                    <div className="flex items-center gap-1 ml-2 p-1 bg-gray-100 rounded-lg">
+                        {tabs.map((tab) => (
+                            <TabButton
+                                key={tab.id}
+                                active={activeTab === tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                icon={tab.icon}
+                                label={tab.label}
+                            />
+                        ))}
                     </div>
-                )}
+                </div>
+
+                {/* Content Area - Connected to tabs above */}
+                <div className="flex-1 min-h-0 overflow-hidden">
+                    {activeTab === 'blog' && (
+                        <BlogEditor post={post} isGenerating={isGenerating} />
+                    )}
+
+                    {activeTab === 'short' && (
+                        <RepurposePanel initialTab="short" blogContent={post.content} />
+                    )}
+
+                    {activeTab === 'threads' && (
+                        <RepurposePanel initialTab="threads" blogContent={post.content} />
+                    )}
+
+                    {activeTab === 'visuals' && (
+                        <RepurposePanel initialTab="visuals" blogContent={post.content} />
+                    )}
+
+                    {activeTab === 'video' && (
+                        <RepurposePanel initialTab="video" blogContent={post.content} />
+                    )}
+                </div>
             </div>
         </div>
     );
