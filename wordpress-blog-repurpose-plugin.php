@@ -8,7 +8,7 @@
  * Text Domain: wordpress-blog-repurpose-plugin
  */
 
-// Prevent direct access to this file
+// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -19,61 +19,87 @@ define('WBRP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WBRP_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 /**
- * Add admin menu
+ * Add admin menu with submenus
  */
 add_action('admin_menu', 'wbrp_add_admin_menu');
 
 function wbrp_add_admin_menu() {
-    // add_menu_page returns the "hook suffix" - a unique identifier for this page
-    // We need this to load our scripts ONLY on this page
-    $hook = add_menu_page(
-        'Blog Repurpose',           // Page title
-        'Blog Repurpose',           // Menu title
-        'manage_options',           // Capability required
-        'blog-repurpose',           // Menu slug
-        'wbrp_render_admin_page',   // Callback function
-        'dashicons-edit-large',     // Icon
-        30                          // Position
+    // Main menu page (also serves as "Create Blog")
+    $main_hook = add_menu_page(
+        'Blog Repurpose',
+        'Blog Repurpose',
+        'manage_options',
+        'blog-repurpose',
+        'wbrp_render_page_create',
+        'dashicons-edit-large',
+        30
     );
 
-    // Load our React scripts only on this specific admin page
-    // This is important for performance - we don't want to load React on every WP admin page!
-    add_action("admin_enqueue_scripts", function($current_hook) use ($hook) {
-        // Only load on our page
-        if ($current_hook !== $hook) {
+    // Submenu: Create Blog (same as main, but explicit in submenu)
+    $create_hook = add_submenu_page(
+        'blog-repurpose',           // Parent slug
+        'Create Blog',              // Page title
+        'Create Blog',              // Menu title
+        'manage_options',           // Capability
+        'blog-repurpose',           // Menu slug (same as parent = replaces "Blog Repurpose" text)
+        'wbrp_render_page_create'   // Callback
+    );
+
+    // Submenu: Blogs
+    $blogs_hook = add_submenu_page(
+        'blog-repurpose',
+        'Blogs',
+        'Blogs',
+        'manage_options',
+        'blog-repurpose-blogs',
+        'wbrp_render_page_blogs'
+    );
+
+    // Submenu: Schedule
+    $schedule_hook = add_submenu_page(
+        'blog-repurpose',
+        'Schedule',
+        'Schedule',
+        'manage_options',
+        'blog-repurpose-schedule',
+        'wbrp_render_page_schedule'
+    );
+
+    // Submenu: Connections
+    $connections_hook = add_submenu_page(
+        'blog-repurpose',
+        'Connections',
+        'Connections',
+        'manage_options',
+        'blog-repurpose-connections',
+        'wbrp_render_page_connections'
+    );
+
+    // Collect all hooks to load scripts on any of our pages
+    $all_hooks = [$main_hook, $create_hook, $blogs_hook, $schedule_hook, $connections_hook];
+
+    // Load scripts on all our pages
+    add_action('admin_enqueue_scripts', function($current_hook) use ($all_hooks) {
+        if (!in_array($current_hook, $all_hooks)) {
             return;
         }
 
-        // Load our built React app
-        // The build process creates index.js and index.css in /build folder
         $asset_file = WBRP_PLUGIN_DIR . 'build/index.asset.php';
 
-        // Check if build exists
         if (!file_exists($asset_file)) {
-            // Build doesn't exist yet - show helpful message
-            add_action('admin_notices', function() {
-                echo '<div class="notice notice-warning"><p>';
-                echo '<strong>Blog Repurpose Plugin:</strong> React app not built yet. ';
-                echo 'Run <code>npm install && npm run build</code> in the plugin folder.';
-                echo '</p></div>';
-            });
             return;
         }
 
-        // Load the asset file - it contains dependencies and version
         $assets = include($asset_file);
 
-        // Enqueue the JavaScript
-        // wp_enqueue_script(handle, src, dependencies, version, in_footer)
         wp_enqueue_script(
-            'wbrp-admin',                           // Unique handle
-            WBRP_PLUGIN_URL . 'build/index.js',     // URL to the script
-            $assets['dependencies'],                 // WordPress will auto-load React, etc.
-            $assets['version'],                      // Version for cache busting
-            true                                     // Load in footer
+            'wbrp-admin',
+            WBRP_PLUGIN_URL . 'build/index.js',
+            $assets['dependencies'],
+            $assets['version'],
+            true
         );
 
-        // Enqueue the CSS
         wp_enqueue_style(
             'wbrp-admin',
             WBRP_PLUGIN_URL . 'build/index.css',
@@ -81,21 +107,36 @@ function wbrp_add_admin_menu() {
             $assets['version']
         );
 
-        // Also load WordPress components CSS (for the Button, TextareaControl, etc.)
         wp_enqueue_style('wp-components');
     });
 }
 
 /**
- * Render the admin page
- * This just creates the container - React takes over from here
+ * Render pages - each passes the page type to React via data attribute
  */
-function wbrp_render_admin_page() {
+function wbrp_render_page_create() {
+    wbrp_render_app('create');
+}
+
+function wbrp_render_page_blogs() {
+    wbrp_render_app('blogs');
+}
+
+function wbrp_render_page_schedule() {
+    wbrp_render_app('schedule');
+}
+
+function wbrp_render_page_connections() {
+    wbrp_render_app('connections');
+}
+
+/**
+ * Render the React app container with page type
+ */
+function wbrp_render_app($page) {
     ?>
     <div class="wrap">
-        <!-- React app mounts here -->
-        <div id="wbrp-app">
-            <!-- If you see this, React hasn't loaded yet -->
+        <div id="wbrp-app" data-page="<?php echo esc_attr($page); ?>">
             <p>Loading...</p>
         </div>
     </div>
