@@ -1,0 +1,19 @@
+{
+  "name": "wordpress-blog-repurpose-plugin",
+  "version": "1.0.0",
+  "description": "Create blog posts with AI and repurpose them into tweets",
+  "scripts": {
+    "build": "wp-scripts build",
+    "start": "wp-scripts start",
+    "lint:js": "wp-scripts lint-js"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^28.0.0"
+  },
+  "dependencies": {
+    "@wordpress/components": "^28.0.0",
+    "@wordpress/element": "^6.0.0",
+    "@wordpress/api-fetch": "^7.0.0",
+    "lucide-react": "^0.468.0"
+  }
+}

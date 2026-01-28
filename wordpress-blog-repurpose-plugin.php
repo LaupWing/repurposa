@@ -9,43 +9,94 @@
  */
 
 // Prevent direct access to this file
-// Why? If someone visits this PHP file directly in browser, we don't want it to run
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Define plugin constants - these help us reference paths easily throughout the plugin
+// Define plugin constants
 define('WBRP_VERSION', '1.0.0');
-define('WBRP_PLUGIN_DIR', plugin_dir_path(__FILE__));  // Full server path to plugin folder
-define('WBRP_PLUGIN_URL', plugin_dir_url(__FILE__));   // URL to plugin folder (for assets)
+define('WBRP_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('WBRP_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 /**
- * For now, let's just add a simple admin menu to prove the plugin works
+ * Add admin menu
  */
 add_action('admin_menu', 'wbrp_add_admin_menu');
 
 function wbrp_add_admin_menu() {
-    // This creates a top-level menu item in WordPress admin sidebar
-    add_menu_page(
-        'Blog Repurpose',           // Page title (shown in browser tab)
-        'Blog Repurpose',           // Menu title (shown in sidebar)
-        'manage_options',           // Capability required (admin only)
-        'blog-repurpose',           // Menu slug (URL identifier)
-        'wbrp_render_admin_page',   // Callback function to render the page
-        'dashicons-edit-large',     // Icon (WordPress built-in dashicon)
-        30                          // Position in menu (lower = higher up)
+    // add_menu_page returns the "hook suffix" - a unique identifier for this page
+    // We need this to load our scripts ONLY on this page
+    $hook = add_menu_page(
+        'Blog Repurpose',           // Page title
+        'Blog Repurpose',           // Menu title
+        'manage_options',           // Capability required
+        'blog-repurpose',           // Menu slug
+        'wbrp_render_admin_page',   // Callback function
+        'dashicons-edit-large',     // Icon
+        30                          // Position
     );
+
+    // Load our React scripts only on this specific admin page
+    // This is important for performance - we don't want to load React on every WP admin page!
+    add_action("admin_enqueue_scripts", function($current_hook) use ($hook) {
+        // Only load on our page
+        if ($current_hook !== $hook) {
+            return;
+        }
+
+        // Load our built React app
+        // The build process creates index.js and index.css in /build folder
+        $asset_file = WBRP_PLUGIN_DIR . 'build/index.asset.php';
+
+        // Check if build exists
+        if (!file_exists($asset_file)) {
+            // Build doesn't exist yet - show helpful message
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-warning"><p>';
+                echo '<strong>Blog Repurpose Plugin:</strong> React app not built yet. ';
+                echo 'Run <code>npm install && npm run build</code> in the plugin folder.';
+                echo '</p></div>';
+            });
+            return;
+        }
+
+        // Load the asset file - it contains dependencies and version
+        $assets = include($asset_file);
+
+        // Enqueue the JavaScript
+        // wp_enqueue_script(handle, src, dependencies, version, in_footer)
+        wp_enqueue_script(
+            'wbrp-admin',                           // Unique handle
+            WBRP_PLUGIN_URL . 'build/index.js',     // URL to the script
+            $assets['dependencies'],                 // WordPress will auto-load React, etc.
+            $assets['version'],                      // Version for cache busting
+            true                                     // Load in footer
+        );
+
+        // Enqueue the CSS
+        wp_enqueue_style(
+            'wbrp-admin',
+            WBRP_PLUGIN_URL . 'build/index.css',
+            [],
+            $assets['version']
+        );
+
+        // Also load WordPress components CSS (for the Button, TextareaControl, etc.)
+        wp_enqueue_style('wp-components');
+    });
 }
 
+/**
+ * Render the admin page
+ * This just creates the container - React takes over from here
+ */
 function wbrp_render_admin_page() {
-    // This is where our React app will mount later
-    // For now, just a simple container
     ?>
     <div class="wrap">
-        <h1>Blog Repurpose</h1>
-        <p>Plugin is working! React app will load here.</p>
+        <!-- React app mounts here -->
         <div id="wbrp-app">
-            <!-- React will mount here -->
+            <!-- If you see this, React hasn't loaded yet -->
+            <p>Loading...</p>
         </div>
     </div>
     <?php

@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+
+# Build output (generated from src/ - run "npm run build" to create)
+build/
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
