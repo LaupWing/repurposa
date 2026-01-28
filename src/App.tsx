@@ -6,6 +6,7 @@
  */
 
 import { useState } from '@wordpress/element';
+import { Toaster } from 'sonner';
 import BlogWizard from './components/BlogWizard';
 import BlogsPage from './components/pages/BlogsPage';
 import BlogViewPage from './components/pages/BlogViewPage';
@@ -57,6 +58,7 @@ export default function App({ initialPage, postId }: AppProps) {
 
     return (
         <div className="wbrp-app">
+            <Toaster position="bottom-right" richColors />
             {renderPage()}
         </div>
     );

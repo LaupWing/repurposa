@@ -6,6 +6,7 @@
  */
 
 import { useState } from '@wordpress/element';
+import { toast } from 'sonner';
 import {
     ChevronLeft,
     PenTool,
@@ -203,10 +204,20 @@ function BlogEditor({
         alert(`AI ${action} request for: "${selectedText.substring(0, 50)}..."\n\nThis will be connected to your AI backend.`);
     };
 
+    const handleSave = () => {
+        console.log('Saving...', { title, content });
+        // TODO: Connect to WordPress REST API to save draft
+        toast.success('Draft saved successfully');
+    };
+
     const handlePublish = (publishNow: boolean) => {
         console.log('Publishing...', { publishNow, title, content });
         // TODO: Connect to WordPress REST API to publish
-        alert(`Published! ${publishNow ? 'Social posts will be published immediately.' : 'Social posts will follow their schedule.'}`);
+        toast.success(
+            publishNow
+                ? 'Published! Social posts will go live immediately.'
+                : 'Published! Social posts will follow their schedule.'
+        );
         setIsPublishModalOpen(false);
     };
 
@@ -236,7 +247,10 @@ function BlogEditor({
             {/* Top Bar */}
             <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2">
                 <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                    <button
+                        onClick={handleSave}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
                         <Save size={16} />
                         Save
                     </button>
