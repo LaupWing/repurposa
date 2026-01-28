@@ -14,9 +14,6 @@ import {
     Image,
     Video,
     Save,
-    Eye,
-    MoreHorizontal,
-    History,
     Sparkles,
 } from 'lucide-react';
 import { TiptapEditor } from '../editor/TiptapEditor';
@@ -140,27 +137,19 @@ function BlogEditor({
         <div className="flex h-full flex-col min-h-0 bg-white">
             {/* Top Bar */}
             <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2">
+                <div className="flex items-center gap-2">
+                    <button className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                        <Save size={16} />
+                        Save
+                    </button>
+                    <span className="text-sm text-gray-400">Auto-saved</span>
+                </div>
                 <div className="flex items-center gap-3">
                     <span className="text-xs px-2 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-600">
                         Draft
                     </span>
-                    <span className="text-sm text-gray-400">Auto-saved</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded">
-                        <History size={16} />
-                        <span className="text-xs">Version 1</span>
-                    </button>
-                    <div className="w-px h-4 bg-gray-200 mx-1" />
-                    <button className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
-                        <Eye size={16} />
-                    </button>
-                    <button className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
-                        <MoreHorizontal size={16} />
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                        <Save size={16} />
-                        Save
+                    <button className="flex items-center gap-2 px-3 py-1.5 bg-[#2271b1] text-white text-sm font-medium rounded-lg hover:bg-[#135e96] transition-colors">
+                        Publish
                     </button>
                 </div>
             </div>
