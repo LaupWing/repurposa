@@ -3,12 +3,23 @@
  *
  * No prefix - our CSS only loads on our plugin page anyway
  */
-@import "tailwindcss";
+@import "tailwindcss" important;
 
 /**
- * Custom styles (if needed)
+ * Custom styles - Reset WordPress admin defaults inside our plugin
  */
 .wrap .wbrp-app {
+  margin: 0;
+}
+
+/* Neutralize WordPress default margins for headings and paragraphs */
+.wbrp-app h1,
+.wbrp-app h2,
+.wbrp-app h3,
+.wbrp-app h4,
+.wbrp-app h5,
+.wbrp-app h6,
+.wbrp-app p {
   margin: 0;
 }
 

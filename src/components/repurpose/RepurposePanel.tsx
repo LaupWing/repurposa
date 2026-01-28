@@ -326,7 +326,8 @@ interface RepurposePanelProps {
 
 export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
-    const [hasGenerated, setHasGenerated] = useState(false);
+    // Start with generated content visible for demo/placeholder
+    const [hasGenerated, setHasGenerated] = useState(true);
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -345,7 +346,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposeP
                 ) : (
                     <div>
                         <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-500">Selected Patterns</h3>
+                            <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Selected Patterns</h3>
                             <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
                                 {samplePatterns.length} patterns
                             </span>

@@ -82,21 +82,32 @@ function truncateContent(content: string | null, maxLength: number = 100): strin
 // ============================================
 
 function StatusDot({ status }: { status: Post['status'] }) {
-    const colors = {
-        published: 'bg-green-500',
-        completed: 'bg-blue-500',
-        generating: 'bg-yellow-500',
-        draft: 'bg-orange-500',
-    };
-
-    const isAnimated = status === 'generating';
+    const isLive = status === 'published';
+    const isGenerating = status === 'generating';
 
     return (
         <span className="relative flex h-2.5 w-2.5">
-            {isAnimated && (
-                <span className={`absolute inline-flex h-full w-full rounded-full ${colors[status]} opacity-75 animate-ping`} />
-            )}
-            <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${colors[status]}`} />
+            {/* Glow effect */}
+            <span
+                className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
+                    isLive
+                        ? 'bg-green-400'
+                        : isGenerating
+                          ? 'bg-blue-400'
+                          : 'bg-orange-400'
+                }`}
+                style={{ animationDuration: '2s' }}
+            />
+            {/* Solid dot */}
+            <span
+                className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
+                    isLive
+                        ? 'bg-green-500'
+                        : isGenerating
+                          ? 'bg-blue-500'
+                          : 'bg-orange-500'
+                }`}
+            />
         </span>
     );
 }
@@ -135,12 +146,12 @@ function PostCard({ post, onEdit, onDelete }: { post: Post; onEdit: (id: number)
             </div>
 
             {/* Title */}
-            <h3 className="font-medium text-gray-900 mb-2 line-clamp-2">
+            <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 leading-snug">
                 {post.title || 'Untitled'}
             </h3>
 
             {/* Content Preview */}
-            <p className="text-sm text-gray-500 mb-3 flex-1 line-clamp-2">
+            <p className="text-sm text-gray-500 mb-3 flex-1 line-clamp-2 leading-relaxed">
                 {truncateContent(post.content)}
             </p>
 
