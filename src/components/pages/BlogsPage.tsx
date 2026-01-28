@@ -109,8 +109,15 @@ function PostCard({ post, onEdit, onDelete }: { post: Post; onEdit: (id: number)
         draft: 'text-orange-600',
     };
 
+    const handleCardClick = () => {
+        onEdit(post.id);
+    };
+
     return (
-        <div className="group relative flex flex-col h-full bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer">
+        <div
+            onClick={handleCardClick}
+            className="group relative flex flex-col h-full bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer"
+        >
             {/* Header: Status + Date + Delete */}
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -231,8 +238,8 @@ export default function BlogsPage() {
     });
 
     const handleEdit = (id: number) => {
-        console.log('Edit post:', id);
-        alert(`Edit post ${id} - Coming soon!`);
+        // Navigate to blog view page
+        window.location.href = `admin.php?page=blog-repurpose-blogs&post_id=${id}`;
     };
 
     const handleDelete = (id: number) => {

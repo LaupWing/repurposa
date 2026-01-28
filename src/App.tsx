@@ -8,6 +8,7 @@
 import { useState } from '@wordpress/element';
 import BlogWizard from './components/BlogWizard';
 import BlogsPage from './components/pages/BlogsPage';
+import BlogViewPage from './components/pages/BlogViewPage';
 import SchedulePage from './components/pages/SchedulePage';
 import ConnectionsPage from './components/pages/ConnectionsPage';
 import type { WizardData } from './components/BlogWizard';
@@ -16,17 +17,18 @@ import type { WizardData } from './components/BlogWizard';
 // TYPES
 // ============================================
 
-type PageType = 'create' | 'blogs' | 'schedule' | 'connections';
+type PageType = 'create' | 'blogs' | 'blog-view' | 'schedule' | 'connections';
 
 interface AppProps {
     initialPage: PageType;
+    postId?: number;
 }
 
 // ============================================
 // COMPONENT
 // ============================================
 
-export default function App({ initialPage }: AppProps) {
+export default function App({ initialPage, postId }: AppProps) {
     const [blogData, setBlogData] = useState<WizardData | null>(null);
 
     const handleWizardComplete = (data: WizardData) => {
@@ -42,6 +44,8 @@ export default function App({ initialPage }: AppProps) {
                 return <BlogWizard onComplete={handleWizardComplete} />;
             case 'blogs':
                 return <BlogsPage />;
+            case 'blog-view':
+                return <BlogViewPage postId={postId} />;
             case 'schedule':
                 return <SchedulePage />;
             case 'connections':

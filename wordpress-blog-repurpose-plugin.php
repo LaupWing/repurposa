@@ -119,7 +119,12 @@ function wbrp_render_page_create() {
 }
 
 function wbrp_render_page_blogs() {
-    wbrp_render_app('blogs');
+    // Check if viewing a specific blog
+    if (isset($_GET['post_id'])) {
+        wbrp_render_app('blog-view', intval($_GET['post_id']));
+    } else {
+        wbrp_render_app('blogs');
+    }
 }
 
 function wbrp_render_page_schedule() {
@@ -133,10 +138,12 @@ function wbrp_render_page_connections() {
 /**
  * Render the React app container with page type
  */
-function wbrp_render_app($page) {
+function wbrp_render_app($page, $post_id = null) {
     ?>
     <div class="wrap">
-        <div id="wbrp-app" data-page="<?php echo esc_attr($page); ?>">
+        <div id="wbrp-app"
+             data-page="<?php echo esc_attr($page); ?>"
+             <?php if ($post_id): ?>data-post-id="<?php echo esc_attr($post_id); ?>"<?php endif; ?>>
             <p>Loading...</p>
         </div>
     </div>

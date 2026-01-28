@@ -18,9 +18,16 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@tailwindcss/postcss": "^4.1.8",
+    "@tiptap/extension-code-block-lowlight": "^2.6.0",
+    "@tiptap/extension-link": "^2.6.0",
+    "@tiptap/extension-placeholder": "^2.6.0",
+    "@tiptap/pm": "^2.6.0",
+    "@tiptap/react": "^2.6.0",
+    "@tiptap/starter-kit": "^2.6.0",
     "@wordpress/api-fetch": "^7.0.0",
     "@wordpress/components": "^28.0.0",
     "@wordpress/element": "^6.0.0",
+    "lowlight": "^3.1.0",
     "lucide-react": "^0.468.0",
     "tailwindcss": "^4.1.8"
   }
