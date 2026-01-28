@@ -265,7 +265,7 @@ export default function BlogsPage() {
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                     <h1 className="text-xl font-bold text-gray-900">
-                        All <em className="font-normal italic">Blogs</em>
+                        All <em className="font-serif font-normal italic">Blogs</em>
                     </h1>
 
                     {/* Search */}

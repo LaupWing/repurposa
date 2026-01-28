@@ -177,7 +177,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900">
-                        Create <em className="font-normal italic">New Blog</em>
+                        Create <em className="font-serif font-normal italic">New Blog</em>
                     </h2>
                     <span className="bg-gray-100 px-3 py-1 rounded-full text-xs text-gray-600">
                         Step {currentStep} of 3
@@ -262,7 +262,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                             ) : (
                                 <>
                                     <Sparkles size={16} />
-                                    Generate <em className="font-normal italic ml-0.5">Outline</em>
+                                    Generate <em className="font-serif font-normal italic ml-0.5">Outline</em>
                                 </>
                             )}
                         </button>
