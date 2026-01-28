@@ -79,20 +79,26 @@ export default function Step2RoughOutline({
     };
 
     return (
-        <div className="space-y-5">
+        <div>
             {/* Topic from Step 1 */}
             {topic && (
-                <p className="text-sm font-medium text-gray-400">
+                <p
+                    className="text-sm font-medium text-gray-400"
+                    style={{ margin: 0 }}
+                >
                     {topic}
                 </p>
             )}
 
+            <div className="space-y-4">
             {/* Header */}
             <div>
-                <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900 mb-2">
-                    <FileText size={18} className="text-blue-600" />
-                    Add Your Rough Outline
-                </h3>
+                <div className="flex items-center gap-2 mb-2">
+                    <FileText size={18} className="text-blue-600 shrink-0" />
+                    <h3 className="text-base font-semibold text-gray-900" style={{ margin: 0 }}>
+                        Add Your Rough Outline
+                    </h3>
+                </div>
                 <p className="text-sm text-gray-500">
                     Personal stories, struggles, wins, specific numbers, client examples—anything
                     that makes this YOUR content. <strong>Drag to reorder</strong> to help the AI
@@ -101,7 +107,7 @@ export default function Step2RoughOutline({
             </div>
 
             {/* Input for new idea */}
-            <div className="flex items-center gap-2">
+            <div className="flex gap-2 h-11">
                 <input
                     type="text"
                     value={newIdea}
@@ -113,13 +119,14 @@ export default function Step2RoughOutline({
                         }
                     }}
                     placeholder="e.g., I struggled with yo-yo dieting for 10 years..."
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ border: '1px solid #d1d5db', margin: 0, height: '100%' }}
                 />
                 <button
                     type="button"
                     onClick={addIdea}
                     disabled={!newIdea.trim()}
-                    className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-11 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                 >
                     <Plus size={18} />
                 </button>
@@ -163,6 +170,7 @@ export default function Step2RoughOutline({
                     Generic AI content is forgettable. Your personal stories and insights
                     make this blog uniquely yours and 10x more engaging.
                 </p>
+            </div>
             </div>
         </div>
     );

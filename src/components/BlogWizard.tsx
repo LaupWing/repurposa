@@ -4,15 +4,17 @@
  * Multi-step wizard for creating blog posts:
  * - Step 1: Topic selection
  * - Step 2: Rough outline (add your ideas)
- * - Step 3: Review & generate (coming soon)
+ * - Step 3: Review generated outline & generate blog
  */
 
 import { useState } from '@wordpress/element';
-import { ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 
 // Steps
 import Step1Topic from './steps/Step1Topic';
 import Step2RoughOutline from './steps/Step2RoughOutline';
+import Step3GeneratedOutline from './steps/Step3GeneratedOutline';
+import { GeneratingOverlay } from './GeneratingOverlay';
 
 // ============================================
 // TYPES
@@ -42,6 +44,8 @@ interface BlogWizardProps {
 
 export default function BlogWizard({ onComplete }: BlogWizardProps) {
     const [currentStep, setCurrentStep] = useState<number>(1);
+    const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
+    const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
     const [data, setData] = useState<WizardData>({
         topic: '',
         roughOutline: [],
@@ -53,7 +57,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     // ============================================
     const canProceed = (): boolean => {
         if (currentStep === 1) return data.topic.trim().length > 0;
-        // Step 2: can proceed even with no ideas (optional)
         return true;
     };
 
@@ -73,12 +76,103 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         setData(prev => ({ ...prev, roughOutline }));
     };
 
+    const updateOutline = (outline: OutlineSection[]): void => {
+        setData(prev => ({ ...prev, outline }));
+    };
+
+    // Generate outline from topic + rough ideas (placeholder for AI)
+    const handleGenerateOutline = async (): Promise<void> => {
+        setIsGeneratingOutline(true);
+
+        // Simulate AI call - replace with actual API call later
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Mock generated outline based on topic
+        const mockOutline: OutlineSection[] = [
+            {
+                id: 'section-1',
+                title: 'Introduction',
+                purpose: 'Hook the reader and introduce the main topic',
+            },
+            {
+                id: 'section-2',
+                title: 'The Problem',
+                purpose: 'Explain the common challenges and pain points',
+            },
+            {
+                id: 'section-3',
+                title: 'Key Insights',
+                purpose: 'Share the main learnings and discoveries',
+            },
+            {
+                id: 'section-4',
+                title: 'Practical Steps',
+                purpose: 'Provide actionable advice readers can implement',
+            },
+            {
+                id: 'section-5',
+                title: 'Conclusion',
+                purpose: 'Summarize key points and call to action',
+            },
+        ];
+
+        setData(prev => ({ ...prev, outline: mockOutline }));
+        setIsGeneratingOutline(false);
+        setCurrentStep(3);
+    };
+
+    // Generate full blog from outline (placeholder for AI)
+    const handleGenerateBlog = async (): Promise<void> => {
+        setIsGeneratingBlog(true);
+
+        // Simulate AI call - replace with actual API call later
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Mock generated content
+        const mockContent = `<h2>Introduction</h2>
+<p>This is your AI-generated blog post about: ${data.topic}</p>
+<p>The content will be generated based on your outline and ideas.</p>
+
+<h2>The Problem</h2>
+<p>Here we discuss the challenges...</p>
+
+<h2>Key Insights</h2>
+<p>The main learnings include...</p>
+
+<h2>Practical Steps</h2>
+<p>Here's what you can do...</p>
+
+<h2>Conclusion</h2>
+<p>To wrap up...</p>`;
+
+        setIsGeneratingBlog(false);
+
+        onComplete({
+            ...data,
+            generatedTitle: data.topic,
+            generatedContent: mockContent,
+        });
+    };
+
     // ============================================
     // RENDER
     // ============================================
     return (
         <div className="max-w-3xl mx-auto mt-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="relative bg-white rounded-lg shadow-sm border border-gray-200">
+                {/* Generating Overlays */}
+                {isGeneratingOutline && (
+                    <GeneratingOverlay
+                        title="Crafting Your Outline"
+                        description="Analyzing your topic and ideas to create a compelling blog structure..."
+                    />
+                )}
+                {isGeneratingBlog && (
+                    <GeneratingOverlay
+                        title="Writing Your Blog"
+                        description="Creating engaging content based on your outline..."
+                    />
+                )}
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
@@ -120,17 +214,11 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                     )}
 
                     {currentStep === 3 && (
-                        <div className="space-y-4">
-                            <p className="text-sm text-gray-500">
-                                Your topic: <span className="font-medium text-gray-900">{data.topic}</span>
-                            </p>
-                            <p className="text-sm text-gray-500">
-                                Ideas: <span className="font-medium text-gray-900">{data.roughOutline.length} added</span>
-                            </p>
-                            <div className="bg-gray-50 rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
-                                <p className="text-gray-500">Step 3: Review & Generate - Coming soon!</p>
-                            </div>
-                        </div>
+                        <Step3GeneratedOutline
+                            topic={data.topic}
+                            outline={data.outline}
+                            onOutlineChange={updateOutline}
+                        />
                     )}
                 </div>
 
@@ -139,7 +227,8 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                     {currentStep > 1 ? (
                         <button
                             onClick={prevStep}
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                            disabled={isGeneratingOutline || isGeneratingBlog}
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
                         >
                             <ArrowLeft size={16} />
                             Back
@@ -148,7 +237,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                         <div />
                     )}
 
-                    {currentStep < 3 ? (
+                    {currentStep === 1 && (
                         <button
                             onClick={nextStep}
                             disabled={!canProceed()}
@@ -157,13 +246,45 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                             Next
                             <ArrowRight size={16} />
                         </button>
-                    ) : (
+                    )}
+
+                    {currentStep === 2 && (
                         <button
-                            onClick={() => onComplete(data)}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                            onClick={handleGenerateOutline}
+                            disabled={isGeneratingOutline}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                         >
-                            <Sparkles size={16} />
-                            Generate Blog
+                            {isGeneratingOutline ? (
+                                <>
+                                    <Loader2 size={16} className="animate-spin" />
+                                    Generating...
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles size={16} />
+                                    Generate <em className="font-normal italic ml-0.5">Outline</em>
+                                </>
+                            )}
+                        </button>
+                    )}
+
+                    {currentStep === 3 && (
+                        <button
+                            onClick={handleGenerateBlog}
+                            disabled={isGeneratingBlog || data.outline.length === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        >
+                            {isGeneratingBlog ? (
+                                <>
+                                    <Loader2 size={16} className="animate-spin" />
+                                    Generating...
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles size={16} />
+                                    Generate Blog
+                                </>
+                            )}
                         </button>
                     )}
                 </div>
