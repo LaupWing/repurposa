@@ -107,14 +107,6 @@ function wbrp_add_admin_menu() {
             $assets['version']
         );
 
-        // Google Fonts - Playfair Display for serif/italic text
-        wp_enqueue_style(
-            'wbrp-google-fonts',
-            'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&display=swap',
-            [],
-            null
-        );
-
         wp_enqueue_style('wp-components');
     });
 }
