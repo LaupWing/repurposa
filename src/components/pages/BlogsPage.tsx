@@ -82,32 +82,28 @@ function truncateContent(content: string | null, maxLength: number = 100): strin
 // ============================================
 
 function StatusDot({ status }: { status: Post['status'] }) {
-    const isLive = status === 'published';
-    const isGenerating = status === 'generating';
+    const colors = {
+        published: 'bg-green-500',
+        completed: 'bg-blue-500',
+        generating: 'bg-yellow-500',
+        draft: 'bg-orange-500',
+    };
+
+    const glowColors = {
+        published: 'bg-green-400',
+        completed: 'bg-blue-400',
+        generating: 'bg-yellow-400',
+        draft: 'bg-orange-400',
+    };
 
     return (
         <span className="relative flex h-2.5 w-2.5">
             {/* Glow effect */}
             <span
-                className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
-                    isLive
-                        ? 'bg-green-400'
-                        : isGenerating
-                          ? 'bg-blue-400'
-                          : 'bg-orange-400'
-                }`}
-                style={{ animationDuration: '2s' }}
+                className={`absolute inline-flex h-full w-full rounded-full animate-status-ping ${glowColors[status]}`}
             />
             {/* Solid dot */}
-            <span
-                className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
-                    isLive
-                        ? 'bg-green-500'
-                        : isGenerating
-                          ? 'bg-blue-500'
-                          : 'bg-orange-500'
-                }`}
-            />
+            <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${colors[status]}`} />
         </span>
     );
 }
