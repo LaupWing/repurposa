@@ -56,6 +56,8 @@ export default function ImagePickerModal({
     const [modifyPrompt, setModifyPrompt] = useState('');
     const [isModifying, setIsModifying] = useState(false);
     const [isModifyExpanded, setIsModifyExpanded] = useState(false);
+    const [showPromptHelper, setShowPromptHelper] = useState(false);
+    const [promptHelperText, setPromptHelperText] = useState('');
 
     // Fetch images from WordPress media library
     useEffect(() => {
@@ -84,6 +86,8 @@ export default function ImagePickerModal({
             setShowModifyInput(false);
             setModifyPrompt('');
             setGeneratePrompt('');
+            setShowPromptHelper(false);
+            setPromptHelperText('');
         }
     }, [isOpen]);
 
@@ -397,61 +401,140 @@ export default function ImagePickerModal({
 
                 {/* Modify with AI Input - shows above footer when active */}
                 {showModifyInput && selectedImage && (
-                    <div className={`relative px-6 py-4 border-t border-gray-200 bg-blue-50 overflow-visible ${isModifyExpanded ? 'flex-1' : ''}`}>
+                    <div className={`relative px-6 py-4 border-t border-gray-200 bg-blue-50 overflow-visible ${isModifyExpanded ? 'flex-1 flex flex-col' : ''}`}>
                         {/* Expand/Collapse button */}
                         <button
                             onClick={() => setIsModifyExpanded(!isModifyExpanded)}
-                            className="absolute top-3 right-3 p-2 text-gray-500 hover:text-gray-700 hover:bg-white rounded-lg transition-colors"
+                            className="absolute top-3 right-3 p-2 text-gray-500 hover:text-gray-700 hover:bg-white rounded-lg transition-colors z-10"
                             title={isModifyExpanded ? 'Collapse' : 'Expand'}
                         >
                             {isModifyExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                         </button>
 
-                        <label className="text-sm font-medium text-gray-700 mb-2 block">
+                        <label className="text-sm font-medium text-gray-700 mb-3 block">
                             How would you like to modify this image?
                         </label>
-                        <div className={`flex gap-3 mb-4 ${isModifyExpanded ? 'flex-col' : ''}`}>
-                            <textarea
-                                value={modifyPrompt}
-                                onChange={(e) => setModifyPrompt(e.target.value)}
-                                placeholder="e.g., Make it brighter, add text overlay, convert to illustration..."
-                                rows={isModifyExpanded ? 6 : 2}
-                                className="flex-1 px-4 py-3 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                autoFocus
-                            />
-                            <div className={`flex gap-2 ${isModifyExpanded ? 'justify-end' : 'flex-col'}`}>
-                                <button
-                                    onClick={handleModify}
-                                    disabled={!modifyPrompt.trim() || isModifying}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    {isModifying ? (
-                                        <Loader2 size={16} className="animate-spin" />
-                                    ) : (
-                                        <Wand2 size={16} />
-                                    )}
-                                    {isModifying ? 'Applying...' : 'Apply'}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowModifyInput(false);
-                                        setModifyPrompt('');
-                                        setIsModifyExpanded(false);
-                                    }}
-                                    className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-white rounded-lg transition-colors"
-                                >
-                                    Cancel
-                                </button>
+
+                        {/* Thumbnail + Textarea row */}
+                        <div className={`flex gap-4 mb-4 ${isModifyExpanded ? 'flex-1' : ''}`}>
+                            {/* Selected image thumbnail - only in expanded mode */}
+                            {isModifyExpanded && (
+                                <div className="shrink-0 self-start">
+                                    <img
+                                        src={selectedImage}
+                                        alt="Image to modify"
+                                        className="w-40 h-40 rounded-lg object-cover border-2 border-white shadow-md"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Textarea and buttons */}
+                            <div className={`flex-1 flex flex-col gap-3 ${isModifyExpanded ? 'h-full' : ''}`}>
+                                <div className="relative">
+                                    <textarea
+                                        value={modifyPrompt}
+                                        onChange={(e) => setModifyPrompt(e.target.value)}
+                                        placeholder="e.g., Make it brighter, add text overlay, convert to illustration..."
+                                        rows={isModifyExpanded ? 6 : 2}
+                                        className={`w-full px-4 py-3 pr-10 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${isModifyExpanded ? 'flex-1' : ''}`}
+                                        autoFocus
+                                    />
+                                    {/* AI Prompt Helper Button */}
+                                    <div className="absolute bottom-2 right-2 group">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPromptHelper(!showPromptHelper)}
+                                            className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors"
+                                        >
+                                            <Sparkles size={16} />
+                                        </button>
+                                        {/* Tooltip */}
+                                        {!showPromptHelper && (
+                                            <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[100001]">
+                                                Modify prompt with AI
+                                                <div className="absolute top-full right-3 border-4 border-transparent border-t-gray-900" />
+                                            </div>
+                                        )}
+                                        {/* Popover - above sparkles button */}
+                                        {showPromptHelper && (
+                                            <>
+                                                {/* Click outside overlay */}
+                                                <div
+                                                    className="fixed inset-0 z-[100000]"
+                                                    onClick={() => {
+                                                        setShowPromptHelper(false);
+                                                        setPromptHelperText('');
+                                                    }}
+                                                />
+                                                <div className="absolute bottom-full right-0 mb-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[100001]">
+                                                    <p className="text-sm font-medium text-gray-700 mb-2">How do you want to modify the prompt?</p>
+                                                    <textarea
+                                                        value={promptHelperText}
+                                                        onChange={(e) => setPromptHelperText(e.target.value)}
+                                                        placeholder="e.g., Make it shorter, add more detail, change the tone..."
+                                                        rows={3}
+                                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        autoFocus
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                                e.preventDefault();
+                                                                // TODO: Call AI to modify the prompt based on promptHelperText
+                                                                setShowPromptHelper(false);
+                                                                setPromptHelperText('');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <button
+                                                        onClick={() => {
+                                                            // TODO: Call AI to modify the prompt based on promptHelperText
+                                                            setShowPromptHelper(false);
+                                                            setPromptHelperText('');
+                                                        }}
+                                                        disabled={!promptHelperText.trim()}
+                                                        className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                    >
+                                                        <Sparkles size={14} />
+                                                        Modify
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                    <button
+                                        onClick={() => {
+                                            setShowModifyInput(false);
+                                            setModifyPrompt('');
+                                            setIsModifyExpanded(false);
+                                        }}
+                                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-white rounded-lg transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleModify}
+                                        disabled={!modifyPrompt.trim() || isModifying}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {isModifying ? (
+                                            <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                            <Wand2 size={16} />
+                                        )}
+                                        {isModifying ? 'Applying...' : 'Apply'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Preset modifications */}
-                        <div className={`flex gap-3 overflow-x-auto pb-2 ${isModifyExpanded ? 'flex-wrap overflow-visible' : ''}`}>
+                        {/* Preset modifications - always horizontal scroll */}
+                        <div className="flex gap-3 overflow-x-auto pb-2">
                             {presetModifications.map((preset) => (
                                 <div key={preset.id} className="relative group shrink-0">
                                     <button
                                         onClick={() => setModifyPrompt(preset.prompt)}
-                                        className={`rounded-lg bg-white border-2 border-gray-200 hover:border-blue-400 transition-colors overflow-hidden relative ${isModifyExpanded ? 'w-24 h-24' : 'w-20 h-20'}`}
+                                        className="w-20 h-20 rounded-lg bg-white border-2 border-gray-200 hover:border-blue-400 transition-colors overflow-hidden relative"
                                     >
                                         {/* Preview image */}
                                         <img
