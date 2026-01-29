@@ -5,7 +5,8 @@
  * Blog Post tab shows editor, other tabs show repurpose content.
  */
 
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
 import { toast } from 'sonner';
 import {
     ChevronLeft,
@@ -40,35 +41,6 @@ interface BlogViewPageProps {
     onBack?: () => void;
 }
 
-// ============================================
-// MOCK DATA
-// ============================================
-
-const mockPost: BlogPost = {
-    id: 1,
-    title: '5 Mistakes Beginners Make When Trying to Lose Weight',
-    content: `
-<h2>Introduction</h2>
-<p>Most people start their weight loss journey with the best intentions, but quickly fall into common traps that sabotage their progress. After helping hundreds of clients reach their goals, I've identified the five most common mistakes—and how to avoid them.</p>
-
-<h2>Mistake #1: Going Too Hard, Too Fast</h2>
-<p>The biggest mistake I see is trying to change everything at once. People wake up on Monday morning, throw out all their "bad" food, sign up for a gym, and commit to working out 6 days a week.</p>
-
-<p>By Wednesday, they're exhausted. By Friday, they've given up.</p>
-
-<h2>Mistake #2: Focusing Only on the Scale</h2>
-<p>The scale is just one measurement—and not even the most important one. Body composition, energy levels, sleep quality, and how your clothes fit are all better indicators of progress.</p>
-
-<h2>Mistake #3: Cutting Out Entire Food Groups</h2>
-<p>Unless you have a medical reason, there's no need to completely eliminate carbs, fats, or any food group. Sustainable weight loss comes from balance, not restriction.</p>
-
-<h2>The Better Approach</h2>
-<p>Instead of dramatic changes, focus on small, consistent improvements. Add one healthy habit per week. Build momentum. Create systems that support your goals.</p>
-
-<p>Remember: the best diet is the one you can actually stick to.</p>
-`,
-    status: 'completed',
-};
 
 // ============================================
 // SUB-COMPONENTS
@@ -324,10 +296,34 @@ function BlogEditor({
 // MAIN COMPONENT
 // ============================================
 
-export default function BlogViewPage({ onBack }: BlogViewPageProps) {
+export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
     const [activeTab, setActiveTab] = useState<ContentTab>('blog');
-    const [post] = useState<BlogPost>(mockPost);
-    const [isGenerating] = useState(false);
+    const [post, setPost] = useState<BlogPost | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Fetch blog from API
+    useEffect(() => {
+        if (!postId) {
+            setIsLoading(false);
+            return;
+        }
+
+        const fetchBlog = async () => {
+            try {
+                const response = await apiFetch<{ blog: BlogPost }>({
+                    path: `/wbrp/v1/blogs/${postId}`,
+                });
+                setPost(response.blog);
+            } catch (error) {
+                console.error('Failed to fetch blog:', error);
+                toast.error('Failed to load blog');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchBlog();
+    }, [postId]);
 
     // Navigation back to blogs list
     const handleBack = () => {
