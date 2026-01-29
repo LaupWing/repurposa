@@ -342,6 +342,33 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
         { id: 'video' as const, label: 'Video', icon: Video },
     ];
 
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="h-[calc(100vh-100px)] flex items-center justify-center p-4">
+                <div className="text-gray-500">Loading blog...</div>
+            </div>
+        );
+    }
+
+    // No post found
+    if (!post) {
+        return (
+            <div className="h-[calc(100vh-100px)] flex flex-col items-center justify-center p-4">
+                <div className="text-center">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-2">Blog not found</h2>
+                    <p className="text-sm text-gray-500 mb-4">This blog may have been deleted.</p>
+                    <button
+                        onClick={handleBack}
+                        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Back to Blogs
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="h-[calc(100vh-100px)] flex flex-col overflow-hidden p-4">
             {/* Card container - tabs and content connected */}
@@ -376,7 +403,7 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                 {/* Content Area - Connected to tabs above */}
                 <div className="flex-1 min-h-0 overflow-hidden">
                     {activeTab === 'blog' && (
-                        <BlogEditor post={post} isGenerating={isGenerating} />
+                        <BlogEditor post={post} isGenerating={false} />
                     )}
 
                     {activeTab === 'short' && (
