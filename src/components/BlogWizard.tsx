@@ -9,12 +9,17 @@
 
 import { useState } from '@wordpress/element';
 import { ArrowRight, ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Steps
 import Step1Topic from './steps/Step1Topic';
 import Step2RoughOutline from './steps/Step2RoughOutline';
 import Step3GeneratedOutline from './steps/Step3GeneratedOutline';
 import { GeneratingOverlay } from './GeneratingOverlay';
+
+// API & Context
+import { generateOutline, generateBlog } from '../services/api';
+import { useProfile } from '../context/ProfileContext';
 
 // ============================================
 // TYPES
@@ -43,6 +48,7 @@ interface BlogWizardProps {
 // ============================================
 
 export default function BlogWizard({ onComplete }: BlogWizardProps) {
+    const { profile } = useProfile();
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
     const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
@@ -80,78 +86,66 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         setData(prev => ({ ...prev, outline }));
     };
 
-    // Generate outline from topic + rough ideas (placeholder for AI)
+    // Generate outline from topic + rough ideas
     const handleGenerateOutline = async (): Promise<void> => {
         setIsGeneratingOutline(true);
 
-        // Simulate AI call - replace with actual API call later
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            const response = await generateOutline(
+                data.topic,
+                data.roughOutline,
+                profile ?? undefined
+            );
 
-        // Mock generated outline based on topic
-        const mockOutline: OutlineSection[] = [
-            {
-                id: 'section-1',
-                title: 'Introduction',
-                purpose: 'Hook the reader and introduce the main topic',
-            },
-            {
-                id: 'section-2',
-                title: 'The Problem',
-                purpose: 'Explain the common challenges and pain points',
-            },
-            {
-                id: 'section-3',
-                title: 'Key Insights',
-                purpose: 'Share the main learnings and discoveries',
-            },
-            {
-                id: 'section-4',
-                title: 'Practical Steps',
-                purpose: 'Provide actionable advice readers can implement',
-            },
-            {
-                id: 'section-5',
-                title: 'Conclusion',
-                purpose: 'Summarize key points and call to action',
-            },
-        ];
+            // Convert API response to our format (add IDs)
+            const outlineWithIds: OutlineSection[] = response.sections.map((section, index) => ({
+                id: `section-${index + 1}`,
+                title: section.title,
+                purpose: section.purpose,
+            }));
 
-        setData(prev => ({ ...prev, outline: mockOutline }));
-        setIsGeneratingOutline(false);
-        setCurrentStep(3);
+            setData(prev => ({ ...prev, outline: outlineWithIds }));
+            setCurrentStep(3);
+        } catch (error) {
+            console.error('Failed to generate outline:', error);
+            toast.error('Failed to generate outline', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsGeneratingOutline(false);
+        }
     };
 
-    // Generate full blog from outline (placeholder for AI)
+    // Generate full blog from outline
     const handleGenerateBlog = async (): Promise<void> => {
         setIsGeneratingBlog(true);
 
-        // Simulate AI call - replace with actual API call later
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        try {
+            // Convert outline back to API format (without IDs)
+            const outlineForApi = data.outline.map(section => ({
+                title: section.title,
+                purpose: section.purpose,
+            }));
 
-        // Mock generated content
-        const mockContent = `<h2>Introduction</h2>
-<p>This is your AI-generated blog post about: ${data.topic}</p>
-<p>The content will be generated based on your outline and ideas.</p>
+            const response = await generateBlog(
+                data.topic,
+                outlineForApi,
+                profile ?? undefined
+            );
 
-<h2>The Problem</h2>
-<p>Here we discuss the challenges...</p>
-
-<h2>Key Insights</h2>
-<p>The main learnings include...</p>
-
-<h2>Practical Steps</h2>
-<p>Here's what you can do...</p>
-
-<h2>Conclusion</h2>
-<p>To wrap up...</p>`;
-
-        setIsGeneratingBlog(false);
-
-        onComplete({
-            ...data,
-            generatedTitle: data.topic,
-            generatedContent: mockContent,
-        });
+            onComplete({
+                ...data,
+                generatedTitle: response.title,
+                generatedContent: response.content,
+            });
+        } catch (error) {
+            console.error('Failed to generate blog:', error);
+            toast.error('Failed to generate blog', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsGeneratingBlog(false);
+        }
     };
 
     // ============================================
