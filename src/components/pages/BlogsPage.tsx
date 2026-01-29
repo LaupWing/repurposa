@@ -40,8 +40,10 @@ function formatTime(dateString: string): string {
 
 function truncateContent(content: string | null, maxLength: number = 100): string {
     if (!content) return 'No content yet...';
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength).trim() + '...';
+    // Strip HTML tags
+    const textContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (textContent.length <= maxLength) return textContent;
+    return textContent.substring(0, maxLength).trim() + '...';
 }
 
 // ============================================
