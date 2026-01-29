@@ -151,11 +151,31 @@ function wbrp_render_app($page, $post_id = null) {
 }
 
 /**
+ * Register custom post type for generated blogs
+ */
+add_action('init', 'wbrp_register_post_types');
+
+function wbrp_register_post_types() {
+    register_post_type('wbrp_blog', [
+        'labels' => [
+            'name' => 'WBRP Blogs',
+            'singular_name' => 'WBRP Blog',
+        ],
+        'public' => false,
+        'show_ui' => false,
+        'show_in_rest' => false,
+        'supports' => ['title', 'editor', 'custom-fields'],
+        'capability_type' => 'post',
+    ]);
+}
+
+/**
  * Register REST API routes for profile
  */
 add_action('rest_api_init', 'wbrp_register_rest_routes');
 
 function wbrp_register_rest_routes() {
+    // Profile routes
     register_rest_route('wbrp/v1', '/profile', [
         [
             'methods' => 'GET',
@@ -174,6 +194,42 @@ function wbrp_register_rest_routes() {
         [
             'methods' => 'DELETE',
             'callback' => 'wbrp_delete_profile',
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ],
+    ]);
+
+    // Blog routes
+    register_rest_route('wbrp/v1', '/blogs', [
+        [
+            'methods' => 'GET',
+            'callback' => 'wbrp_get_blogs',
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ],
+        [
+            'methods' => 'POST',
+            'callback' => 'wbrp_create_blog',
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ],
+    ]);
+
+    // Single blog route
+    register_rest_route('wbrp/v1', '/blogs/(?P<id>\d+)', [
+        [
+            'methods' => 'GET',
+            'callback' => 'wbrp_get_blog',
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ],
+        [
+            'methods' => 'DELETE',
+            'callback' => 'wbrp_delete_blog',
             'permission_callback' => function() {
                 return current_user_can('manage_options');
             },
@@ -218,4 +274,107 @@ function wbrp_save_profile(WP_REST_Request $request) {
     update_option('wbrp_profile', $profile);
 
     return new WP_REST_Response(['profile' => $profile, 'success' => true], 200);
+}
+
+/**
+ * Get all blogs
+ */
+function wbrp_get_blogs() {
+    $posts = get_posts([
+        'post_type' => 'wbrp_blog',
+        'posts_per_page' => -1,
+        'orderby' => 'date',
+        'order' => 'DESC',
+    ]);
+
+    $blogs = array_map(function($post) {
+        return [
+            'id' => $post->ID,
+            'title' => $post->post_title,
+            'content' => $post->post_content,
+            'status' => get_post_meta($post->ID, '_wbrp_status', true) ?: 'draft',
+            'topic' => get_post_meta($post->ID, '_wbrp_topic', true),
+            'outline' => get_post_meta($post->ID, '_wbrp_outline', true),
+            'created_at' => $post->post_date,
+            'updated_at' => $post->post_modified,
+        ];
+    }, $posts);
+
+    return new WP_REST_Response(['blogs' => $blogs], 200);
+}
+
+/**
+ * Get single blog
+ */
+function wbrp_get_blog(WP_REST_Request $request) {
+    $post_id = $request->get_param('id');
+    $post = get_post($post_id);
+
+    if (!$post || $post->post_type !== 'wbrp_blog') {
+        return new WP_REST_Response(['error' => 'Blog not found'], 404);
+    }
+
+    $blog = [
+        'id' => $post->ID,
+        'title' => $post->post_title,
+        'content' => $post->post_content,
+        'status' => get_post_meta($post->ID, '_wbrp_status', true) ?: 'draft',
+        'topic' => get_post_meta($post->ID, '_wbrp_topic', true),
+        'outline' => get_post_meta($post->ID, '_wbrp_outline', true),
+        'created_at' => $post->post_date,
+        'updated_at' => $post->post_modified,
+    ];
+
+    return new WP_REST_Response(['blog' => $blog], 200);
+}
+
+/**
+ * Create a new blog
+ */
+function wbrp_create_blog(WP_REST_Request $request) {
+    $data = $request->get_json_params();
+
+    $post_id = wp_insert_post([
+        'post_type' => 'wbrp_blog',
+        'post_title' => sanitize_text_field($data['title'] ?? ''),
+        'post_content' => wp_kses_post($data['content'] ?? ''),
+        'post_status' => 'publish', // Internal status, actual status in meta
+    ]);
+
+    if (is_wp_error($post_id)) {
+        return new WP_REST_Response(['error' => $post_id->get_error_message()], 500);
+    }
+
+    // Save metadata
+    update_post_meta($post_id, '_wbrp_status', 'draft');
+    update_post_meta($post_id, '_wbrp_topic', sanitize_text_field($data['topic'] ?? ''));
+
+    if (!empty($data['outline'])) {
+        update_post_meta($post_id, '_wbrp_outline', $data['outline']);
+    }
+
+    return new WP_REST_Response([
+        'blog' => [
+            'id' => $post_id,
+            'title' => get_the_title($post_id),
+            'status' => 'draft',
+        ],
+        'success' => true,
+    ], 201);
+}
+
+/**
+ * Delete a blog
+ */
+function wbrp_delete_blog(WP_REST_Request $request) {
+    $post_id = $request->get_param('id');
+    $post = get_post($post_id);
+
+    if (!$post || $post->post_type !== 'wbrp_blog') {
+        return new WP_REST_Response(['error' => 'Blog not found'], 404);
+    }
+
+    wp_delete_post($post_id, true);
+
+    return new WP_REST_Response(['success' => true], 200);
 }

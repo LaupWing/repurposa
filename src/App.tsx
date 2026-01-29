@@ -55,10 +55,32 @@ function AppContent({ initialPage, postId }: AppProps) {
         }
     };
 
-    const handleWizardComplete = (data: WizardData) => {
-        console.log('Wizard completed with data:', data);
-        setBlogData(data);
-        alert('Blog generated! Check console for data.');
+    const handleWizardComplete = async (data: WizardData) => {
+        try {
+            await apiFetch({
+                path: '/wbrp/v1/blogs',
+                method: 'POST',
+                data: {
+                    title: data.generatedTitle,
+                    content: data.generatedContent,
+                    topic: data.topic,
+                    outline: data.outline,
+                },
+            });
+
+            setBlogData(data);
+            toast.success('Blog created!', {
+                description: 'Your blog has been saved as a draft.',
+            });
+
+            // Redirect to blogs page
+            window.location.href = 'admin.php?page=blog-repurpose-blogs';
+        } catch (error) {
+            console.error('Failed to save blog:', error);
+            toast.error('Failed to save blog', {
+                description: 'Please try again.',
+            });
+        }
     };
 
     if (isLoading) {

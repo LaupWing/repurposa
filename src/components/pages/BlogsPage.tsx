@@ -5,8 +5,10 @@
  * Features: search, filter by status, grid of cards.
  */
 
-import { useState } from '@wordpress/element';
-import { FileText, Search, Filter, Plus, Trash2, Pencil, Check, X } from 'lucide-react';
+import { useState, useEffect } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
+import { FileText, Search, Filter, Plus, Trash2, Pencil, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ============================================
 // TYPES
@@ -21,41 +23,6 @@ interface Post {
 }
 
 type StatusFilter = 'all' | 'draft' | 'generating' | 'completed' | 'published';
-
-// ============================================
-// MOCK DATA (will be replaced with API data)
-// ============================================
-
-const mockPosts: Post[] = [
-    {
-        id: 1,
-        title: '5 Mistakes Beginners Make When Trying to Lose Weight',
-        content: 'Most people start their weight loss journey with the best intentions, but quickly fall into common traps that sabotage their progress...',
-        status: 'published',
-        created_at: '2024-01-15T10:30:00Z',
-    },
-    {
-        id: 2,
-        title: 'The Complete Guide to Meal Prep for Busy Professionals',
-        content: 'If you struggle to eat healthy during the week, meal prep is your secret weapon. Here\'s how to get started...',
-        status: 'completed',
-        created_at: '2024-01-14T14:20:00Z',
-    },
-    {
-        id: 3,
-        title: 'Why Most Diets Fail (And What to Do Instead)',
-        content: null,
-        status: 'generating',
-        created_at: '2024-01-13T09:15:00Z',
-    },
-    {
-        id: 4,
-        title: 'How I Lost 30 Pounds in 6 Months Without Giving Up Pizza',
-        content: 'This is my personal story of transformation. It wasn\'t about restriction, it was about finding balance...',
-        status: 'draft',
-        created_at: '2024-01-12T16:45:00Z',
-    },
-];
 
 // ============================================
 // HELPERS
@@ -227,10 +194,30 @@ function FilterDropdown({
 // ============================================
 
 export default function BlogsPage() {
-    const [posts] = useState<Post[]>(mockPosts);
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    // Fetch blogs from API
+    useEffect(() => {
+        const fetchBlogs = async () => {
+            try {
+                const response = await apiFetch<{ blogs: Post[] }>({
+                    path: '/wbrp/v1/blogs',
+                });
+                setPosts(response.blogs);
+            } catch (error) {
+                console.error('Failed to fetch blogs:', error);
+                toast.error('Failed to load blogs');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchBlogs();
+    }, []);
 
     // Filter posts
     const filteredPosts = posts.filter((post) => {
@@ -245,19 +232,39 @@ export default function BlogsPage() {
     });
 
     const handleEdit = (id: number) => {
-        // Navigate to blog view page
         window.location.href = `admin.php?page=blog-repurpose-blogs&post_id=${id}`;
     };
 
-    const handleDelete = (id: number) => {
-        console.log('Delete post:', id);
-        alert(`Delete post ${id} - Coming soon!`);
+    const handleDelete = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this blog?')) return;
+
+        try {
+            await apiFetch({
+                path: `/wbrp/v1/blogs/${id}`,
+                method: 'DELETE',
+            });
+            setPosts(posts.filter(p => p.id !== id));
+            toast.success('Blog deleted');
+        } catch (error) {
+            console.error('Failed to delete blog:', error);
+            toast.error('Failed to delete blog');
+        }
     };
 
     const handleCreateNew = () => {
-        // Navigate to create page
         window.location.href = 'admin.php?page=blog-repurpose';
     };
+
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="max-w-3xl mx-auto mt-6">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+                    <p className="text-gray-500">Loading blogs...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6">
@@ -268,25 +275,30 @@ export default function BlogsPage() {
                         All <em className="font-serif font-normal italic">Blogs</em>
                     </h1>
 
-                    {/* Search */}
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Search blogs..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-56 h-8 pl-3 pr-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    </div>
+                    {/* Only show search/filter when there are posts */}
+                    {posts.length > 0 && (
+                        <>
+                            {/* Search */}
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search blogs..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-56 h-8 pl-3 pr-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                                <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            </div>
 
-                    {/* Filter */}
-                    <FilterDropdown
-                        value={statusFilter}
-                        onChange={setStatusFilter}
-                        isOpen={isFilterOpen}
-                        onToggle={() => setIsFilterOpen(!isFilterOpen)}
-                    />
+                            {/* Filter */}
+                            <FilterDropdown
+                                value={statusFilter}
+                                onChange={setStatusFilter}
+                                isOpen={isFilterOpen}
+                                onToggle={() => setIsFilterOpen(!isFilterOpen)}
+                            />
+                        </>
+                    )}
                 </div>
 
                 {/* New Blog Button */}
@@ -299,24 +311,38 @@ export default function BlogsPage() {
                 </button>
             </div>
 
-            {/* Post Count */}
-            <p className="text-sm text-gray-500 mb-4">
-                {filteredPosts.length} blog {filteredPosts.length === 1 ? 'post' : 'posts'}
-            </p>
-
             {/* Content */}
-            {filteredPosts.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredPosts.map((post) => (
-                        <PostCard
-                            key={post.id}
-                            post={post}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                        />
-                    ))}
+            {posts.length === 0 ? (
+                /* Zero state */
+                <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
+                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-5">
+                        <FileText size={28} className="text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        No blogs yet
+                    </h3>
+                    <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                        Create your first AI-powered blog post. It only takes a few minutes to go from idea to draft.
+                    </p>
                 </div>
-            ) : posts.length > 0 ? (
+            ) : filteredPosts.length > 0 ? (
+                <>
+                    {/* Post Count */}
+                    <p className="text-sm text-gray-500 mb-4">
+                        {filteredPosts.length} blog {filteredPosts.length === 1 ? 'post' : 'posts'}
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredPosts.map((post) => (
+                            <PostCard
+                                key={post.id}
+                                post={post}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                            />
+                        ))}
+                    </div>
+                </>
+            ) : (
                 /* No results from filter */
                 <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
                     <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -331,24 +357,6 @@ export default function BlogsPage() {
                         className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         Clear filters
-                    </button>
-                </div>
-            ) : (
-                /* Empty State */
-                <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <FileText size={24} className="text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No blogs yet</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                        Create your first blog post to get started
-                    </p>
-                    <button
-                        onClick={handleCreateNew}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors mx-auto"
-                    >
-                        <Plus size={16} />
-                        Create Blog
                     </button>
                 </div>
             )}
