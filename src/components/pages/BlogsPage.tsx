@@ -18,6 +18,7 @@ interface Post {
     id: number;
     title: string;
     content: string | null;
+    thumbnail?: string;
     status: 'draft' | 'generating' | 'completed' | 'published';
     created_at: string;
 }
@@ -92,45 +93,62 @@ function PostCard({ post, onEdit, onDelete }: { post: Post; onEdit: (id: number)
     return (
         <div
             onClick={handleCardClick}
-            className="group relative flex flex-col h-full bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer"
+            className="group relative flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all cursor-pointer"
         >
-            {/* Header: Status + Date + Delete */}
-            <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                    <StatusDot status={post.status} />
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                        {formatDate(post.created_at)} at {formatTime(post.created_at)}
-                    </span>
+            {/* Thumbnail */}
+            {post.thumbnail ? (
+                <div className="h-32 bg-gray-100 overflow-hidden">
+                    <img
+                        src={post.thumbnail}
+                        alt=""
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                 </div>
-                <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(post.id); }}
-                    className="p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 rounded-full transition-all"
-                >
-                    <Trash2 size={14} />
-                </button>
-            </div>
+            ) : (
+                <div className="h-32 bg-gray-100 flex items-center justify-center">
+                    <FileText size={32} className="text-gray-300" />
+                </div>
+            )}
 
-            {/* Title */}
-            <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 leading-snug">
-                {post.title || 'Untitled'}
-            </h3>
+            <div className="p-4 flex flex-col flex-1">
+                {/* Header: Status + Date + Delete */}
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                        <StatusDot status={post.status} />
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                            {formatDate(post.created_at)} at {formatTime(post.created_at)}
+                        </span>
+                    </div>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(post.id); }}
+                        className="p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 rounded-full transition-all"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                </div>
 
-            {/* Content Preview */}
-            <p className="text-sm text-gray-500 mb-3 flex-1 line-clamp-2 leading-relaxed">
-                {truncateContent(post.content)}
-            </p>
+                {/* Title */}
+                <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 leading-snug">
+                    {post.title || 'Untitled'}
+                </h3>
 
-            {/* Footer: Status + Edit */}
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                <span className={`text-xs font-medium capitalize ${statusColors[post.status]}`}>
-                    {post.status}
-                </span>
-                <button
-                    onClick={(e) => { e.stopPropagation(); onEdit(post.id); }}
-                    className="p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-all"
-                >
-                    <Pencil size={14} />
-                </button>
+                {/* Content Preview */}
+                <p className="text-sm text-gray-500 mb-3 flex-1 line-clamp-2 leading-relaxed">
+                    {truncateContent(post.content)}
+                </p>
+
+                {/* Footer: Status + Edit */}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <span className={`text-xs font-medium capitalize ${statusColors[post.status]}`}>
+                        {post.status}
+                    </span>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(post.id); }}
+                        className="p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-all"
+                    >
+                        <Pencil size={14} />
+                    </button>
+                </div>
             </div>
         </div>
     );

@@ -108,6 +108,9 @@ function wbrp_add_admin_menu() {
         );
 
         wp_enqueue_style('wp-components');
+
+        // Enqueue WordPress media library
+        wp_enqueue_media();
     });
 }
 
@@ -228,6 +231,13 @@ function wbrp_register_rest_routes() {
             },
         ],
         [
+            'methods' => 'PUT',
+            'callback' => 'wbrp_update_blog',
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ],
+        [
             'methods' => 'DELETE',
             'callback' => 'wbrp_delete_blog',
             'permission_callback' => function() {
@@ -295,6 +305,7 @@ function wbrp_get_blogs() {
             'status' => get_post_meta($post->ID, '_wbrp_status', true) ?: 'draft',
             'topic' => get_post_meta($post->ID, '_wbrp_topic', true),
             'outline' => get_post_meta($post->ID, '_wbrp_outline', true),
+            'thumbnail' => get_post_meta($post->ID, '_wbrp_thumbnail', true),
             'created_at' => $post->post_date,
             'updated_at' => $post->post_modified,
         ];
@@ -321,6 +332,7 @@ function wbrp_get_blog(WP_REST_Request $request) {
         'status' => get_post_meta($post->ID, '_wbrp_status', true) ?: 'draft',
         'topic' => get_post_meta($post->ID, '_wbrp_topic', true),
         'outline' => get_post_meta($post->ID, '_wbrp_outline', true),
+        'thumbnail' => get_post_meta($post->ID, '_wbrp_thumbnail', true),
         'created_at' => $post->post_date,
         'updated_at' => $post->post_modified,
     ];
@@ -361,6 +373,44 @@ function wbrp_create_blog(WP_REST_Request $request) {
         ],
         'success' => true,
     ], 201);
+}
+
+/**
+ * Update a blog
+ */
+function wbrp_update_blog(WP_REST_Request $request) {
+    $post_id = $request->get_param('id');
+    $post = get_post($post_id);
+
+    if (!$post || $post->post_type !== 'wbrp_blog') {
+        return new WP_REST_Response(['error' => 'Blog not found'], 404);
+    }
+
+    $data = $request->get_json_params();
+
+    // Update post
+    $update_args = ['ID' => $post_id];
+
+    if (isset($data['title'])) {
+        $update_args['post_title'] = sanitize_text_field($data['title']);
+    }
+
+    if (isset($data['content'])) {
+        $update_args['post_content'] = wp_kses_post($data['content']);
+    }
+
+    wp_update_post($update_args);
+
+    // Update meta
+    if (isset($data['thumbnail'])) {
+        update_post_meta($post_id, '_wbrp_thumbnail', esc_url_raw($data['thumbnail']));
+    }
+
+    if (isset($data['status'])) {
+        update_post_meta($post_id, '_wbrp_status', sanitize_text_field($data['status']));
+    }
+
+    return new WP_REST_Response(['success' => true], 200);
 }
 
 /**

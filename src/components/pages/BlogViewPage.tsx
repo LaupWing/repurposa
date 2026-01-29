@@ -19,9 +19,12 @@ import {
     Sparkles,
     X,
     Check,
+    Trash2,
+    Loader2,
 } from 'lucide-react';
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
+import ImagePickerModal from '../ImagePickerModal';
 
 // ============================================
 // TYPES
@@ -33,6 +36,7 @@ interface BlogPost {
     id: number;
     title: string;
     content: string;
+    thumbnail?: string;
     status: 'draft' | 'generating' | 'completed' | 'published';
 }
 
@@ -169,17 +173,31 @@ function BlogEditor({
 }) {
     const [title, setTitle] = useState(post.title);
     const [content, setContent] = useState(post.content);
+    const [thumbnail, setThumbnail] = useState(post.thumbnail || '');
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+    const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleAIRequest = (selectedText: string, action: string) => {
         console.log(`AI Action: ${action}`, selectedText);
         alert(`AI ${action} request for: "${selectedText.substring(0, 50)}..."\n\nThis will be connected to your AI backend.`);
     };
 
-    const handleSave = () => {
-        console.log('Saving...', { title, content });
-        // TODO: Connect to WordPress REST API to save draft
-        toast.success('Draft saved successfully');
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await apiFetch({
+                path: `/wbrp/v1/blogs/${post.id}`,
+                method: 'PUT',
+                data: { title, content, thumbnail },
+            });
+            toast.success('Draft saved successfully');
+        } catch (error) {
+            console.error('Failed to save:', error);
+            toast.error('Failed to save');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handlePublish = (publishNow: boolean) => {
@@ -191,6 +209,10 @@ function BlogEditor({
                 : 'Published! Social posts will follow their schedule.'
         );
         setIsPublishModalOpen(false);
+    };
+
+    const handleRemoveThumbnail = () => {
+        setThumbnail('');
     };
 
     if (isGenerating) {
@@ -221,12 +243,12 @@ function BlogEditor({
                 <div className="flex items-center gap-2">
                     <button
                         onClick={handleSave}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                     >
-                        <Save size={16} />
-                        Save
+                        {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                        {isSaving ? 'Saving...' : 'Save'}
                     </button>
-                    <span className="text-sm text-gray-400">Auto-saved</span>
                 </div>
                 <div className="flex items-center gap-3">
                     <span className="text-xs px-2 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-600">
@@ -251,6 +273,54 @@ function BlogEditor({
             {/* Editor Area */}
             <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="mx-auto max-w-3xl px-4 py-8">
+                    {/* Image Picker Modal */}
+                    <ImagePickerModal
+                        isOpen={isImagePickerOpen}
+                        onClose={() => setIsImagePickerOpen(false)}
+                        onSelect={setThumbnail}
+                        currentImage={thumbnail}
+                    />
+
+                    {/* Thumbnail Section */}
+                    <div className="mb-6">
+                        {thumbnail ? (
+                            <div className="relative group rounded-lg overflow-hidden">
+                                <img
+                                    src={thumbnail}
+                                    alt="Blog thumbnail"
+                                    className="w-full h-48 object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                    <button
+                                        onClick={() => setIsImagePickerOpen(true)}
+                                        className="flex items-center gap-2 px-3 py-2 bg-white text-gray-900 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                                    >
+                                        <Image size={16} />
+                                        Change
+                                    </button>
+                                    <button
+                                        onClick={handleRemoveThumbnail}
+                                        className="flex items-center gap-2 px-3 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
+                                    >
+                                        <Trash2 size={16} />
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setIsImagePickerOpen(true)}
+                                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+                            >
+                                <Image size={32} className="mx-auto mb-3 text-gray-400" />
+                                <span className="text-sm font-medium text-gray-600">Choose Image</span>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Select from media library
+                                </p>
+                            </button>
+                        )}
+                    </div>
+
                     {/* Title Input */}
                     <textarea
                         value={title}
