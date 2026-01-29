@@ -101,10 +101,7 @@ export default function Step1Topic({ topic, onTopicChange }: Step1TopicProps) {
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100000] flex items-center justify-center">
                     {/* Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                        onClick={handleCloseModal}
-                    />
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
                     {/* Modal Content */}
                     <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
