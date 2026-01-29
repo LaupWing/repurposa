@@ -6,7 +6,7 @@
  */
 
 // Configuration - TODO: Move to WordPress settings
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://127.0.0.1:8000/api';
 const API_KEY = 'test-key-12345'; // TODO: Get from WordPress settings
 
 // ============================================
