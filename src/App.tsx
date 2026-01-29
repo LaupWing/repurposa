@@ -5,9 +5,10 @@
  * No custom sidebar - uses WordPress native navigation.
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { Toaster, toast } from 'sonner';
+import { ProfileProvider, useProfile } from './context/ProfileContext';
 import BlogWizard from './components/BlogWizard';
 import BlogsPage from './components/pages/BlogsPage';
 import BlogViewPage from './components/pages/BlogViewPage';
@@ -28,29 +29,12 @@ interface AppProps {
 }
 
 // ============================================
-// COMPONENT
+// INNER APP (uses context)
 // ============================================
 
-export default function App({ initialPage, postId }: AppProps) {
+function AppContent({ initialPage, postId }: AppProps) {
+    const { profile, isLoading, setProfile } = useProfile();
     const [blogData, setBlogData] = useState<WizardData | null>(null);
-    const [profile, setProfile] = useState<ProfileData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    // Load profile from WordPress on mount
-    useEffect(() => {
-        apiFetch<{ profile: ProfileData | null }>({ path: '/wbrp/v1/profile' })
-            .then((response) => {
-                if (response.profile) {
-                    setProfile(response.profile);
-                }
-            })
-            .catch((error) => {
-                console.error('Failed to load profile:', error);
-            })
-            .finally(() => {
-                setIsLoading(false);
-            });
-    }, []);
 
     const handleOnboardingComplete = async (data: ProfileData) => {
         try {
@@ -77,12 +61,10 @@ export default function App({ initialPage, postId }: AppProps) {
         alert('Blog generated! Check console for data.');
     };
 
-    // Don't render anything while checking for stored profile
     if (isLoading) {
         return null;
     }
 
-    // Render the appropriate page
     const renderPage = () => {
         switch (initialPage) {
             case 'create':
@@ -101,13 +83,27 @@ export default function App({ initialPage, postId }: AppProps) {
     };
 
     return (
-        <div className="wbrp-app">
+        <>
             <Toaster position="bottom-right" richColors />
             <OnboardingModal
                 isOpen={!profile}
                 onComplete={handleOnboardingComplete}
             />
             {renderPage()}
-        </div>
+        </>
+    );
+}
+
+// ============================================
+// APP WITH PROVIDER
+// ============================================
+
+export default function App(props: AppProps) {
+    return (
+        <ProfileProvider>
+            <div className="wbrp-app">
+                <AppContent {...props} />
+            </div>
+        </ProfileProvider>
     );
 }

@@ -8,15 +8,9 @@
 import { useState, useEffect } from '@wordpress/element';
 import { Popover, Spinner } from '@wordpress/components';
 import { Sparkles, HelpCircle, X } from 'lucide-react';
-
-// ============================================
-// TYPES
-// ============================================
-
-interface TopicSuggestion {
-    title: string;
-    why_it_works: string;
-}
+import { toast } from 'sonner';
+import { generateTopics, type TopicSuggestion } from '../../../services/api';
+import { useProfile } from '../../../context/ProfileContext';
 
 interface TopicGeneratorPopoverProps {
     isOpen: boolean;
@@ -37,6 +31,7 @@ export default function TopicGeneratorPopover({
     initialPrompt = '',
     anchorRef,
 }: TopicGeneratorPopoverProps) {
+    const { profile } = useProfile();
     const [prompt, setPrompt] = useState(initialPrompt);
     const [isGenerating, setIsGenerating] = useState(false);
     const [suggestions, setSuggestions] = useState<TopicSuggestion[]>([]);
@@ -56,33 +51,23 @@ export default function TopicGeneratorPopover({
         }
     }, [isOpen]);
 
-    // Generate topics (placeholder - will connect to API later)
+    // Generate topics from Laravel API
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
 
         setIsGenerating(true);
 
-        // TODO: Replace with actual API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Mock suggestions
-        const mockSuggestions: TopicSuggestion[] = [
-            {
-                title: `5 ${prompt} mistakes that are costing you results`,
-                why_it_works: 'Uses specific number + pain point to create urgency',
-            },
-            {
-                title: `The complete guide to ${prompt} for beginners`,
-                why_it_works: 'Targets beginners who are actively searching for help',
-            },
-            {
-                title: `Why most people fail at ${prompt} (and how to fix it)`,
-                why_it_works: 'Addresses common frustration + promises solution',
-            },
-        ];
-
-        setSuggestions(mockSuggestions);
-        setIsGenerating(false);
+        try {
+            const response = await generateTopics(prompt.trim(), profile ?? undefined);
+            setSuggestions(response.suggestions);
+        } catch (error) {
+            console.error('Failed to generate topics:', error);
+            toast.error('Failed to generate topics', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const handleSelectTopic = (topic: string) => {

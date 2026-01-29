@@ -66,28 +66,48 @@ async function apiRequest<T>(
 // API METHODS
 // ============================================
 
-export async function generateTopics(roughIdea: string): Promise<GenerateTopicsResponse> {
+export interface ProfileContext {
+    business_type?: string;
+    niche?: string;
+    target_audience?: string;
+}
+
+export async function generateTopics(
+    roughIdea: string,
+    profile?: ProfileContext
+): Promise<GenerateTopicsResponse> {
     return apiRequest<GenerateTopicsResponse>('/blog/generate-topics', {
         rough_idea: roughIdea,
+        business_type: profile?.business_type,
+        niche: profile?.niche,
+        target_audience: profile?.target_audience,
     });
 }
 
 export async function generateOutline(
     topic: string,
-    roughOutline?: string[]
+    roughOutline?: string[],
+    profile?: ProfileContext
 ): Promise<GenerateOutlineResponse> {
     return apiRequest<GenerateOutlineResponse>('/blog/generate-outline', {
         topic,
         rough_outline: roughOutline || [],
+        business_type: profile?.business_type,
+        niche: profile?.niche,
+        target_audience: profile?.target_audience,
     });
 }
 
 export async function generateBlog(
     topic: string,
-    outline: OutlineSection[]
+    outline: OutlineSection[],
+    profile?: ProfileContext
 ): Promise<GenerateBlogResponse> {
     return apiRequest<GenerateBlogResponse>('/blog/generate-blog', {
         topic,
         outline,
+        business_type: profile?.business_type,
+        niche: profile?.niche,
+        target_audience: profile?.target_audience,
     });
 }
