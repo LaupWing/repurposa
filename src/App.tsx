@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
 import { Toaster } from 'sonner';
 import BlogWizard from './components/BlogWizard';
 import BlogsPage from './components/pages/BlogsPage';
@@ -27,12 +28,6 @@ interface AppProps {
 }
 
 // ============================================
-// STORAGE KEY
-// ============================================
-
-const PROFILE_STORAGE_KEY = 'wbrp_profile';
-
-// ============================================
 // COMPONENT
 // ============================================
 
@@ -41,22 +36,33 @@ export default function App({ initialPage, postId }: AppProps) {
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Load profile from localStorage on mount
+    // Load profile from WordPress on mount
     useEffect(() => {
-        const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
-        if (stored) {
-            try {
-                setProfile(JSON.parse(stored));
-            } catch (e) {
-                // Invalid stored data, will show onboarding
-            }
-        }
-        setIsLoading(false);
+        apiFetch<{ profile: ProfileData | null }>({ path: '/wbrp/v1/profile' })
+            .then((response) => {
+                if (response.profile) {
+                    setProfile(response.profile);
+                }
+            })
+            .catch((error) => {
+                console.error('Failed to load profile:', error);
+            })
+            .finally(() => {
+                setIsLoading(false);
+            });
     }, []);
 
-    const handleOnboardingComplete = (data: ProfileData) => {
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(data));
-        setProfile(data);
+    const handleOnboardingComplete = async (data: ProfileData) => {
+        try {
+            await apiFetch({
+                path: '/wbrp/v1/profile',
+                method: 'POST',
+                data,
+            });
+            setProfile(data);
+        } catch (error) {
+            console.error('Failed to save profile:', error);
+        }
     };
 
     const handleWizardComplete = (data: WizardData) => {
