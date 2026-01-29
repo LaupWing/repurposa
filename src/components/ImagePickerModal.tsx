@@ -249,61 +249,6 @@ export default function ImagePickerModal({
                                 </div>
                             )}
 
-                            {/* Modify with AI section - shows when image is selected */}
-                            {selectedImage && activeTab === 'library' && (
-                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                    {showModifyInput ? (
-                                        <div className="space-y-3">
-                                            <label className="text-sm font-medium text-gray-700">
-                                                How would you like to modify this image?
-                                            </label>
-                                            <textarea
-                                                value={modifyPrompt}
-                                                onChange={(e) => setModifyPrompt(e.target.value)}
-                                                placeholder="e.g., Make it brighter, add a blue overlay, convert to illustration style..."
-                                                rows={2}
-                                                className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={handleModify}
-                                                    disabled={!modifyPrompt.trim() || isModifying}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                                >
-                                                    {isModifying ? (
-                                                        <>
-                                                            <Loader2 size={16} className="animate-spin" />
-                                                            Modifying...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Wand2 size={16} />
-                                                            Apply Changes
-                                                        </>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setShowModifyInput(false);
-                                                        setModifyPrompt('');
-                                                    }}
-                                                    className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => setShowModifyInput(true)}
-                                            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                                        >
-                                            <Wand2 size={16} />
-                                            Modify with AI
-                                        </button>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     ) : (
                         /* Generate Tab */
@@ -365,21 +310,75 @@ export default function ImagePickerModal({
                     )}
                 </div>
 
+                {/* Modify with AI Input - shows above footer when active */}
+                {showModifyInput && selectedImage && (
+                    <div className="px-6 py-4 border-t border-gray-200 bg-blue-50">
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">
+                            How would you like to modify this image?
+                        </label>
+                        <div className="flex gap-3">
+                            <textarea
+                                value={modifyPrompt}
+                                onChange={(e) => setModifyPrompt(e.target.value)}
+                                placeholder="e.g., Make it brighter, add text overlay, convert to illustration..."
+                                rows={2}
+                                className="flex-1 px-4 py-3 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                autoFocus
+                            />
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={handleModify}
+                                    disabled={!modifyPrompt.trim() || isModifying}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {isModifying ? (
+                                        <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                        <Wand2 size={16} />
+                                    )}
+                                    {isModifying ? 'Applying...' : 'Apply'}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowModifyInput(false);
+                                        setModifyPrompt('');
+                                    }}
+                                    className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-white rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
                     <button
                         onClick={onClose}
                         className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                         Cancel
                     </button>
-                    <button
-                        onClick={handleSelect}
-                        disabled={!selectedImage}
-                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-                    >
-                        Select Image
-                    </button>
+                    <div className="flex items-center gap-3">
+                        {selectedImage && activeTab === 'library' && !showModifyInput && (
+                            <button
+                                onClick={() => setShowModifyInput(true)}
+                                className="flex items-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                            >
+                                <Wand2 size={16} />
+                                Modify with AI
+                            </button>
+                        )}
+                        <button
+                            onClick={handleSelect}
+                            disabled={!selectedImage}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                        >
+                            <Check size={16} />
+                            Select Image
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
