@@ -1,0 +1,93 @@
+/**
+ * API Service
+ *
+ * Handles all API calls to the Laravel backend.
+ * Base URL: http://localhost:8080/api
+ */
+
+// Configuration - TODO: Move to WordPress settings
+const API_BASE_URL = 'http://localhost:8080/api';
+const API_KEY = 'test-key-12345'; // TODO: Get from WordPress settings
+
+// ============================================
+// TYPES
+// ============================================
+
+export interface TopicSuggestion {
+    title: string;
+    why_it_works: string;
+}
+
+export interface GenerateTopicsResponse {
+    suggestions: TopicSuggestion[];
+}
+
+export interface OutlineSection {
+    title: string;
+    purpose: string;
+}
+
+export interface GenerateOutlineResponse {
+    sections: OutlineSection[];
+}
+
+export interface GenerateBlogResponse {
+    title: string;
+    content: string;
+    seo_description?: string;
+}
+
+// ============================================
+// API CLIENT
+// ============================================
+
+async function apiRequest<T>(
+    endpoint: string,
+    data: Record<string, unknown>
+): Promise<T> {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': API_KEY,
+        },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || `API error: ${response.status}`);
+    }
+
+    return response.json();
+}
+
+// ============================================
+// API METHODS
+// ============================================
+
+export async function generateTopics(roughIdea: string): Promise<GenerateTopicsResponse> {
+    return apiRequest<GenerateTopicsResponse>('/blog/generate-topics', {
+        rough_idea: roughIdea,
+    });
+}
+
+export async function generateOutline(
+    topic: string,
+    roughOutline?: string[]
+): Promise<GenerateOutlineResponse> {
+    return apiRequest<GenerateOutlineResponse>('/blog/generate-outline', {
+        topic,
+        rough_outline: roughOutline || [],
+    });
+}
+
+export async function generateBlog(
+    topic: string,
+    outline: OutlineSection[]
+): Promise<GenerateBlogResponse> {
+    return apiRequest<GenerateBlogResponse>('/blog/generate-blog', {
+        topic,
+        outline,
+    });
+}

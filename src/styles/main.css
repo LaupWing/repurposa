@@ -10,6 +10,8 @@
  */
 .wrap .wbrp-app {
   margin: 0;
+  position: relative;
+  min-height: 600px;
 }
 
 /* Neutralize WordPress default margins for headings and paragraphs */
