@@ -65,14 +65,14 @@ function wbrp_add_admin_menu() {
         'wbrp_render_page_schedule'
     );
 
-    // Submenu: Connections
+    // Submenu: Settings
     $connections_hook = add_submenu_page(
         'blog-repurpose',
-        'Connections',
-        'Connections',
+        'Settings',
+        'Settings',
         'manage_options',
-        'blog-repurpose-connections',
-        'wbrp_render_page_connections'
+        'blog-repurpose-settings',
+        'wbrp_render_page_settings'
     );
 
     // Collect all hooks to load scripts on any of our pages
@@ -131,8 +131,8 @@ function wbrp_render_page_schedule() {
     wbrp_render_app('schedule');
 }
 
-function wbrp_render_page_connections() {
-    wbrp_render_app('connections');
+function wbrp_render_page_settings() {
+    wbrp_render_app('settings');
 }
 
 /**
@@ -171,7 +171,22 @@ function wbrp_register_rest_routes() {
                 return current_user_can('manage_options');
             },
         ],
+        [
+            'methods' => 'DELETE',
+            'callback' => 'wbrp_delete_profile',
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ],
     ]);
+}
+
+/**
+ * Delete profile data
+ */
+function wbrp_delete_profile() {
+    delete_option('wbrp_profile');
+    return new WP_REST_Response(['success' => true], 200);
 }
 
 /**
@@ -195,6 +210,7 @@ function wbrp_save_profile(WP_REST_Request $request) {
 
     $profile = [
         'business_type' => sanitize_text_field($data['business_type'] ?? ''),
+        'niche' => sanitize_text_field($data['niche'] ?? ''),
         'target_audience' => sanitize_text_field($data['target_audience'] ?? ''),
         'brand_voice' => sanitize_text_field($data['brand_voice'] ?? 'conversational'),
     ];

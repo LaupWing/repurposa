@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import BlogWizard from './components/BlogWizard';
 import BlogsPage from './components/pages/BlogsPage';
 import BlogViewPage from './components/pages/BlogViewPage';
@@ -20,7 +20,7 @@ import type { WizardData } from './components/BlogWizard';
 // TYPES
 // ============================================
 
-type PageType = 'create' | 'blogs' | 'blog-view' | 'schedule' | 'connections';
+type PageType = 'create' | 'blogs' | 'blog-view' | 'schedule' | 'settings';
 
 interface AppProps {
     initialPage: PageType;
@@ -60,8 +60,14 @@ export default function App({ initialPage, postId }: AppProps) {
                 data,
             });
             setProfile(data);
+            toast.success('Profile saved!', {
+                description: "You're all set! Start creating content.",
+            });
         } catch (error) {
             console.error('Failed to save profile:', error);
+            toast.error('Failed to save profile', {
+                description: 'Please try again.',
+            });
         }
     };
 
@@ -87,7 +93,7 @@ export default function App({ initialPage, postId }: AppProps) {
                 return <BlogViewPage postId={postId} />;
             case 'schedule':
                 return <SchedulePage />;
-            case 'connections':
+            case 'settings':
                 return <ConnectionsPage />;
             default:
                 return <BlogWizard onComplete={handleWizardComplete} />;
