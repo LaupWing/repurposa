@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { X, Search, Check, Loader2, Image as ImageIcon, Sparkles, Wand2, MoveHorizontal, Sun, Palette, PenTool, Eraser, Focus } from 'lucide-react';
+import { X, Search, Check, Loader2, Image as ImageIcon, Sparkles, Wand2, MoveHorizontal, Sun, Palette, PenTool, Eraser, Focus, Maximize2, Minimize2 } from 'lucide-react';
 
 interface MediaItem {
     id: number;
@@ -55,6 +55,7 @@ export default function ImagePickerModal({
     const [showModifyInput, setShowModifyInput] = useState(false);
     const [modifyPrompt, setModifyPrompt] = useState('');
     const [isModifying, setIsModifying] = useState(false);
+    const [isModifyExpanded, setIsModifyExpanded] = useState(false);
 
     // Fetch images from WordPress media library
     useEffect(() => {
@@ -244,7 +245,7 @@ export default function ImagePickerModal({
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-1 px-6 py-3 border-b border-gray-100 bg-gray-50">
+                <div className={`flex gap-1 px-6 py-3 border-b border-gray-100 bg-gray-50 ${isModifyExpanded ? 'hidden' : ''}`}>
                     <button
                         onClick={() => setActiveTab('library')}
                         className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -270,7 +271,7 @@ export default function ImagePickerModal({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto">
+                <div className={`flex-1 overflow-y-auto ${isModifyExpanded ? 'hidden' : ''}`}>
                     {activeTab === 'library' ? (
                         <div className="p-6">
                             {/* Search */}
@@ -396,20 +397,29 @@ export default function ImagePickerModal({
 
                 {/* Modify with AI Input - shows above footer when active */}
                 {showModifyInput && selectedImage && (
-                    <div className="px-6 py-4 border-t border-gray-200 bg-blue-50 overflow-visible">
+                    <div className={`relative px-6 py-4 border-t border-gray-200 bg-blue-50 overflow-visible ${isModifyExpanded ? 'flex-1' : ''}`}>
+                        {/* Expand/Collapse button */}
+                        <button
+                            onClick={() => setIsModifyExpanded(!isModifyExpanded)}
+                            className="absolute top-3 right-3 p-2 text-gray-500 hover:text-gray-700 hover:bg-white rounded-lg transition-colors"
+                            title={isModifyExpanded ? 'Collapse' : 'Expand'}
+                        >
+                            {isModifyExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                        </button>
+
                         <label className="text-sm font-medium text-gray-700 mb-2 block">
                             How would you like to modify this image?
                         </label>
-                        <div className="flex gap-3 mb-4">
+                        <div className={`flex gap-3 mb-4 ${isModifyExpanded ? 'flex-col' : ''}`}>
                             <textarea
                                 value={modifyPrompt}
                                 onChange={(e) => setModifyPrompt(e.target.value)}
                                 placeholder="e.g., Make it brighter, add text overlay, convert to illustration..."
-                                rows={2}
+                                rows={isModifyExpanded ? 6 : 2}
                                 className="flex-1 px-4 py-3 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                                 autoFocus
                             />
-                            <div className="flex flex-col gap-2">
+                            <div className={`flex gap-2 ${isModifyExpanded ? 'justify-end' : 'flex-col'}`}>
                                 <button
                                     onClick={handleModify}
                                     disabled={!modifyPrompt.trim() || isModifying}
@@ -426,6 +436,7 @@ export default function ImagePickerModal({
                                     onClick={() => {
                                         setShowModifyInput(false);
                                         setModifyPrompt('');
+                                        setIsModifyExpanded(false);
                                     }}
                                     className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-white rounded-lg transition-colors"
                                 >
@@ -435,12 +446,12 @@ export default function ImagePickerModal({
                         </div>
 
                         {/* Preset modifications */}
-                        <div className="flex gap-3 overflow-x-auto pb-2">
+                        <div className={`flex gap-3 overflow-x-auto pb-2 ${isModifyExpanded ? 'flex-wrap overflow-visible' : ''}`}>
                             {presetModifications.map((preset) => (
                                 <div key={preset.id} className="relative group shrink-0">
                                     <button
                                         onClick={() => setModifyPrompt(preset.prompt)}
-                                        className="w-20 h-20 rounded-lg bg-white border-2 border-gray-200 hover:border-blue-400 transition-colors overflow-hidden relative"
+                                        className={`rounded-lg bg-white border-2 border-gray-200 hover:border-blue-400 transition-colors overflow-hidden relative ${isModifyExpanded ? 'w-24 h-24' : 'w-20 h-20'}`}
                                     >
                                         {/* Preview image */}
                                         <img
