@@ -411,9 +411,24 @@ export default function ImagePickerModal({
                             {isModifyExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                         </button>
 
-                        <label className="text-sm font-medium text-gray-700 mb-3 block">
-                            How would you like to modify this image?
-                        </label>
+                        <div className="flex items-center gap-2 mb-3">
+                            <label className="text-sm font-medium text-gray-700">
+                                How would you like to modify this image?
+                            </label>
+                            <div className="relative group">
+                                <button
+                                    type="button"
+                                    onClick={() => setModifyPrompt(prev => prev + (prev ? ' ' : '') + '{blog_title}')}
+                                    className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100 transition-colors font-mono"
+                                >
+                                    {'{blog_title}'}
+                                </button>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[100001]">
+                                    This will inject the title of your blog when creating or modifying the image
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                                </div>
+                            </div>
+                        </div>
 
                         {/* Thumbnail + Textarea row */}
                         <div className={`flex gap-4 mb-4 ${isModifyExpanded ? 'flex-1' : ''}`}>
@@ -435,7 +450,7 @@ export default function ImagePickerModal({
                                         value={modifyPrompt}
                                         onChange={(e) => setModifyPrompt(e.target.value)}
                                         placeholder="e.g., Make it brighter, add text overlay, convert to illustration..."
-                                        rows={isModifyExpanded ? 6 : 2}
+                                        rows={isModifyExpanded ? 10 : 2}
                                         className={`w-full px-4 py-3 pr-10 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${isModifyExpanded ? 'flex-1' : ''}`}
                                         autoFocus
                                     />
