@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { X, Search, Check, Loader2, Image as ImageIcon, Sparkles, Wand2 } from 'lucide-react';
+import { X, Search, Check, Loader2, Image as ImageIcon, Sparkles, Wand2, MoveHorizontal, Sun, Palette, PenTool, Eraser, Focus } from 'lucide-react';
 
 interface MediaItem {
     id: number;
@@ -135,6 +135,87 @@ export default function ImagePickerModal({
                image.source_url;
     };
 
+    // Preset AI modifications with preview images
+    const presetModifications = [
+        {
+            id: 'expand',
+            icon: MoveHorizontal,
+            label: 'Expand',
+            tooltip: 'Make the image wider by extending the sides with AI',
+            prompt: 'Expand this image horizontally, extend the background naturally on both sides',
+            preview: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100&h=100&fit=crop',
+        },
+        {
+            id: 'brighten',
+            icon: Sun,
+            label: 'Brighten',
+            tooltip: 'Increase brightness and make colors more vibrant',
+            prompt: 'Make this image brighter and more vibrant, enhance the colors',
+            preview: 'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=100&h=100&fit=crop',
+        },
+        {
+            id: 'anime',
+            icon: Sparkles,
+            label: 'Anime',
+            tooltip: 'Convert to anime art style',
+            prompt: 'Convert this image to anime art style, vibrant colors, clean lines, Japanese animation aesthetic',
+            preview: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&h=100&fit=crop',
+        },
+        {
+            id: 'cartoon',
+            icon: PenTool,
+            label: 'Cartoon',
+            tooltip: 'Convert to cartoon style',
+            prompt: 'Convert this image to a fun cartoon style, bold outlines, simplified shapes, bright colors',
+            preview: 'https://images.unsplash.com/photo-1569017388730-020b5f80a004?w=100&h=100&fit=crop',
+        },
+        {
+            id: 'comic',
+            icon: Palette,
+            label: 'Comic',
+            tooltip: 'Convert to comic book style',
+            prompt: 'Convert this image to comic book style, halftone dots, bold ink lines, dramatic shading, pop art aesthetic',
+            preview: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=100&h=100&fit=crop',
+        },
+        {
+            id: 'retro-70s',
+            icon: Sun,
+            label: '70s Retro',
+            tooltip: 'Convert to 70s retro cartoon style',
+            prompt: 'Convert this image to 1970s retro cartoon style, groovy colors, warm oranges and browns, vintage aesthetic, psychedelic vibes',
+            preview: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=100&h=100&fit=crop',
+        },
+        {
+            id: 'pixel-art',
+            icon: Sparkles,
+            label: 'Pixel Art',
+            tooltip: 'Convert to retro pixel art style',
+            prompt: 'Convert this image to pixel art style, 16-bit retro gaming aesthetic, limited color palette, crisp pixels',
+            preview: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100&h=100&fit=crop',
+        },
+        {
+            id: 'remove-bg',
+            icon: Eraser,
+            label: 'Remove BG',
+            tooltip: 'Remove the background from the image',
+            prompt: 'Remove the background and make it transparent',
+            preview: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
+        },
+        {
+            id: 'blur-bg',
+            icon: Focus,
+            label: 'Blur BG',
+            tooltip: 'Blur the background to focus on the subject',
+            prompt: 'Blur the background while keeping the main subject sharp and in focus',
+            preview: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop',
+        },
+    ];
+
+    const handlePresetClick = (prompt: string) => {
+        setModifyPrompt(prompt);
+        setShowModifyInput(true);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -143,7 +224,7 @@ export default function ImagePickerModal({
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
             {/* Modal */}
-            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[80vh] flex flex-col overflow-visible">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                     <div>
@@ -218,35 +299,38 @@ export default function ImagePickerModal({
                                     </p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-4 gap-3">
-                                    {filteredImages.map((image) => (
-                                        <button
-                                            key={image.id}
-                                            onClick={() => {
-                                                setSelectedImage(image.source_url);
-                                                setShowModifyInput(false);
-                                            }}
-                                            className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                                                selectedImage === image.source_url
-                                                    ? 'border-blue-500 ring-2 ring-blue-500/30'
-                                                    : 'border-transparent hover:border-gray-300'
-                                            }`}
-                                        >
-                                            <img
-                                                src={getThumbnailUrl(image)}
-                                                alt={image.alt_text || image.title.rendered}
-                                                className="w-full h-full object-cover"
-                                            />
-                                            {selectedImage === image.source_url && (
-                                                <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                                                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                                                        <Check size={18} className="text-white" />
+                                <>
+                                    <div className="grid grid-cols-4 gap-3">
+                                        {filteredImages.map((image) => (
+                                            <button
+                                                key={image.id}
+                                                onClick={() => {
+                                                    setSelectedImage(image.source_url);
+                                                    setShowModifyInput(false);
+                                                }}
+                                                className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                                                    selectedImage === image.source_url
+                                                        ? 'border-blue-500 ring-2 ring-blue-500/30'
+                                                        : 'border-transparent hover:border-gray-300'
+                                                }`}
+                                            >
+                                                <img
+                                                    src={getThumbnailUrl(image)}
+                                                    alt={image.alt_text || image.title.rendered}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                {selectedImage === image.source_url && (
+                                                    <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                                                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                                            <Check size={18} className="text-white" />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                </>
                             )}
 
                         </div>
@@ -312,17 +396,17 @@ export default function ImagePickerModal({
 
                 {/* Modify with AI Input - shows above footer when active */}
                 {showModifyInput && selectedImage && (
-                    <div className="px-6 py-4 border-t border-gray-200 bg-blue-50">
+                    <div className="px-6 py-4 border-t border-gray-200 bg-blue-50 overflow-visible">
                         <label className="text-sm font-medium text-gray-700 mb-2 block">
                             How would you like to modify this image?
                         </label>
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 mb-4">
                             <textarea
                                 value={modifyPrompt}
                                 onChange={(e) => setModifyPrompt(e.target.value)}
                                 placeholder="e.g., Make it brighter, add text overlay, convert to illustration..."
                                 rows={2}
-                                className="flex-1 px-4 py-3 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="flex-1 px-4 py-3 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                                 autoFocus
                             />
                             <div className="flex flex-col gap-2">
@@ -348,6 +432,35 @@ export default function ImagePickerModal({
                                     Cancel
                                 </button>
                             </div>
+                        </div>
+
+                        {/* Preset modifications */}
+                        <div className="flex gap-3 overflow-x-auto pb-2">
+                            {presetModifications.map((preset) => (
+                                <div key={preset.id} className="relative group shrink-0">
+                                    <button
+                                        onClick={() => setModifyPrompt(preset.prompt)}
+                                        className="w-20 h-20 rounded-lg bg-white border-2 border-gray-200 hover:border-blue-400 transition-colors overflow-hidden relative"
+                                    >
+                                        {/* Preview image */}
+                                        <img
+                                            src={preset.preview}
+                                            alt={preset.label}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        {/* Overlay with label */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col items-center justify-end p-1.5">
+                                            <preset.icon size={14} className="text-white mb-0.5" />
+                                            <span className="text-[10px] font-medium text-white">{preset.label}</span>
+                                        </div>
+                                    </button>
+                                    {/* Tooltip - above */}
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[100001]">
+                                        {preset.tooltip}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
