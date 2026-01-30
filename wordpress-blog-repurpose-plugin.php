@@ -170,6 +170,18 @@ function wbrp_register_post_types() {
         'supports' => ['title', 'editor', 'custom-fields'],
         'capability_type' => 'post',
     ]);
+
+    register_post_type('wbrp_tweet', [
+        'labels' => [
+            'name' => 'WBRP Tweets',
+            'singular_name' => 'WBRP Tweet',
+        ],
+        'public' => false,
+        'show_ui' => false,
+        'show_in_rest' => false,
+        'supports' => ['editor', 'custom-fields'],
+        'capability_type' => 'post',
+    ]);
 }
 
 /**
@@ -241,6 +253,31 @@ function wbrp_register_rest_routes() {
             'methods' => 'DELETE',
             'callback' => 'wbrp_delete_blog',
             'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ],
+    ]);
+
+    // Tweet routes (by blog)
+    register_rest_route('wbrp/v1', '/blogs/(?P<blog_id>\d+)/tweets', [
+        [
+            'methods' => 'GET',
+            'callback' => 'wbrp_get_tweets',
+            'permission_callback' => function () {
+                return current_user_can('manage_options');
+            },
+        ],
+        [
+            'methods' => 'POST',
+            'callback' => 'wbrp_save_tweets',
+            'permission_callback' => function () {
+                return current_user_can('manage_options');
+            },
+        ],
+        [
+            'methods' => 'DELETE',
+            'callback' => 'wbrp_delete_tweets',
+            'permission_callback' => function () {
                 return current_user_can('manage_options');
             },
         ],
@@ -425,6 +462,115 @@ function wbrp_delete_blog(WP_REST_Request $request) {
     }
 
     wp_delete_post($post_id, true);
+
+    return new WP_REST_Response(['success' => true], 200);
+}
+
+/**
+ * Get tweets for a blog
+ */
+function wbrp_get_tweets(WP_REST_Request $request) {
+    $blog_id = $request->get_param('blog_id');
+    $blog = get_post($blog_id);
+
+    if (!$blog || $blog->post_type !== 'wbrp_blog') {
+        return new WP_REST_Response(['error' => 'Blog not found'], 404);
+    }
+
+    $posts = get_posts([
+        'post_type' => 'wbrp_tweet',
+        'post_parent' => $blog_id,
+        'posts_per_page' => -1,
+        'orderby' => 'date',
+        'order' => 'ASC',
+    ]);
+
+    $tweets = array_map(function ($post) {
+        return [
+            'id' => $post->ID,
+            'content' => $post->post_content,
+            'inspiration_id' => get_post_meta($post->ID, '_wbrp_inspiration_id', true),
+            'inspiration_content' => get_post_meta($post->ID, '_wbrp_inspiration_content', true),
+            'inspiration_hook' => get_post_meta($post->ID, '_wbrp_inspiration_hook', true),
+            'emotions' => json_decode(get_post_meta($post->ID, '_wbrp_emotions', true), true) ?: [],
+            'structure' => get_post_meta($post->ID, '_wbrp_structure', true),
+            'why_it_works' => get_post_meta($post->ID, '_wbrp_why_it_works', true),
+        ];
+    }, $posts);
+
+    return new WP_REST_Response(['tweets' => $tweets], 200);
+}
+
+/**
+ * Save tweets for a blog (replaces existing)
+ */
+function wbrp_save_tweets(WP_REST_Request $request) {
+    $blog_id = $request->get_param('blog_id');
+    $blog = get_post($blog_id);
+
+    if (!$blog || $blog->post_type !== 'wbrp_blog') {
+        return new WP_REST_Response(['error' => 'Blog not found'], 404);
+    }
+
+    $data = $request->get_json_params();
+    $tweets = $data['tweets'] ?? [];
+
+    // Delete existing tweets for this blog
+    $existing = get_posts([
+        'post_type' => 'wbrp_tweet',
+        'post_parent' => $blog_id,
+        'posts_per_page' => -1,
+        'fields' => 'ids',
+    ]);
+    foreach ($existing as $tweet_id) {
+        wp_delete_post($tweet_id, true);
+    }
+
+    // Insert new tweets
+    $saved = [];
+    foreach ($tweets as $tweet) {
+        $post_id = wp_insert_post([
+            'post_type' => 'wbrp_tweet',
+            'post_content' => wp_kses_post($tweet['content'] ?? ''),
+            'post_parent' => $blog_id,
+            'post_status' => 'publish',
+        ]);
+
+        if (!is_wp_error($post_id)) {
+            update_post_meta($post_id, '_wbrp_inspiration_id', intval($tweet['inspiration_id'] ?? 0));
+            update_post_meta($post_id, '_wbrp_inspiration_content', wp_kses_post($tweet['inspiration_content'] ?? ''));
+            update_post_meta($post_id, '_wbrp_inspiration_hook', sanitize_text_field($tweet['inspiration_hook'] ?? ''));
+            update_post_meta($post_id, '_wbrp_emotions', wp_json_encode($tweet['emotions'] ?? []));
+            update_post_meta($post_id, '_wbrp_structure', sanitize_text_field($tweet['structure'] ?? ''));
+            update_post_meta($post_id, '_wbrp_why_it_works', sanitize_text_field($tweet['why_it_works'] ?? ''));
+
+            $saved[] = ['id' => $post_id];
+        }
+    }
+
+    return new WP_REST_Response(['saved' => $saved, 'success' => true], 201);
+}
+
+/**
+ * Delete all tweets for a blog
+ */
+function wbrp_delete_tweets(WP_REST_Request $request) {
+    $blog_id = $request->get_param('blog_id');
+    $blog = get_post($blog_id);
+
+    if (!$blog || $blog->post_type !== 'wbrp_blog') {
+        return new WP_REST_Response(['error' => 'Blog not found'], 404);
+    }
+
+    $existing = get_posts([
+        'post_type' => 'wbrp_tweet',
+        'post_parent' => $blog_id,
+        'posts_per_page' => -1,
+        'fields' => 'ids',
+    ]);
+    foreach ($existing as $tweet_id) {
+        wp_delete_post($tweet_id, true);
+    }
 
     return new WP_REST_Response(['success' => true], 200);
 }

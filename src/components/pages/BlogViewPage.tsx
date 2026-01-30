@@ -477,15 +477,15 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                     )}
 
                     {activeTab === 'short' && (
-                        <RepurposePanel initialTab="short" blogContent={post.content} />
+                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} />
                     )}
 
                     {activeTab === 'threads' && (
-                        <RepurposePanel initialTab="threads" blogContent={post.content} />
+                        <RepurposePanel initialTab="threads" blogContent={post.content} blogId={post.id} />
                     )}
 
                     {activeTab === 'visuals' && (
-                        <RepurposePanel initialTab="visuals" blogContent={post.content} />
+                        <RepurposePanel initialTab="visuals" blogContent={post.content} blogId={post.id} />
                     )}
 
                     {activeTab === 'video' && (

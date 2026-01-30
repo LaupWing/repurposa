@@ -4,7 +4,8 @@
  * Panel for generating tweets, threads, visuals from blog content.
  */
 
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
 import {
     Share2,
     FileText,
@@ -40,6 +41,17 @@ interface TweetPattern {
 interface Thread {
     id: string;
     tweets: { id: string; content: string; characterCount: number }[];
+}
+
+interface SavedTweet {
+    id: number;
+    content: string;
+    inspiration_id: string;
+    inspiration_content: string;
+    inspiration_hook: string;
+    emotions: string[];
+    structure: string;
+    why_it_works: string;
 }
 
 // ============================================
@@ -280,11 +292,41 @@ function EmptyState({
 interface RepurposePanelProps {
     initialTab?: TabType;
     blogContent?: string;
+    blogId?: number;
 }
 
-export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposePanelProps) {
+export function RepurposePanel({ initialTab = 'short', blogContent, blogId }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [tweets, setTweets] = useState<TweetPattern[]>([]);
+
+    // Load saved tweets on mount
+    useEffect(() => {
+        if (!blogId) return;
+
+        const loadTweets = async () => {
+            setIsLoading(true);
+            try {
+                const response = await apiFetch<{ tweets: SavedTweet[] }>({
+                    path: `/wbrp/v1/blogs/${blogId}/tweets`,
+                });
+                const patterns: TweetPattern[] = response.tweets.map((t) => ({
+                    id: t.id,
+                    content: t.content,
+                    emotions: t.emotions,
+                    structure: t.structure,
+                    why_it_works: t.why_it_works,
+                }));
+                setTweets(patterns);
+            } catch (error) {
+                console.error('Failed to load tweets:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadTweets();
+    }, [blogId]);
 
     const handleGenerateTweets = async () => {
         if (!blogContent) {
@@ -306,6 +348,25 @@ export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposeP
             }));
 
             setTweets(patterns);
+
+            // Save to WordPress
+            if (blogId) {
+                await apiFetch({
+                    path: `/wbrp/v1/blogs/${blogId}/tweets`,
+                    method: 'POST',
+                    data: {
+                        tweets: response.tweets.map((tweet) => ({
+                            content: tweet.generated_tweet,
+                            inspiration_id: tweet.inspiration.id,
+                            inspiration_content: tweet.inspiration.content,
+                            inspiration_hook: tweet.inspiration.hook,
+                            emotions: tweet.inspiration.emotions,
+                            structure: tweet.inspiration.structure,
+                            why_it_works: tweet.inspiration.why_it_works,
+                        })),
+                    },
+                });
+            }
         } catch (error) {
             console.error('Failed to generate tweets:', error);
             toast.error('Failed to generate tweets', {
