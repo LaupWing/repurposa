@@ -565,6 +565,7 @@ function wbrp_get_tweets(WP_REST_Request $request) {
             'emotions' => json_decode(get_post_meta($post->ID, '_wbrp_emotions', true), true) ?: [],
             'structure' => get_post_meta($post->ID, '_wbrp_structure', true),
             'why_it_works' => get_post_meta($post->ID, '_wbrp_why_it_works', true),
+            'cta_tweet' => get_post_meta($post->ID, '_wbrp_cta_tweet', true) ?: null,
         ];
     }, $posts);
 
@@ -613,6 +614,10 @@ function wbrp_save_tweets(WP_REST_Request $request) {
             update_post_meta($post_id, '_wbrp_emotions', wp_json_encode($tweet['emotions'] ?? []));
             update_post_meta($post_id, '_wbrp_structure', sanitize_text_field($tweet['structure'] ?? ''));
             update_post_meta($post_id, '_wbrp_why_it_works', sanitize_text_field($tweet['why_it_works'] ?? ''));
+
+            if (!empty($tweet['cta_tweet'])) {
+                update_post_meta($post_id, '_wbrp_cta_tweet', wp_kses_post($tweet['cta_tweet']));
+            }
 
             $saved[] = ['id' => $post_id];
         }

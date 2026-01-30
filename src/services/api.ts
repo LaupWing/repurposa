@@ -118,6 +118,7 @@ export async function generateBlog(
 
 export interface GeneratedTweet {
     generated_tweet: string;
+    cta_tweet?: string;
     inspiration: {
         id: number;
         hook: string;

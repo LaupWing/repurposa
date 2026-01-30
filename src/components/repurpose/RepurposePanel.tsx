@@ -38,6 +38,7 @@ interface TweetPattern {
     emotions: string[];
     structure: string;
     why_it_works: string;
+    cta_tweet?: string;
 }
 
 interface Thread {
@@ -54,11 +55,38 @@ interface SavedTweet {
     emotions: string[];
     structure: string;
     why_it_works: string;
+    cta_tweet?: string | null;
 }
 
 // ============================================
-// SAMPLE DATA (threads - placeholder until API)
+// SAMPLE DATA (placeholder until API)
 // ============================================
+
+const sampleTweets: TweetPattern[] = [
+    {
+        id: 1,
+        content: "\"Must be nice.\"\nYes.\nIt is.\nIt would be nice for you too if you stopped waiting for perfection and launched your MVP fast. In 2026, speed is survival.",
+        emotions: ['Confident', 'Unapologetic'],
+        structure: 'Commentary on objection + Harsh truth with hook',
+        why_it_works: 'Takes a common jealous phrase and flips it. The quote hook pulls you in, the punchline hits hard.',
+        cta_tweet: "There's a lot more at stake when it comes to launching quickly and effectively. Dive into the full insights here: https://example.com/blog-post",
+    },
+    {
+        id: 3,
+        content: "Nobody:\n\"I want to take six months to build my MVP and watch competitors steal my customers.\"\n90% of entrepreneurs:\nDo exactly that.\nWake up.",
+        emotions: ['Frustrated', 'Provocative', 'Urgent'],
+        structure: 'Interesting observation + Harsh truth + Meme format',
+        why_it_works: '"Nobody:" meme format creates instant pattern recognition. Absurdity technique — nobody would SAY this, but people DO it.',
+        cta_tweet: "If you think speed doesn't matter, you're missing the bigger picture. Discover why launching fast is your only option: https://example.com/blog-post",
+    },
+    {
+        id: 20,
+        content: "Hard pill to swallow:\nIf your MVP takes six months, you've already lost. In a world where speed is the only advantage, waiting for perfection is a luxury you can't afford.",
+        emotions: ['Honest', 'Motivational', 'Provocative'],
+        structure: 'Harsh truth with hook + Unique perspective on common problem',
+        why_it_works: '"Hard pill to swallow:" hook signals uncomfortable truth, creates curiosity. Puts responsibility on the reader.',
+    },
+];
 
 const sampleThreads: Thread[] = [];
 
@@ -83,6 +111,7 @@ const emotionColors: Record<string, string> = {
 
 function TweetCard({ pattern, index }: { pattern: TweetPattern; index: number }) {
     const [copied, setCopied] = useState(false);
+    const [copiedCta, setCopiedCta] = useState(false);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(pattern.content);
@@ -90,71 +119,124 @@ function TweetCard({ pattern, index }: { pattern: TweetPattern; index: number })
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleCopyCta = () => {
+        if (!pattern.cta_tweet) return;
+        navigator.clipboard.writeText(pattern.cta_tweet);
+        setCopiedCta(true);
+        setTimeout(() => setCopiedCta(false), 2000);
+    };
+
     return (
-        <div className="group relative mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
-            {/* Pattern number */}
-            <div className="absolute -top-2 -left-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white shadow-sm">
-                {index + 1}
-            </div>
-
-            {/* Emotions */}
-            <div className="mt-1 mb-3 flex flex-wrap items-center gap-1.5">
-                {pattern.emotions.map((emotion) => (
-                    <span
-                        key={emotion}
-                        className={`rounded-full border px-2 py-0.5 text-[10px] ${
-                            emotionColors[emotion] || 'border-gray-200 bg-gray-100 text-gray-600'
-                        }`}
-                    >
-                        {emotion}
-                    </span>
-                ))}
-            </div>
-
-            {/* Content */}
-            <div className="mb-3">
-                {pattern.content.split('\n').map((line, i) => (
-                    <p key={i} className="text-sm leading-relaxed text-gray-800">
-                        {line || <span className="block h-2" />}
-                    </p>
-                ))}
-            </div>
-
-            {/* Footer */}
-            <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                {/* Left - Info tooltips */}
-                <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
-                        <Lightbulb size={14} />
-                        Why it works
-                    </button>
-                    <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
-                        <Layout size={14} />
-                        Structure
-                    </button>
+        <div className="group relative mb-4">
+            {/* Main Tweet */}
+            <div className="relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
+                {/* Pattern number */}
+                <div className="absolute -top-2 -left-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white shadow-sm">
+                    {index + 1}
                 </div>
 
-                {/* Right - Actions */}
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={handleCopy}
-                        className={`h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 ${
-                            copied ? 'text-green-500' : 'text-gray-400'
-                        }`}
-                    >
-                        {copied ? <Check size={14} /> : <Copy size={14} />}
-                    </button>
-                    <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                        <Pencil size={14} />
-                    </button>
-                    <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                        <ImagePlus size={14} />
-                    </button>
-                    <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                        <Calendar size={14} />
-                    </button>
+                {/* Emotions */}
+                <div className="mt-1 mb-3 flex flex-wrap items-center gap-1.5">
+                    {pattern.emotions.map((emotion) => (
+                        <span
+                            key={emotion}
+                            className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                                emotionColors[emotion] || 'border-gray-200 bg-gray-100 text-gray-600'
+                            }`}
+                        >
+                            {emotion}
+                        </span>
+                    ))}
+                </div>
+
+                {/* Content */}
+                <div className="mb-3">
+                    {pattern.content.split('\n').map((line, i) => (
+                        <p key={i} className="text-sm leading-relaxed text-gray-800">
+                            {line || <span className="block h-2" />}
+                        </p>
+                    ))}
+                </div>
+
+                {/* Footer */}
+                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                    {/* Left - Info tooltips */}
+                    <div className="flex items-center gap-3">
+                        <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
+                            <Lightbulb size={14} />
+                            Why it works
+                        </button>
+                        <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
+                            <Layout size={14} />
+                            Structure
+                        </button>
+                    </div>
+
+                    {/* Right - Actions */}
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={handleCopy}
+                            className={`h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 ${
+                                copied ? 'text-green-500' : 'text-gray-400'
+                            }`}
+                        >
+                            {copied ? <Check size={14} /> : <Copy size={14} />}
+                        </button>
+                        <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                            <Pencil size={14} />
+                        </button>
+                        <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                            <ImagePlus size={14} />
+                        </button>
+                        <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                            <Calendar size={14} />
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            {/* CTA Reply Tweet */}
+            {pattern.cta_tweet && (
+                <div className="relative ml-6 mt-0">
+                    {/* Thread connector line */}
+                    <div className="absolute top-0 left-4 h-4 w-0.5 bg-gray-200" />
+
+                    <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div className="mb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                                <Share2 size={12} className="text-gray-400" />
+                                <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                                    Reply · CTA
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="mb-3">
+                            <p className="text-sm leading-relaxed text-gray-800">
+                                {pattern.cta_tweet}
+                            </p>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="mt-3 flex items-center justify-end border-t border-gray-100 pt-3">
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={handleCopyCta}
+                                    className={`h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 ${
+                                        copiedCta ? 'text-green-500' : 'text-gray-400'
+                                    }`}
+                                >
+                                    {copiedCta ? <Check size={14} /> : <Copy size={14} />}
+                                </button>
+                                <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                                    <Pencil size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -401,36 +483,37 @@ interface RepurposePanelProps {
 export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [tweets, setTweets] = useState<TweetPattern[]>([]);
+    // TODO: Replace sampleTweets with [] once done testing UI
+    const [tweets, setTweets] = useState<TweetPattern[]>(sampleTweets);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+    // TODO: Re-enable once done testing UI
     // Load saved tweets on mount
-    useEffect(() => {
-        if (!blogId) return;
-
-        const loadTweets = async () => {
-            setIsLoading(true);
-            try {
-                const response = await apiFetch<{ tweets: SavedTweet[] }>({
-                    path: `/wbrp/v1/blogs/${blogId}/tweets`,
-                });
-                const patterns: TweetPattern[] = response.tweets.map((t) => ({
-                    id: t.id,
-                    content: t.content,
-                    emotions: t.emotions,
-                    structure: t.structure,
-                    why_it_works: t.why_it_works,
-                }));
-                setTweets(patterns);
-            } catch (error) {
-                console.error('Failed to load tweets:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadTweets();
-    }, [blogId]);
+    // useEffect(() => {
+    //     if (!blogId) return;
+    //     const loadTweets = async () => {
+    //         setIsLoading(true);
+    //         try {
+    //             const response = await apiFetch<{ tweets: SavedTweet[] }>({
+    //                 path: `/wbrp/v1/blogs/${blogId}/tweets`,
+    //             });
+    //             const patterns: TweetPattern[] = response.tweets.map((t) => ({
+    //                 id: t.id,
+    //                 content: t.content,
+    //                 emotions: t.emotions,
+    //                 structure: t.structure,
+    //                 why_it_works: t.why_it_works,
+    //                 cta_tweet: t.cta_tweet || undefined,
+    //             }));
+    //             setTweets(patterns);
+    //         } catch (error) {
+    //             console.error('Failed to load tweets:', error);
+    //         } finally {
+    //             setIsLoading(false);
+    //         }
+    //     };
+    //     loadTweets();
+    // }, [blogId]);
 
     const onGenerateClick = () => {
         setShowConfirmModal(true);
@@ -449,9 +532,6 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         try {
             const ctaLink = includeCta && publishedPostUrl ? publishedPostUrl : undefined;
             const response = await generateTweets(blogContent, ctaLink);
-            console.log('[RepurposePanel] API response:', response);
-            setIsGenerating(false);
-            return;
 
             const patterns: TweetPattern[] = response.tweets.map((tweet) => ({
                 id: tweet.inspiration.id,
@@ -459,6 +539,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 emotions: tweet.inspiration.emotions,
                 structure: tweet.inspiration.structure,
                 why_it_works: tweet.inspiration.why_it_works,
+                cta_tweet: tweet.cta_tweet,
             }));
 
             setTweets(patterns);
@@ -477,6 +558,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                             emotions: tweet.inspiration.emotions,
                             structure: tweet.inspiration.structure,
                             why_it_works: tweet.inspiration.why_it_works,
+                            cta_tweet: tweet.cta_tweet || '',
                         })),
                     },
                 });
