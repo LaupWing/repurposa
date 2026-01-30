@@ -258,6 +258,17 @@ function wbrp_register_rest_routes() {
         ],
     ]);
 
+    // Publish route
+    register_rest_route('wbrp/v1', '/blogs/(?P<id>\d+)/publish', [
+        [
+            'methods' => 'POST',
+            'callback' => 'wbrp_publish_blog',
+            'permission_callback' => function () {
+                return current_user_can('manage_options');
+            },
+        ],
+    ]);
+
     // Tweet routes (by blog)
     register_rest_route('wbrp/v1', '/blogs/(?P<blog_id>\d+)/tweets', [
         [
@@ -335,6 +346,7 @@ function wbrp_get_blogs() {
     ]);
 
     $blogs = array_map(function($post) {
+        $published_post_id = get_post_meta($post->ID, '_wbrp_published_post_id', true);
         return [
             'id' => $post->ID,
             'title' => $post->post_title,
@@ -343,6 +355,8 @@ function wbrp_get_blogs() {
             'topic' => get_post_meta($post->ID, '_wbrp_topic', true),
             'outline' => get_post_meta($post->ID, '_wbrp_outline', true),
             'thumbnail' => get_post_meta($post->ID, '_wbrp_thumbnail', true),
+            'published_post_id' => $published_post_id ? (int) $published_post_id : null,
+            'published_post_url' => $published_post_id ? get_permalink($published_post_id) : null,
             'created_at' => $post->post_date,
             'updated_at' => $post->post_modified,
         ];
@@ -362,6 +376,7 @@ function wbrp_get_blog(WP_REST_Request $request) {
         return new WP_REST_Response(['error' => 'Blog not found'], 404);
     }
 
+    $published_post_id = get_post_meta($post->ID, '_wbrp_published_post_id', true);
     $blog = [
         'id' => $post->ID,
         'title' => $post->post_title,
@@ -370,6 +385,8 @@ function wbrp_get_blog(WP_REST_Request $request) {
         'topic' => get_post_meta($post->ID, '_wbrp_topic', true),
         'outline' => get_post_meta($post->ID, '_wbrp_outline', true),
         'thumbnail' => get_post_meta($post->ID, '_wbrp_thumbnail', true),
+        'published_post_id' => $published_post_id ? (int) $published_post_id : null,
+        'published_post_url' => $published_post_id ? get_permalink($published_post_id) : null,
         'created_at' => $post->post_date,
         'updated_at' => $post->post_modified,
     ];
@@ -464,6 +481,59 @@ function wbrp_delete_blog(WP_REST_Request $request) {
     wp_delete_post($post_id, true);
 
     return new WP_REST_Response(['success' => true], 200);
+}
+
+/**
+ * Publish a blog as a real WordPress post
+ */
+function wbrp_publish_blog(WP_REST_Request $request) {
+    $blog_id = $request->get_param('id');
+    $blog = get_post($blog_id);
+
+    if (!$blog || $blog->post_type !== 'wbrp_blog') {
+        return new WP_REST_Response(['error' => 'Blog not found'], 404);
+    }
+
+    // Check if already published
+    $existing_post_id = get_post_meta($blog_id, '_wbrp_published_post_id', true);
+    if ($existing_post_id && get_post($existing_post_id)) {
+        // Update the existing post instead
+        wp_update_post([
+            'ID' => $existing_post_id,
+            'post_title' => $blog->post_title,
+            'post_content' => $blog->post_content,
+        ]);
+
+        return new WP_REST_Response([
+            'success' => true,
+            'post_id' => (int) $existing_post_id,
+            'post_url' => get_permalink($existing_post_id),
+            'updated' => true,
+        ], 200);
+    }
+
+    // Create a real WordPress post
+    $post_id = wp_insert_post([
+        'post_type' => 'post',
+        'post_title' => $blog->post_title,
+        'post_content' => $blog->post_content,
+        'post_status' => 'publish',
+    ]);
+
+    if (is_wp_error($post_id)) {
+        return new WP_REST_Response(['error' => $post_id->get_error_message()], 500);
+    }
+
+    // Store the connection
+    update_post_meta($blog_id, '_wbrp_published_post_id', $post_id);
+    update_post_meta($blog_id, '_wbrp_status', 'published');
+
+    return new WP_REST_Response([
+        'success' => true,
+        'post_id' => $post_id,
+        'post_url' => get_permalink($post_id),
+        'updated' => false,
+    ], 201);
 }
 
 /**

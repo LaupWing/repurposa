@@ -38,6 +38,8 @@ interface BlogPost {
     content: string;
     thumbnail?: string;
     status: 'draft' | 'generating' | 'completed' | 'published';
+    published_post_id?: number | null;
+    published_post_url?: string | null;
 }
 
 interface BlogViewPageProps {
@@ -167,9 +169,11 @@ function TabButton({
 function BlogEditor({
     post,
     isGenerating,
+    onPublished,
 }: {
     post: BlogPost;
     isGenerating: boolean;
+    onPublished: (postId: number, postUrl: string) => void;
 }) {
     const [title, setTitle] = useState(post.title);
     const [content, setContent] = useState(post.content);
@@ -177,6 +181,7 @@ function BlogEditor({
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isPublishing, setIsPublishing] = useState(false);
 
     const handleAIRequest = (selectedText: string, action: string) => {
         console.log(`AI Action: ${action}`, selectedText);
@@ -200,15 +205,42 @@ function BlogEditor({
         }
     };
 
-    const handlePublish = (publishNow: boolean) => {
-        console.log('Publishing...', { publishNow, title, content });
-        // TODO: Connect to WordPress REST API to publish
-        toast.success(
-            publishNow
-                ? 'Published! Social posts will go live immediately.'
-                : 'Published! Social posts will follow their schedule.'
-        );
-        setIsPublishModalOpen(false);
+    const handlePublish = async (publishNow: boolean) => {
+        setIsPublishing(true);
+        try {
+            // Save latest content first
+            await apiFetch({
+                path: `/wbrp/v1/blogs/${post.id}`,
+                method: 'PUT',
+                data: { title, content, thumbnail },
+            });
+
+            const response = await apiFetch<{
+                success: boolean;
+                post_id: number;
+                post_url: string;
+                updated: boolean;
+            }>({
+                path: `/wbrp/v1/blogs/${post.id}/publish`,
+                method: 'POST',
+            });
+
+            onPublished(response.post_id, response.post_url);
+
+            toast.success(
+                response.updated
+                    ? 'Blog post updated on WordPress.'
+                    : 'Blog post published to WordPress!',
+            );
+        } catch (error) {
+            console.error('Failed to publish:', error);
+            toast.error('Failed to publish', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsPublishing(false);
+            setIsPublishModalOpen(false);
+        }
     };
 
     const handleRemoveThumbnail = () => {
@@ -251,15 +283,41 @@ function BlogEditor({
                     </button>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-xs px-2 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-600">
-                        Draft
-                    </span>
-                    <button
-                        onClick={() => setIsPublishModalOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-[#2271b1] text-white text-sm font-medium rounded-lg hover:bg-[#135e96] transition-colors"
-                    >
-                        Publish
-                    </button>
+                    {post.published_post_id ? (
+                        <>
+                            <span className="text-xs px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-600">
+                                Published
+                            </span>
+                            <a
+                                href={post.published_post_url || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:underline"
+                            >
+                                View Post
+                            </a>
+                            <button
+                                onClick={() => setIsPublishModalOpen(true)}
+                                disabled={isPublishing}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-[#2271b1] text-white text-sm font-medium rounded-lg hover:bg-[#135e96] disabled:opacity-50 transition-colors"
+                            >
+                                {isPublishing ? 'Updating...' : 'Update'}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <span className="text-xs px-2 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-600">
+                                Draft
+                            </span>
+                            <button
+                                onClick={() => setIsPublishModalOpen(true)}
+                                disabled={isPublishing}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-[#2271b1] text-white text-sm font-medium rounded-lg hover:bg-[#135e96] disabled:opacity-50 transition-colors"
+                            >
+                                {isPublishing ? 'Publishing...' : 'Publish'}
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -473,11 +531,22 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                 {/* Content Area - Connected to tabs above */}
                 <div className="flex-1 min-h-0 overflow-hidden">
                     {activeTab === 'blog' && (
-                        <BlogEditor post={post} isGenerating={false} />
+                        <BlogEditor
+                            post={post}
+                            isGenerating={false}
+                            onPublished={(publishedPostId, publishedPostUrl) => {
+                                setPost(prev => prev ? {
+                                    ...prev,
+                                    status: 'published',
+                                    published_post_id: publishedPostId,
+                                    published_post_url: publishedPostUrl,
+                                } : prev);
+                            }}
+                        />
                     )}
 
                     {activeTab === 'short' && (
-                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} />
+                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} />
                     )}
 
                     {activeTab === 'threads' && (

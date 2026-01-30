@@ -19,6 +19,8 @@ import {
     Calendar,
     Pencil,
     ImagePlus,
+    AlertTriangle,
+    X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateTweets } from '../../services/api';
@@ -250,10 +252,12 @@ function EmptyState({
     type,
     onGenerate,
     isGenerating,
+    isPublished,
 }: {
     type: TabType;
     onGenerate: () => void;
     isGenerating: boolean;
+    isPublished?: boolean;
 }) {
     const config = {
         short: { title: 'Short Posts', button: 'Generate Tweets', icon: Share2 },
@@ -270,9 +274,14 @@ function EmptyState({
                 <Icon size={20} className="text-gray-400" />
             </div>
             <h3 className="mb-1 font-medium text-gray-900">No {title} Yet</h3>
-            <p className="mb-6 max-w-[200px] text-sm text-gray-500">
+            <p className="mb-4 max-w-[240px] text-sm text-gray-500">
                 Generate optimized {title.toLowerCase()} from your blog post content.
             </p>
+            {!isPublished && type === 'short' && (
+                <p className="mb-4 max-w-[280px] text-xs text-amber-600">
+                    Tip: Publish your blog first to create tweets with effective CTAs that link back to your post.
+                </p>
+            )}
             <button
                 onClick={onGenerate}
                 disabled={isGenerating}
@@ -285,6 +294,98 @@ function EmptyState({
     );
 }
 
+function ConfirmGenerateModal({
+    isOpen,
+    onClose,
+    onConfirm,
+    isPublished,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (includeCta: boolean) => void;
+    isPublished?: boolean;
+}) {
+    const [includeCta, setIncludeCta] = useState(!!isPublished);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                    <h2 className="text-base font-semibold text-gray-900">Generate Tweets</h2>
+                    <button
+                        onClick={onClose}
+                        className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+                <div className="px-5 py-4 space-y-4">
+                    {/* CTA Checkbox */}
+                    <label
+                        className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                            isPublished
+                                ? 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer'
+                                : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
+                        }`}
+                    >
+                        <div className="relative flex items-center justify-center mt-0.5">
+                            <input
+                                type="checkbox"
+                                checked={includeCta}
+                                onChange={(e) => setIncludeCta(e.target.checked)}
+                                disabled={!isPublished}
+                                className="sr-only"
+                            />
+                            <div
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                    includeCta && isPublished
+                                        ? 'bg-blue-600 border-blue-600'
+                                        : 'border-gray-300 bg-white'
+                                }`}
+                            >
+                                {includeCta && isPublished && <Check size={14} className="text-white" />}
+                            </div>
+                        </div>
+                        <div>
+                            <span className="text-sm font-medium text-gray-900">Include CTA to blog post</span>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                                Add a call-to-action linking back to your published blog.
+                            </p>
+                        </div>
+                    </label>
+
+                    {/* Warning if not published */}
+                    {!isPublished && (
+                        <div className="flex gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-sm text-amber-800">
+                                Publish your blog first to enable CTAs that link back to your post.
+                            </p>
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-gray-200 bg-gray-50">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={() => onConfirm(includeCta && !!isPublished)}
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                    >
+                        Generate Tweets
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -293,12 +394,14 @@ interface RepurposePanelProps {
     initialTab?: TabType;
     blogContent?: string;
     blogId?: number;
+    isPublished?: boolean;
 }
 
-export function RepurposePanel({ initialTab = 'short', blogContent, blogId }: RepurposePanelProps) {
+export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [tweets, setTweets] = useState<TweetPattern[]>([]);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     // Load saved tweets on mount
     useEffect(() => {
@@ -328,7 +431,13 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId }: Re
         loadTweets();
     }, [blogId]);
 
-    const handleGenerateTweets = async () => {
+    const onGenerateClick = () => {
+        setShowConfirmModal(true);
+    };
+
+    const handleGenerateTweets = async (includeCta: boolean = false) => {
+        setShowConfirmModal(false);
+
         if (!blogContent) {
             toast.error('No blog content available to repurpose.');
             return;
@@ -382,7 +491,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId }: Re
         switch (initialTab) {
             case 'short':
                 return tweets.length === 0 ? (
-                    <EmptyState type="short" onGenerate={handleGenerateTweets} isGenerating={isGenerating} />
+                    <EmptyState type="short" onGenerate={onGenerateClick} isGenerating={isGenerating} isPublished={isPublished} />
                 ) : (
                     <div>
                         <div className="mb-4 flex items-center justify-between">
@@ -435,6 +544,12 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId }: Re
                     description="Analyzing your blog content and crafting engaging tweets..."
                 />
             )}
+            <ConfirmGenerateModal
+                isOpen={showConfirmModal}
+                onClose={() => setShowConfirmModal(false)}
+                onConfirm={handleGenerateTweets}
+                isPublished={isPublished}
+            />
             {/* Content - No internal tabs, parent controls which content to show */}
             <div className="flex-1 overflow-y-auto p-6">
                 {renderContent()}
