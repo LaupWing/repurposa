@@ -111,13 +111,29 @@ const emotionColors: Record<string, string> = {
 // SUB-COMPONENTS
 // ============================================
 
-function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta }: { pattern: TweetPattern; index: number; onDelete: () => void; onDeleteCta: () => void; onAddCta: () => void }) {
+function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta }: {
+    pattern: TweetPattern;
+    index: number;
+    onDelete: () => void;
+    onDeleteCta: () => void;
+    onAddCta: () => void;
+    onEdit: (content: string) => void;
+    onEditCta: (content: string) => void;
+}) {
     const [copied, setCopied] = useState(false);
     const [copiedCta, setCopiedCta] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [isEditingCta, setIsEditingCta] = useState(false);
+    const [editContent, setEditContent] = useState(pattern.content);
+    const [editCtaContent, setEditCtaContent] = useState(pattern.cta_tweet || '');
+
+    const [showWhyTooltip, setShowWhyTooltip] = useState(false);
+    const [showStructureTooltip, setShowStructureTooltip] = useState(false);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(pattern.content);
         setCopied(true);
+        toast.success('Tweet copied to clipboard');
         setTimeout(() => setCopied(false), 2000);
     };
 
@@ -125,7 +141,28 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta }: { patter
         if (!pattern.cta_tweet) return;
         navigator.clipboard.writeText(pattern.cta_tweet);
         setCopiedCta(true);
+        toast.success('CTA copied to clipboard');
         setTimeout(() => setCopiedCta(false), 2000);
+    };
+
+    const handleSaveEdit = () => {
+        onEdit(editContent);
+        setIsEditing(false);
+    };
+
+    const handleCancelEdit = () => {
+        setEditContent(pattern.content);
+        setIsEditing(false);
+    };
+
+    const handleSaveCtaEdit = () => {
+        onEditCta(editCtaContent);
+        setIsEditingCta(false);
+    };
+
+    const handleCancelCtaEdit = () => {
+        setEditCtaContent(pattern.cta_tweet || '');
+        setIsEditingCta(false);
     };
 
     return (
@@ -153,54 +190,90 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta }: { patter
 
                 {/* Content */}
                 <div className="mb-3">
-                    {pattern.content.split('\n').map((line, i) => (
-                        <p key={i} className="text-sm leading-relaxed text-gray-800">
-                            {line || <span className="block h-2" />}
-                        </p>
-                    ))}
+                    {isEditing ? (
+                        <div>
+                            <textarea
+                                value={editContent}
+                                onChange={(e) => setEditContent(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                rows={5}
+                                style={{ fieldSizing: 'content' } as React.CSSProperties}
+                            />
+                            <div className="mt-2 flex items-center justify-between">
+                                <span className={`text-xs font-mono ${editContent.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                    {editContent.length}/280
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={handleCancelEdit}
+                                        className="px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSaveEdit}
+                                        className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                                    >
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        pattern.content.split('\n').map((line, i) => (
+                            <p key={i} className="text-sm leading-relaxed text-gray-800">
+                                {line || <span className="block h-2" />}
+                            </p>
+                        ))
+                    )}
                 </div>
 
                 {/* Footer */}
-                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                    {/* Left - Info tooltips */}
-                    <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
-                            <Lightbulb size={14} />
-                            Why it works
-                        </button>
-                        <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
-                            <Layout size={14} />
-                            Structure
-                        </button>
-                    </div>
+                {!isEditing && (
+                    <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                        {/* Left - Info tooltips */}
+                        <div className="flex items-center gap-3">
+                            <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
+                                <Lightbulb size={14} />
+                                Why it works
+                            </button>
+                            <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
+                                <Layout size={14} />
+                                Structure
+                            </button>
+                        </div>
 
-                    {/* Right - Actions */}
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={handleCopy}
-                            className={`h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 ${
-                                copied ? 'text-green-500' : 'text-gray-400'
-                            }`}
-                        >
-                            {copied ? <Check size={14} /> : <Copy size={14} />}
-                        </button>
-                        <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                            <Pencil size={14} />
-                        </button>
-                        <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                            <ImagePlus size={14} />
-                        </button>
-                        <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                            <Calendar size={14} />
-                        </button>
-                        <button
-                            onClick={onDelete}
-                            className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
-                        >
-                            <Trash2 size={14} />
-                        </button>
+                        {/* Right - Actions */}
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={handleCopy}
+                                className={`h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 ${
+                                    copied ? 'text-green-500' : 'text-gray-400'
+                                }`}
+                            >
+                                {copied ? <Check size={14} /> : <Copy size={14} />}
+                            </button>
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                            >
+                                <Pencil size={14} />
+                            </button>
+                            <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                                <ImagePlus size={14} />
+                            </button>
+                            <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                                <Calendar size={14} />
+                            </button>
+                            <button
+                                onClick={onDelete}
+                                className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Add CTA button when no CTA exists */}
@@ -234,33 +307,64 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta }: { patter
 
                         {/* Content */}
                         <div className="mb-3">
-                            <p className="text-sm leading-relaxed text-gray-800">
-                                {pattern.cta_tweet}
-                            </p>
+                            {isEditingCta ? (
+                                <div>
+                                    <textarea
+                                        value={editCtaContent}
+                                        onChange={(e) => setEditCtaContent(e.target.value)}
+                                        className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                        rows={3}
+                                        style={{ fieldSizing: 'content' } as React.CSSProperties}
+                                    />
+                                    <div className="mt-2 flex items-center justify-end gap-2">
+                                        <button
+                                            onClick={handleCancelCtaEdit}
+                                            className="px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleSaveCtaEdit}
+                                            className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                                        >
+                                            Save
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm leading-relaxed text-gray-800">
+                                    {pattern.cta_tweet}
+                                </p>
+                            )}
                         </div>
 
                         {/* Footer */}
-                        <div className="mt-3 flex items-center justify-end border-t border-gray-100 pt-3">
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={handleCopyCta}
-                                    className={`h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 ${
-                                        copiedCta ? 'text-green-500' : 'text-gray-400'
-                                    }`}
-                                >
-                                    {copiedCta ? <Check size={14} /> : <Copy size={14} />}
-                                </button>
-                                <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                                    <Pencil size={14} />
-                                </button>
-                                <button
-                                    onClick={onDeleteCta}
-                                    className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
+                        {!isEditingCta && (
+                            <div className="mt-3 flex items-center justify-end border-t border-gray-100 pt-3">
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={handleCopyCta}
+                                        className={`h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 ${
+                                            copiedCta ? 'text-green-500' : 'text-gray-400'
+                                        }`}
+                                    >
+                                        {copiedCta ? <Check size={14} /> : <Copy size={14} />}
+                                    </button>
+                                    <button
+                                        onClick={() => setIsEditingCta(true)}
+                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                    >
+                                        <Pencil size={14} />
+                                    </button>
+                                    <button
+                                        onClick={onDeleteCta}
+                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -623,6 +727,8 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     onDelete={() => setTweets(prev => prev.filter(t => t.id !== pattern.id))}
                                     onDeleteCta={() => setTweets(prev => prev.map(t => t.id === pattern.id ? { ...t, cta_tweet: undefined } : t))}
                                     onAddCta={() => setTweets(prev => prev.map(t => t.id === pattern.id ? { ...t, cta_tweet: 'Read the full post here: ' } : t))}
+                                    onEdit={(content) => setTweets(prev => prev.map(t => t.id === pattern.id ? { ...t, content } : t))}
+                                    onEditCta={(content) => setTweets(prev => prev.map(t => t.id === pattern.id ? { ...t, cta_tweet: content } : t))}
                                 />
                             ))}
                         </div>
