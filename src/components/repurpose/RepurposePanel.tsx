@@ -622,37 +622,35 @@ interface RepurposePanelProps {
 export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    // TODO: Replace sampleTweets with [] once done testing UI
-    const [tweets, setTweets] = useState<TweetPattern[]>(sampleTweets);
+    const [tweets, setTweets] = useState<TweetPattern[]>([]);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-    // TODO: Re-enable once done testing UI
     // Load saved tweets on mount
-    // useEffect(() => {
-    //     if (!blogId) return;
-    //     const loadTweets = async () => {
-    //         setIsLoading(true);
-    //         try {
-    //             const response = await apiFetch<{ tweets: SavedTweet[] }>({
-    //                 path: `/wbrp/v1/blogs/${blogId}/tweets`,
-    //             });
-    //             const patterns: TweetPattern[] = response.tweets.map((t) => ({
-    //                 id: t.id,
-    //                 content: t.content,
-    //                 emotions: t.emotions,
-    //                 structure: t.structure,
-    //                 why_it_works: t.why_it_works,
-    //                 cta_tweet: t.cta_tweet || undefined,
-    //             }));
-    //             setTweets(patterns);
-    //         } catch (error) {
-    //             console.error('Failed to load tweets:', error);
-    //         } finally {
-    //             setIsLoading(false);
-    //         }
-    //     };
-    //     loadTweets();
-    // }, [blogId]);
+    useEffect(() => {
+        if (!blogId) return;
+        const loadTweets = async () => {
+            setIsLoading(true);
+            try {
+                const response = await apiFetch<{ tweets: SavedTweet[] }>({
+                    path: `/wbrp/v1/blogs/${blogId}/tweets`,
+                });
+                const patterns: TweetPattern[] = response.tweets.map((t) => ({
+                    id: t.id,
+                    content: t.content,
+                    emotions: t.emotions,
+                    structure: t.structure,
+                    why_it_works: t.why_it_works,
+                    cta_tweet: t.cta_tweet || undefined,
+                }));
+                setTweets(patterns);
+            } catch (error) {
+                console.error('Failed to load tweets:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadTweets();
+    }, [blogId]);
 
     const onGenerateClick = () => {
         setShowConfirmModal(true);
