@@ -21,6 +21,8 @@ import {
     ImagePlus,
     AlertTriangle,
     X,
+    Trash2,
+    Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateTweets } from '../../services/api';
@@ -109,7 +111,7 @@ const emotionColors: Record<string, string> = {
 // SUB-COMPONENTS
 // ============================================
 
-function TweetCard({ pattern, index }: { pattern: TweetPattern; index: number }) {
+function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta }: { pattern: TweetPattern; index: number; onDelete: () => void; onDeleteCta: () => void; onAddCta: () => void }) {
     const [copied, setCopied] = useState(false);
     const [copiedCta, setCopiedCta] = useState(false);
 
@@ -191,9 +193,28 @@ function TweetCard({ pattern, index }: { pattern: TweetPattern; index: number })
                         <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
                             <Calendar size={14} />
                         </button>
+                        <button
+                            onClick={onDelete}
+                            className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                        >
+                            <Trash2 size={14} />
+                        </button>
                     </div>
                 </div>
             </div>
+
+            {/* Add CTA button when no CTA exists */}
+            {!pattern.cta_tweet && (
+                <div className="ml-6 mt-2">
+                    <button
+                        onClick={onAddCta}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                        <Plus size={14} />
+                        Add CTA Reply
+                    </button>
+                </div>
+            )}
 
             {/* CTA Reply Tweet */}
             {pattern.cta_tweet && (
@@ -231,6 +252,12 @@ function TweetCard({ pattern, index }: { pattern: TweetPattern; index: number })
                                 </button>
                                 <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
                                     <Pencil size={14} />
+                                </button>
+                                <button
+                                    onClick={onDeleteCta}
+                                    className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                >
+                                    <Trash2 size={14} />
                                 </button>
                             </div>
                         </div>
@@ -589,7 +616,14 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                         </div>
                         <div className="pl-2">
                             {tweets.map((pattern, index) => (
-                                <TweetCard key={pattern.id} pattern={pattern} index={index} />
+                                <TweetCard
+                                    key={pattern.id}
+                                    pattern={pattern}
+                                    index={index}
+                                    onDelete={() => setTweets(prev => prev.filter(t => t.id !== pattern.id))}
+                                    onDeleteCta={() => setTweets(prev => prev.map(t => t.id === pattern.id ? { ...t, cta_tweet: undefined } : t))}
+                                    onAddCta={() => setTweets(prev => prev.map(t => t.id === pattern.id ? { ...t, cta_tweet: 'Read the full post here: ' } : t))}
+                                />
                             ))}
                         </div>
                     </div>
