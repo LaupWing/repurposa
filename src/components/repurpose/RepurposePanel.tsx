@@ -4,7 +4,7 @@
  * Panel for generating tweets, threads, visuals from blog content.
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import {
     Share2,
@@ -23,6 +23,7 @@ import {
     X,
     Trash2,
     Plus,
+    MoreHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
@@ -127,6 +128,20 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
     const [isEditingCta, setIsEditingCta] = useState(false);
     const [editContent, setEditContent] = useState(pattern.content);
     const [editCtaContent, setEditCtaContent] = useState(pattern.cta_tweet || '');
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Close menu on outside click
+    useEffect(() => {
+        if (!menuOpen) return;
+        const handleClick = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [menuOpen]);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(pattern.content);
@@ -251,31 +266,51 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
                         {/* Right - Actions */}
                         <div className="flex items-center gap-1">
                             <button
-                                onClick={handleCopy}
-                                className={`h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 ${
-                                    copied ? 'text-green-500' : 'text-gray-400'
-                                }`}
-                            >
-                                {copied ? <Check size={14} /> : <Copy size={14} />}
-                            </button>
-                            <button
                                 onClick={() => setIsEditing(true)}
                                 className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                             >
                                 <Pencil size={14} />
                             </button>
                             <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                                <ImagePlus size={14} />
-                            </button>
-                            <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
                                 <Calendar size={14} />
                             </button>
-                            <button
-                                onClick={onDelete}
-                                className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
-                            >
-                                <Trash2 size={14} />
-                            </button>
+                            {/* More menu */}
+                            <div className="relative" ref={menuRef}>
+                                <button
+                                    onClick={() => setMenuOpen(!menuOpen)}
+                                    className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${
+                                        menuOpen ? 'bg-gray-100 text-gray-600' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                                    }`}
+                                >
+                                    <MoreHorizontal size={14} />
+                                </button>
+                                {menuOpen && (
+                                    <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-10">
+                                        <button
+                                            onClick={() => { handleCopy(); setMenuOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                                            {copied ? 'Copied!' : 'Copy'}
+                                        </button>
+                                        <button
+                                            onClick={() => { setMenuOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <ImagePlus size={14} />
+                                            Add Image
+                                        </button>
+                                        <div className="border-t border-gray-100 my-1" />
+                                        <button
+                                            onClick={() => { onDelete(); setMenuOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                        >
+                                            <Trash2 size={14} />
+                                            Delete
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}

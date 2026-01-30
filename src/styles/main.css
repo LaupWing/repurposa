@@ -44,6 +44,12 @@
 /**
  * TipTap Editor Styles
  */
+/* Allow WordPress tooltips to wrap text */
+.components-tooltip {
+  white-space: normal !important;
+  max-width: 260px;
+}
+
 .tiptap-editor .ProseMirror {
   outline: none;
   min-height: 400px;
