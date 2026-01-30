@@ -546,7 +546,7 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                     )}
 
                     {activeTab === 'short' && (
-                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} />
+                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} publishedPostUrl={post.published_post_url} />
                     )}
 
                     {activeTab === 'threads' && (

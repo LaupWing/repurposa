@@ -134,9 +134,11 @@ export interface GenerateTweetsResponse {
 }
 
 export async function generateTweets(
-    blogContent: string
+    blogContent: string,
+    ctaLink?: string
 ): Promise<GenerateTweetsResponse> {
     return apiRequest<GenerateTweetsResponse>('/repurpose/generate-tweets', {
         blog_content: blogContent,
+        ...(ctaLink && { cta_link: ctaLink }),
     });
 }

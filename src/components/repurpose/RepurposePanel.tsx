@@ -395,9 +395,10 @@ interface RepurposePanelProps {
     blogContent?: string;
     blogId?: number;
     isPublished?: boolean;
+    publishedPostUrl?: string | null;
 }
 
-export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished }: RepurposePanelProps) {
+export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [tweets, setTweets] = useState<TweetPattern[]>([]);
@@ -446,7 +447,8 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         setIsGenerating(true);
 
         try {
-            const response = await generateTweets(blogContent);
+            const ctaLink = includeCta && publishedPostUrl ? publishedPostUrl : undefined;
+            const response = await generateTweets(blogContent, ctaLink);
 
             const patterns: TweetPattern[] = response.tweets.map((tweet) => ({
                 id: tweet.inspiration.id,
