@@ -25,6 +25,7 @@ import {
     Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Tooltip } from '@wordpress/components';
 import { generateTweets } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 
@@ -127,9 +128,6 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
     const [editContent, setEditContent] = useState(pattern.content);
     const [editCtaContent, setEditCtaContent] = useState(pattern.cta_tweet || '');
 
-    const [showWhyTooltip, setShowWhyTooltip] = useState(false);
-    const [showStructureTooltip, setShowStructureTooltip] = useState(false);
-
     const handleCopy = () => {
         navigator.clipboard.writeText(pattern.content);
         setCopied(true);
@@ -231,16 +229,23 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
                 {/* Footer */}
                 {!isEditing && (
                     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                        {/* Left - Info tooltips */}
+                        {/* Left - Char count + Info tooltips */}
                         <div className="flex items-center gap-3">
-                            <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
-                                <Lightbulb size={14} />
-                                Why it works
-                            </button>
-                            <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
-                                <Layout size={14} />
-                                Structure
-                            </button>
+                            <span className={`font-mono text-[10px] ${pattern.content.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                {pattern.content.length}/280
+                            </span>
+                            <Tooltip text={pattern.why_it_works} delay={0} placement="top">
+                                <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
+                                    <Lightbulb size={14} />
+                                    Why it works
+                                </button>
+                            </Tooltip>
+                            <Tooltip text={pattern.structure} delay={0} placement="top">
+                                <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
+                                    <Layout size={14} />
+                                    Structure
+                                </button>
+                            </Tooltip>
                         </div>
 
                         {/* Right - Actions */}
@@ -340,7 +345,10 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
 
                         {/* Footer */}
                         {!isEditingCta && (
-                            <div className="mt-3 flex items-center justify-end border-t border-gray-100 pt-3">
+                            <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                                <span className={`font-mono text-[10px] ${(pattern.cta_tweet?.length || 0) > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                    {pattern.cta_tweet?.length || 0}/280
+                                </span>
                                 <div className="flex items-center gap-1">
                                     <button
                                         onClick={handleCopyCta}
