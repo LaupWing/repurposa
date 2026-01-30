@@ -449,6 +449,9 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         try {
             const ctaLink = includeCta && publishedPostUrl ? publishedPostUrl : undefined;
             const response = await generateTweets(blogContent, ctaLink);
+            console.log('[RepurposePanel] API response:', response);
+            setIsGenerating(false);
+            return;
 
             const patterns: TweetPattern[] = response.tweets.map((tweet) => ({
                 id: tweet.inspiration.id,
