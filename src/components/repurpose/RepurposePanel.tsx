@@ -326,8 +326,7 @@ interface RepurposePanelProps {
 
 export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
-    // Start with generated content visible for demo/placeholder
-    const [hasGenerated, setHasGenerated] = useState(true);
+    const [hasGenerated, setHasGenerated] = useState(false);
 
     const handleGenerate = async () => {
         setIsGenerating(true);
