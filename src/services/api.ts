@@ -111,3 +111,32 @@ export async function generateBlog(
         target_audience: profile?.target_audience,
     });
 }
+
+// ============================================
+// REPURPOSE API
+// ============================================
+
+export interface GeneratedTweet {
+    generated_tweet: string;
+    inspiration: {
+        id: number;
+        hook: string;
+        content: string;
+        structure: string;
+        emotions: string[];
+        why_it_works: string;
+        media: unknown[];
+    };
+}
+
+export interface GenerateTweetsResponse {
+    tweets: GeneratedTweet[];
+}
+
+export async function generateTweets(
+    blogContent: string
+): Promise<GenerateTweetsResponse> {
+    return apiRequest<GenerateTweetsResponse>('/repurpose/generate-tweets', {
+        blog_content: blogContent,
+    });
+}

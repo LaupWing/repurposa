@@ -19,6 +19,9 @@ import {
     Pencil,
     ImagePlus,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { generateTweets } from '../../services/api';
+import { GeneratingOverlay } from '../GeneratingOverlay';
 
 // ============================================
 // TYPES
@@ -40,55 +43,10 @@ interface Thread {
 }
 
 // ============================================
-// SAMPLE DATA
+// SAMPLE DATA (threads - placeholder until API)
 // ============================================
 
-const samplePatterns: TweetPattern[] = [
-    {
-        id: 1,
-        content: "Most people think weight loss is about willpower.\n\nIt's not.\n\nIt's about systems.\n\nHere's what actually works:",
-        emotions: ['Confident', 'Contrarian'],
-        structure: 'Myth-busting opener',
-        why_it_works: 'Challenges common belief and promises insider knowledge',
-    },
-    {
-        id: 2,
-        content: "I spent 6 months trying every diet.\n\nHere's the one thing they all got wrong:\n\nThey focused on restriction, not addition.",
-        emotions: ['Honest', 'Reflective'],
-        structure: 'Personal story + insight',
-        why_it_works: 'Builds trust through vulnerability and lived experience',
-    },
-    {
-        id: 3,
-        content: "Stop counting calories.\n\nStart counting habits.\n\nThe scale will follow.",
-        emotions: ['Motivational', 'Provocative'],
-        structure: 'Pattern interrupt',
-        why_it_works: 'Simple, memorable, and actionable advice',
-    },
-];
-
-const sampleThreads: Thread[] = [
-    {
-        id: '1',
-        tweets: [
-            {
-                id: 't1',
-                content: "I've lost 30 pounds in 6 months without giving up pizza.\n\nHere's exactly how I did it:\n\n(A thread) 🧵",
-                characterCount: 112,
-            },
-            {
-                id: 't2',
-                content: "1/ First, I stopped treating food as the enemy.\n\nDiets fail because they're built on restriction.\n\nI built mine on addition.",
-                characterCount: 128,
-            },
-            {
-                id: 't3',
-                content: "2/ I added:\n- More protein at breakfast\n- A 10-min walk after meals\n- One glass of water before eating\n\nSmall additions. Big results.",
-                characterCount: 146,
-            },
-        ],
-    },
-];
+const sampleThreads: Thread[] = [];
 
 // ============================================
 // EMOTION COLORS
@@ -326,32 +284,54 @@ interface RepurposePanelProps {
 
 export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
-    const [hasGenerated, setHasGenerated] = useState(false);
+    const [tweets, setTweets] = useState<TweetPattern[]>([]);
 
-    const handleGenerate = async () => {
+    const handleGenerateTweets = async () => {
+        if (!blogContent) {
+            toast.error('No blog content available to repurpose.');
+            return;
+        }
+
         setIsGenerating(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        setHasGenerated(true);
-        setIsGenerating(false);
+
+        try {
+            const response = await generateTweets(blogContent);
+
+            const patterns: TweetPattern[] = response.tweets.map((tweet) => ({
+                id: tweet.inspiration.id,
+                content: tweet.generated_tweet,
+                emotions: tweet.inspiration.emotions,
+                structure: tweet.inspiration.structure,
+                why_it_works: tweet.inspiration.why_it_works,
+            }));
+
+            setTweets(patterns);
+        } catch (error) {
+            console.error('Failed to generate tweets:', error);
+            toast.error('Failed to generate tweets', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     // Show content based on initialTab (parent controls the tab)
     const renderContent = () => {
         switch (initialTab) {
             case 'short':
-                return !hasGenerated ? (
-                    <EmptyState type="short" onGenerate={handleGenerate} isGenerating={isGenerating} />
+                return tweets.length === 0 ? (
+                    <EmptyState type="short" onGenerate={handleGenerateTweets} isGenerating={isGenerating} />
                 ) : (
                     <div>
                         <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Selected Patterns</h3>
+                            <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Generated Tweets</h3>
                             <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                {samplePatterns.length} patterns
+                                {tweets.length} tweets
                             </span>
                         </div>
                         <div className="pl-2">
-                            {samplePatterns.map((pattern, index) => (
+                            {tweets.map((pattern, index) => (
                                 <TweetCard key={pattern.id} pattern={pattern} index={index} />
                             ))}
                         </div>
@@ -359,8 +339,8 @@ export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposeP
                 );
 
             case 'threads':
-                return !hasGenerated ? (
-                    <EmptyState type="threads" onGenerate={handleGenerate} isGenerating={isGenerating} />
+                return sampleThreads.length === 0 ? (
+                    <EmptyState type="threads" onGenerate={() => {}} isGenerating={false} />
                 ) : (
                     <div>
                         <div className="mb-4 flex items-center justify-between">
@@ -376,10 +356,10 @@ export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposeP
                 );
 
             case 'visuals':
-                return <EmptyState type="visuals" onGenerate={handleGenerate} isGenerating={isGenerating} />;
+                return <EmptyState type="visuals" onGenerate={() => {}} isGenerating={false} />;
 
             case 'video':
-                return <EmptyState type="video" onGenerate={handleGenerate} isGenerating={isGenerating} />;
+                return <EmptyState type="video" onGenerate={() => {}} isGenerating={false} />;
 
             default:
                 return null;
@@ -387,7 +367,13 @@ export function RepurposePanel({ initialTab = 'short', blogContent }: RepurposeP
     };
 
     return (
-        <div className="flex h-full flex-col bg-white">
+        <div className="relative flex h-full flex-col bg-white">
+            {isGenerating && (
+                <GeneratingOverlay
+                    title="Generating Tweets"
+                    description="Analyzing your blog content and crafting engaging tweets..."
+                />
+            )}
             {/* Content - No internal tabs, parent controls which content to show */}
             <div className="flex-1 overflow-y-auto p-6">
                 {renderContent()}
