@@ -21,16 +21,20 @@ import {
     Check,
     Trash2,
     Loader2,
+    Settings,
+    RefreshCw,
 } from 'lucide-react';
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
 import ImagePickerModal from '../ImagePickerModal';
+import { generateBlog } from '../../services/api';
+import type { OutlineSection } from '../../services/api';
 
 // ============================================
 // TYPES
 // ============================================
 
-type ContentTab = 'blog' | 'short' | 'threads' | 'visuals' | 'video';
+type ContentTab = 'blog' | 'short' | 'threads' | 'visuals' | 'video' | 'settings';
 
 interface BlogPost {
     id: number;
@@ -40,6 +44,10 @@ interface BlogPost {
     status: 'draft' | 'generating' | 'completed' | 'published';
     published_post_id?: number | null;
     published_post_url?: string | null;
+    topic?: string;
+    outline?: OutlineSection[];
+    created_at?: string;
+    updated_at?: string;
 }
 
 interface BlogViewPageProps {
@@ -420,6 +428,181 @@ function BlogEditor({
     );
 }
 
+function SettingsPanel({
+    post,
+    onRegenerated,
+    onDeleted,
+}: {
+    post: BlogPost;
+    onRegenerated: (title: string, content: string) => void;
+    onDeleted: () => void;
+}) {
+    const [isRegenerating, setIsRegenerating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleRegenerate = async () => {
+        if (!post.topic || !post.outline?.length) {
+            toast.error('Cannot regenerate: missing topic or outline data');
+            return;
+        }
+
+        setIsRegenerating(true);
+        try {
+            const response = await generateBlog(post.topic, post.outline);
+
+            // Save the regenerated content
+            await apiFetch({
+                path: `/wbrp/v1/blogs/${post.id}`,
+                method: 'PUT',
+                data: {
+                    title: response.title,
+                    content: response.content,
+                },
+            });
+
+            onRegenerated(response.title, response.content);
+            toast.success('Blog regenerated successfully');
+        } catch (error) {
+            console.error('Failed to regenerate blog:', error);
+            toast.error('Failed to regenerate blog');
+        } finally {
+            setIsRegenerating(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm('Are you sure you want to delete this blog? This action cannot be undone.')) return;
+
+        setIsDeleting(true);
+        try {
+            await apiFetch({
+                path: `/wbrp/v1/blogs/${post.id}`,
+                method: 'DELETE',
+            });
+            toast.success('Blog deleted');
+            onDeleted();
+        } catch (error) {
+            console.error('Failed to delete blog:', error);
+            toast.error('Failed to delete blog');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const formatDate = (dateStr?: string) => {
+        if (!dateStr) return '—';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+        });
+    };
+
+    const statusLabel = post.published_post_id ? 'Published' : 'Draft';
+    const statusColor = post.published_post_id
+        ? 'text-green-700 bg-green-50 border-green-200'
+        : 'text-orange-700 bg-orange-50 border-orange-200';
+
+    return (
+        <div className="h-full overflow-y-auto">
+            <div className="mx-auto max-w-2xl px-4 py-8 space-y-8">
+                {/* Regenerate Blog */}
+                <div>
+                    <button
+                        onClick={handleRegenerate}
+                        disabled={isRegenerating || !post.topic || !post.outline?.length}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                        {isRegenerating ? (
+                            <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                            <RefreshCw size={16} />
+                        )}
+                        {isRegenerating ? 'Regenerating...' : 'Regenerate Blog'}
+                    </button>
+                    {(!post.topic || !post.outline?.length) && (
+                        <p className="mt-2 text-xs text-gray-400">
+                            Topic and outline data are required to regenerate.
+                        </p>
+                    )}
+                </div>
+
+                {/* Blog Info */}
+                <div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Blog Info</h3>
+                    <dl className="space-y-4">
+                        <div>
+                            <dt className="text-xs font-medium text-gray-500 mb-1">Topic</dt>
+                            <dd className="text-sm text-gray-900">{post.topic || '—'}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-medium text-gray-500 mb-1">Created</dt>
+                            <dd className="text-sm text-gray-900">{formatDate(post.created_at)}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-medium text-gray-500 mb-1">Last Updated</dt>
+                            <dd className="text-sm text-gray-900">{formatDate(post.updated_at)}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-medium text-gray-500 mb-1">Status</dt>
+                            <dd>
+                                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded border ${statusColor}`}>
+                                    {statusLabel}
+                                </span>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                {/* Outline */}
+                {post.outline && post.outline.length > 0 && (
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-4">Outline</h3>
+                        <ol className="space-y-3">
+                            {post.outline.map((section, index) => (
+                                <li
+                                    key={index}
+                                    className="p-3 rounded-lg border border-gray-200 bg-gray-50"
+                                >
+                                    <div className="text-sm font-medium text-gray-900">
+                                        {index + 1}. {section.title}
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                        {section.purpose}
+                                    </div>
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                )}
+
+                {/* Danger Zone */}
+                <div className="border-t border-gray-200 pt-8">
+                    <h3 className="text-sm font-semibold text-red-600 mb-2">Danger Zone</h3>
+                    <p className="text-xs text-gray-500 mb-4">
+                        Permanently delete this blog and all associated data. This action cannot be undone.
+                    </p>
+                    <button
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                        {isDeleting ? (
+                            <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                            <Trash2 size={16} />
+                        )}
+                        {isDeleting ? 'Deleting...' : 'Delete Blog'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -526,6 +709,19 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                             />
                         ))}
                     </div>
+
+                    {/* Settings gear icon */}
+                    <button
+                        onClick={() => setActiveTab('settings')}
+                        className={`ml-auto flex items-center justify-center h-8 w-8 rounded transition-colors ${
+                            activeTab === 'settings'
+                                ? 'text-gray-900 bg-white shadow-sm'
+                                : 'text-gray-400 hover:text-gray-600 hover:bg-white/50'
+                        }`}
+                        title="Settings"
+                    >
+                        <Settings size={16} />
+                    </button>
                 </div>
 
                 {/* Content Area - Connected to tabs above */}
@@ -559,6 +755,17 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
 
                     {activeTab === 'video' && (
                         <RepurposePanel initialTab="video" blogContent={post.content} />
+                    )}
+
+                    {activeTab === 'settings' && (
+                        <SettingsPanel
+                            post={post}
+                            onRegenerated={(title, content) => {
+                                setPost(prev => prev ? { ...prev, title, content } : prev);
+                                setActiveTab('blog');
+                            }}
+                            onDeleted={handleBack}
+                        />
                     )}
                 </div>
             </div>
