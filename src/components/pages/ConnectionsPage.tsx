@@ -23,6 +23,7 @@ interface SocialPlatform {
   connected: boolean;
   username?: string;
   color: string;
+  comingSoon?: boolean;
 }
 
 // ============================================
@@ -68,6 +69,7 @@ const platforms: SocialPlatform[] = [
     icon: <RiThreadsFill size={20} />,
     connected: false,
     color: "bg-gray-900",
+    comingSoon: true,
   },
   {
     id: "instagram",
@@ -75,6 +77,7 @@ const platforms: SocialPlatform[] = [
     icon: <RiInstagramFill size={20} />,
     connected: false,
     color: "bg-gradient-to-br from-purple-600 to-pink-500",
+    comingSoon: true,
   },
   {
     id: "facebook",
@@ -82,6 +85,7 @@ const platforms: SocialPlatform[] = [
     icon: <RiFacebookFill size={20} />,
     connected: false,
     color: "bg-blue-600",
+    comingSoon: true,
   },
 ];
 
@@ -283,17 +287,19 @@ export default function ConnectionsPage() {
           {platforms.map((platform) => (
             <div
               key={platform.id}
-              className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
+              className={`flex items-center justify-between py-4 first:pt-0 last:pb-0 ${platform.comingSoon ? 'opacity-50' : ''}`}
             >
               <div className="flex items-center gap-4">
                 <div
-                  className={`w-10 h-10 ${platform.color} text-white rounded-lg flex items-center justify-center`}
+                  className={`w-10 h-10 ${platform.comingSoon ? 'bg-gray-300' : platform.color} text-white rounded-lg flex items-center justify-center`}
                 >
                   {platform.icon}
                 </div>
                 <div>
                   <h3 className="font-medium text-gray-900">{platform.name}</h3>
-                  {platform.connected ? (
+                  {platform.comingSoon ? (
+                    <p className="text-sm text-gray-400">Coming soon</p>
+                  ) : platform.connected ? (
                     <p className="text-sm text-green-600 flex items-center gap-1">
                       <Check size={14} />
                       Connected as @{platform.username}
@@ -304,7 +310,11 @@ export default function ConnectionsPage() {
                 </div>
               </div>
 
-              {platform.connected ? (
+              {platform.comingSoon ? (
+                <span className="px-3 py-1.5 text-xs font-medium text-gray-400 bg-gray-100 rounded-lg">
+                  Coming soon
+                </span>
+              ) : platform.connected ? (
                 <button className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                   Disconnect
                 </button>
