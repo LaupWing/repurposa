@@ -9,7 +9,7 @@ import { useState, useEffect } from "@wordpress/element";
 import apiFetch from "@wordpress/api-fetch";
 import { toast } from "sonner";
 import { Check, ExternalLink, Save, Loader2 } from "lucide-react";
-import { RiTwitterXFill, RiLinkedinFill } from "react-icons/ri";
+import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from "react-icons/ri";
 import type { ProfileData } from "../OnboardingModal";
 
 // ============================================
@@ -61,6 +61,27 @@ const platforms: SocialPlatform[] = [
     icon: <RiLinkedinFill size={20} />,
     connected: false,
     color: "bg-blue-700",
+  },
+  {
+    id: "threads",
+    name: "Threads",
+    icon: <RiThreadsFill size={20} />,
+    connected: false,
+    color: "bg-gray-900",
+  },
+  {
+    id: "instagram",
+    name: "Instagram",
+    icon: <RiInstagramFill size={20} />,
+    connected: false,
+    color: "bg-gradient-to-br from-purple-600 to-pink-500",
+  },
+  {
+    id: "facebook",
+    name: "Facebook",
+    icon: <RiFacebookFill size={20} />,
+    connected: false,
+    color: "bg-blue-600",
   },
 ];
 

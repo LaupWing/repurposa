@@ -14,6 +14,7 @@ import {
     X as XIcon,
     Trash2,
     GripVertical,
+    Filter,
     Pencil,
     MoreHorizontal,
     Check,
@@ -570,7 +571,20 @@ export default function SchedulePage() {
     const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>(DEFAULT_WEEKLY_SCHEDULE);
     const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
     const [typeFilter, setTypeFilter] = useState<PostType | 'all'>('all');
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const filterRef = useRef<HTMLDivElement>(null);
+
+    // Close filter dropdown on outside click
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+                setIsFilterOpen(false);
+            }
+        }
+        if (isFilterOpen) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isFilterOpen]);
 
     // Filter posts
     const filteredPosts = posts.filter((post) => {
@@ -687,39 +701,8 @@ export default function SchedulePage() {
                 <div>
                     {/* Filters */}
                     {posts.length > 0 && (
-                        <div className="flex items-center gap-3 mb-5">
-                            {/* Platform filter */}
-                            <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
-                                <button
-                                    onClick={() => setPlatformFilter('all')}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                        platformFilter === 'all'
-                                            ? 'bg-white text-gray-900 shadow-sm'
-                                            : 'text-gray-500 hover:text-gray-700'
-                                    }`}
-                                >
-                                    All
-                                </button>
-                                {PLATFORMS.map((p) => (
-                                    <button
-                                        key={p.id}
-                                        onClick={() => setPlatformFilter(p.id)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                            platformFilter === p.id
-                                                ? 'bg-white text-gray-900 shadow-sm'
-                                                : 'text-gray-500 hover:text-gray-700'
-                                        }`}
-                                    >
-                                        {p.icon}
-                                        {p.name}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Divider */}
-                            <div className="h-6 w-px bg-gray-200" />
-
-                            {/* Post type filter */}
+                        <div className="flex items-center justify-between mb-5">
+                            {/* Post type pills — left */}
                             <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
                                 <button
                                     onClick={() => setTypeFilter('all')}
@@ -729,7 +712,7 @@ export default function SchedulePage() {
                                             : 'text-gray-500 hover:text-gray-700'
                                     }`}
                                 >
-                                    All Types
+                                    All
                                 </button>
                                 {POST_TYPES.map((t) => (
                                     <button
@@ -745,6 +728,58 @@ export default function SchedulePage() {
                                         {t.label}
                                     </button>
                                 ))}
+                            </div>
+
+                            {/* Platform filter dropdown — right */}
+                            <div className="relative" ref={filterRef}>
+                                <button
+                                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                    className={`flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
+                                        platformFilter !== 'all'
+                                            ? 'border-blue-500 text-blue-600 bg-blue-50'
+                                            : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <Filter size={14} />
+                                    {platformFilter === 'all'
+                                        ? 'Filter'
+                                        : PLATFORMS.find((p) => p.id === platformFilter)?.name}
+                                </button>
+
+                                {isFilterOpen && (
+                                    <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                        <button
+                                            onClick={() => { setPlatformFilter('all'); setIsFilterOpen(false); }}
+                                            className={`flex items-center justify-between w-full px-3 py-2 text-sm transition-colors ${
+                                                platformFilter === 'all'
+                                                    ? 'bg-blue-50 text-blue-600'
+                                                    : 'text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            All Platforms
+                                            {platformFilter === 'all' && <Check size={14} />}
+                                        </button>
+                                        {PLATFORMS.map((p) => (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => { setPlatformFilter(p.id); setIsFilterOpen(false); }}
+                                                className={`flex items-center justify-between w-full px-3 py-2 text-sm transition-colors ${
+                                                    platformFilter === p.id
+                                                        ? 'bg-blue-50 text-blue-600'
+                                                        : 'text-gray-600 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`w-5 h-5 ${p.bg} text-white rounded flex items-center justify-center`}>
+                                                        {p.icon}
+                                                    </span>
+                                                    {p.name}
+                                                </div>
+                                                {platformFilter === p.id && <Check size={14} />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
