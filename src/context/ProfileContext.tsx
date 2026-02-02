@@ -71,12 +71,10 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        laravelFetch<{ data: ProfileData | null }>('/profile')
-            .then((response) => {
+        laravelFetch<{ id: number; name: string; email: string }>('/user')
+            .then(() => {
                 setIsConnected(true);
-                if (response.data) {
-                    setProfile(response.data);
-                }
+                // TODO: Fetch profile from /api/profile once that endpoint exists
             })
             .catch((error) => {
                 console.error('Failed to load profile:', error);
