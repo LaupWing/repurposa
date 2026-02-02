@@ -93,15 +93,10 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         setIsGeneratingOutline(true);
 
         try {
-            const profileContext = {
-                business_type: profile?.business_type,
-                niche: profile?.niche,
-                target_audience: data.targetAudience || profile?.target_audience,
-            };
             const response = await generateOutline(
                 data.topic,
                 data.roughOutline,
-                profileContext
+                { target_audience: data.targetAudience || profile?.target_audience }
             );
 
             // Convert API response to our format (add IDs)

@@ -84,41 +84,51 @@ export interface ProfileContext {
 
 export async function generateTopics(
     roughIdea: string,
-    profile?: ProfileContext
+    options?: { target_audience?: string }
 ): Promise<GenerateTopicsResponse> {
     return apiRequest<GenerateTopicsResponse>('/blog/generate-topics', {
         rough_idea: roughIdea,
-        business_type: profile?.business_type,
-        niche: profile?.niche,
-        target_audience: profile?.target_audience,
+        target_audience: options?.target_audience,
     });
 }
 
 export async function generateOutline(
     topic: string,
     roughOutline?: string[],
-    profile?: ProfileContext
+    options?: { target_audience?: string }
 ): Promise<GenerateOutlineResponse> {
     return apiRequest<GenerateOutlineResponse>('/blog/generate-outline', {
         topic,
         rough_outline: roughOutline || [],
-        business_type: profile?.business_type,
-        niche: profile?.niche,
-        target_audience: profile?.target_audience,
+        target_audience: options?.target_audience,
     });
 }
 
 export async function generateBlog(
     topic: string,
     outline: OutlineSection[],
-    profile?: ProfileContext
+    options?: { target_audience?: string }
 ): Promise<GenerateBlogResponse> {
     return apiRequest<GenerateBlogResponse>('/blog/generate-blog', {
         topic,
         outline,
-        business_type: profile?.business_type,
-        niche: profile?.niche,
-        target_audience: profile?.target_audience,
+        target_audience: options?.target_audience,
+    });
+}
+
+export interface RefinePromptResponse {
+    prompt: string;
+}
+
+export async function refinePrompt(
+    prompt: string,
+    targetAudience?: string,
+    instruction?: string
+): Promise<RefinePromptResponse> {
+    return apiRequest<RefinePromptResponse>('/blog/refine-prompt', {
+        prompt,
+        target_audience: targetAudience,
+        instruction,
     });
 }
 

@@ -7,9 +7,9 @@
 
 import { useState } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
-import { FileText, Sparkles, HelpCircle, X } from 'lucide-react';
+import { FileText, Sparkles, HelpCircle, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateTopics, type TopicSuggestion } from '../../../services/api';
+import { generateTopics, refinePrompt, type TopicSuggestion } from '../../../services/api';
 import { useProfile } from '../../../context/ProfileContext';
 
 // ============================================
@@ -34,6 +34,28 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
     const [isGenerating, setIsGenerating] = useState(false);
     const [suggestions, setSuggestions] = useState<TopicSuggestion[]>([]);
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+    const [isRefining, setIsRefining] = useState(false);
+    const [showRefineTooltip, setShowRefineTooltip] = useState(false);
+    const [showEditPopover, setShowEditPopover] = useState(false);
+    const [editInstruction, setEditInstruction] = useState('');
+
+    const handleEditPrompt = async () => {
+        if (!editInstruction.trim()) return;
+
+        setIsRefining(true);
+        try {
+            const response = await refinePrompt(topic, targetAudience, editInstruction);
+            onTopicChange(response.prompt);
+            setShowEditPopover(false);
+            setEditInstruction('');
+            toast.success('Prompt updated!');
+        } catch (error) {
+            console.error('Failed to edit prompt:', error);
+            toast.error('Failed to edit prompt');
+        } finally {
+            setIsRefining(false);
+        }
+    };
 
     const handleOpenModal = () => {
         setPrompt(topic);
@@ -56,7 +78,9 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
         setIsGenerating(true);
 
         try {
-            const response = await generateTopics(searchTerm, profile ?? undefined);
+            const response = await generateTopics(searchTerm, {
+                target_audience: targetAudience || profile?.target_audience,
+            });
             setSuggestions(response.suggestions);
         } catch (error) {
             console.error('Failed to generate topics:', error);
@@ -95,14 +119,82 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
                 What's this blog about?
             </label>
 
-            {/* Textarea */}
-            <textarea
-                value={topic}
-                onChange={(e) => onTopicChange(e.target.value)}
-                placeholder="e.g., 5 mistakes beginners make that sabotage their weight loss"
-                rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            />
+            {/* Textarea with refine button */}
+            <div className="relative">
+                <textarea
+                    value={topic}
+                    onChange={(e) => onTopicChange(e.target.value)}
+                    placeholder="e.g., 5 mistakes beginners make that sabotage their weight loss"
+                    rows={4}
+                    className="w-full px-4 py-3 pb-10 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                />
+                <div className="absolute bottom-2 right-2">
+                    <button
+                        onClick={() => setShowEditPopover(!showEditPopover)}
+                        disabled={!topic.trim()}
+                        onMouseEnter={() => !showEditPopover && setShowRefineTooltip(true)}
+                        onMouseLeave={() => setShowRefineTooltip(false)}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                        <Sparkles size={16} />
+                    </button>
+
+                    {/* Tooltip */}
+                    {showRefineTooltip && !showEditPopover && (
+                        <div className="absolute bottom-full right-0 mb-2 w-48 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg pointer-events-none">
+                            <p className="font-semibold">Edit prompt</p>
+                            <p className="text-gray-300 mt-0.5">Change prompt with AI</p>
+                        </div>
+                    )}
+
+                    {/* Edit Popover */}
+                    {showEditPopover && (
+                        <div className="absolute bottom-full right-0 mb-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl p-3 z-10">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-sm font-semibold text-gray-900">Edit prompt</p>
+                                <button
+                                    onClick={() => { setShowEditPopover(false); setEditInstruction(''); }}
+                                    className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-500 mb-2">Tell AI how to change your topic</p>
+                            <textarea
+                                value={editInstruction}
+                                onChange={(e) => setEditInstruction(e.target.value)}
+                                placeholder="e.g., make it more specific, focus on beginners, add a number..."
+                                rows={2}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleEditPrompt();
+                                    }
+                                }}
+                            />
+                            <button
+                                onClick={handleEditPrompt}
+                                disabled={isRefining || !editInstruction.trim()}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {isRefining ? (
+                                    <>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Updating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles size={14} />
+                                        Apply
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* Generate Button */}
             <button
