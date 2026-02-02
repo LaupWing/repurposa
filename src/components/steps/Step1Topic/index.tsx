@@ -7,7 +7,7 @@
 
 import { useState } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
-import { FileText, Sparkles, HelpCircle, X, Loader2 } from 'lucide-react';
+import { FileText, Sparkles, HelpCircle, X, Loader2, Undo2, Redo2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateTopics, refineText, type TopicSuggestion } from '../../../services/api';
 import { useProfile } from '../../../context/ProfileContext';
@@ -39,12 +39,54 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
     const [showEditPopover, setShowEditPopover] = useState(false);
     const [editInstruction, setEditInstruction] = useState('');
 
+    // History: tracks AI edits for undo/redo
+    // Each entry: { text: result, label: instruction used }
+    // history[0] = original text before first AI edit
+    const [history, setHistory] = useState<{ text: string; label: string }[]>([]);
+    const [historyIndex, setHistoryIndex] = useState(-1); // -1 = no history yet
+    const [showHistory, setShowHistory] = useState(false);
+
+    const hasHistory = history.length > 1;
+    const canUndo = historyIndex > 0;
+    const canRedo = historyIndex < history.length - 1;
+
+    const handleUndo = () => {
+        if (!canUndo) return;
+        const newIndex = historyIndex - 1;
+        setHistoryIndex(newIndex);
+        onTopicChange(history[newIndex].text);
+    };
+
+    const handleRedo = () => {
+        if (!canRedo) return;
+        const newIndex = historyIndex + 1;
+        setHistoryIndex(newIndex);
+        onTopicChange(history[newIndex].text);
+    };
+
+    const handleHistorySelect = (index: number) => {
+        setHistoryIndex(index);
+        onTopicChange(history[index].text);
+        setShowHistory(false);
+    };
+
     const handleEditPrompt = async () => {
         if (!editInstruction.trim()) return;
 
         setIsRefining(true);
         try {
             const response = await refineText(topic, editInstruction);
+
+            // If first edit, save the original text as entry 0
+            let newHistory = history.slice(0, historyIndex + 1);
+            if (newHistory.length === 0) {
+                newHistory = [{ text: topic, label: 'Original' }];
+            }
+
+            newHistory.push({ text: response.text, label: editInstruction });
+            setHistory(newHistory);
+            setHistoryIndex(newHistory.length - 1);
+
             onTopicChange(response.text);
             setShowEditPopover(false);
             setEditInstruction('');
@@ -93,6 +135,15 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
     };
 
     const handleSelectTopic = (selectedTopic: string) => {
+        // Track in history
+        let newHistory = history.slice(0, historyIndex + 1);
+        if (newHistory.length === 0 && topic.trim()) {
+            newHistory = [{ text: topic, label: 'Original' }];
+        }
+        newHistory.push({ text: selectedTopic, label: 'Generated topic' });
+        setHistory(newHistory);
+        setHistoryIndex(newHistory.length - 1);
+
         onTopicChange(selectedTopic);
         handleCloseModal();
     };
@@ -128,6 +179,65 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
                     rows={4}
                     className="w-full px-4 py-3 pb-10 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 />
+                {/* History controls — bottom left */}
+                {hasHistory && (
+                    <div className="absolute bottom-2 left-2 flex items-center gap-0.5">
+                        <button
+                            onClick={handleUndo}
+                            disabled={!canUndo}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Previous version"
+                        >
+                            <Undo2 size={14} />
+                        </button>
+                        <button
+                            onClick={handleRedo}
+                            disabled={!canRedo}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Next version"
+                        >
+                            <Redo2 size={14} />
+                        </button>
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowHistory(!showHistory)}
+                                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                                title="View all versions"
+                            >
+                                <Clock size={14} />
+                            </button>
+
+                            {/* History dropdown */}
+                            {showHistory && (
+                                <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
+                                    <div className="px-3 py-2 border-b border-gray-100">
+                                        <p className="text-xs font-semibold text-gray-900">Edit history</p>
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto">
+                                        {history.map((entry, index) => (
+                                            <button
+                                                key={index}
+                                                onClick={() => handleHistorySelect(index)}
+                                                className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
+                                                    index === historyIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                                }`}
+                                            >
+                                                <p className={`font-medium truncate ${index === historyIndex ? 'text-blue-700' : 'text-gray-900'}`}>
+                                                    {entry.label}
+                                                </p>
+                                                <p className="text-gray-400 truncate mt-0.5">
+                                                    {entry.text}
+                                                </p>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Edit with AI — bottom right */}
                 <div className="absolute bottom-2 right-2">
                     <button
                         onClick={() => setShowEditPopover(!showEditPopover)}
