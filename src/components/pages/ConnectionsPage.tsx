@@ -5,12 +5,12 @@
  * Centered layout matching BlogWizard design.
  */
 
-import { useState, useEffect } from "@wordpress/element";
-import apiFetch from "@wordpress/api-fetch";
+import { useState } from "@wordpress/element";
 import { toast } from "sonner";
 import { Check, ExternalLink, Save, Loader2 } from "lucide-react";
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from "react-icons/ri";
-import type { ProfileData } from "../OnboardingModal";
+import { useProfile } from "../../context/ProfileContext";
+import type { ProfileData } from "../../context/ProfileContext";
 
 // ============================================
 // TYPES
@@ -94,35 +94,26 @@ const platforms: SocialPlatform[] = [
 // ============================================
 
 export default function ConnectionsPage() {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { profile: contextProfile, isLoading, saveProfile } = useProfile();
+  const [localProfile, setLocalProfile] = useState<ProfileData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
-  useEffect(() => {
-    apiFetch<{ profile: ProfileData | null }>({ path: "/wbrp/v1/profile" })
-      .then((response) => {
-        if (response.profile) {
-          setProfile(response.profile);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load profile:", error);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, []);
+  // Sync context profile to local state for editing
+  if (contextProfile && !initialized) {
+    setLocalProfile(contextProfile);
+    setInitialized(true);
+  }
+
+  const profile = localProfile;
+  const setProfile = setLocalProfile;
 
   const handleSaveProfile = async () => {
     if (!profile) return;
 
     setIsSaving(true);
     try {
-      await apiFetch({
-        path: "/wbrp/v1/profile",
-        method: "POST",
-        data: profile,
-      });
+      await saveProfile(profile);
       toast.success("Profile saved!");
     } catch (error) {
       console.error("Failed to save profile:", error);

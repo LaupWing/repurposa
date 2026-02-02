@@ -6,13 +6,26 @@
  */
 
 import { createContext, useContext, useState, useEffect } from '@wordpress/element';
-import type { ProfileData } from '../components/OnboardingModal';
 
 // ============================================
 // TYPES
 // ============================================
 
+export interface ProfileData {
+    business_type: string;
+    niche: string;
+    target_audience: string;
+    brand_voice: 'conversational' | 'professional' | 'bold';
+}
+
+export interface UserData {
+    id: number;
+    name: string;
+    email: string;
+}
+
 interface ProfileContextType {
+    user: UserData | null;
     profile: ProfileData | null;
     isLoading: boolean;
     isConnected: boolean;
@@ -57,11 +70,12 @@ const ProfileContext = createContext<ProfileContextType | null>(null);
 // ============================================
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
+    const [user, setUser] = useState<UserData | null>(null);
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
 
-    // Load profile from Laravel on mount
+    // Load user + profile from Laravel on mount
     useEffect(() => {
         const { token } = getConfig();
 
@@ -71,10 +85,13 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        laravelFetch<{ id: number; name: string; email: string }>('/user')
-            .then(() => {
+        laravelFetch<{ user: UserData; profile: ProfileData | null }>('/profile')
+            .then((response) => {
                 setIsConnected(true);
-                // TODO: Fetch profile from /api/profile once that endpoint exists
+                setUser(response.user);
+                if (response.profile) {
+                    setProfile(response.profile);
+                }
             })
             .catch((error) => {
                 console.error('Failed to load profile:', error);
@@ -99,7 +116,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <ProfileContext.Provider value={{ profile, isLoading, isConnected, setProfile, saveProfile, deleteProfile }}>
+        <ProfileContext.Provider value={{ user, profile, isLoading, isConnected, setProfile, saveProfile, deleteProfile }}>
             {children}
         </ProfileContext.Provider>
     );
