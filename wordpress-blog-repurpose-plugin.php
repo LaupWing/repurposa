@@ -109,6 +109,12 @@ function wbrp_add_admin_menu() {
 
         wp_enqueue_style('wp-components');
 
+        // Pass config to React (Sanctum token + Laravel API URL)
+        wp_localize_script('wbrp-admin', 'wbrpConfig', [
+            'apiUrl' => defined('WBRP_API_URL') ? WBRP_API_URL : 'http://127.0.0.1:8000',
+            'token' => get_option('wbrp_auth_token', ''),
+        ]);
+
         // Enqueue WordPress media library
         wp_enqueue_media();
     });
@@ -190,31 +196,6 @@ function wbrp_register_post_types() {
 add_action('rest_api_init', 'wbrp_register_rest_routes');
 
 function wbrp_register_rest_routes() {
-    // Profile routes
-    register_rest_route('wbrp/v1', '/profile', [
-        [
-            'methods' => 'GET',
-            'callback' => 'wbrp_get_profile',
-            'permission_callback' => function() {
-                return current_user_can('manage_options');
-            },
-        ],
-        [
-            'methods' => 'POST',
-            'callback' => 'wbrp_save_profile',
-            'permission_callback' => function() {
-                return current_user_can('manage_options');
-            },
-        ],
-        [
-            'methods' => 'DELETE',
-            'callback' => 'wbrp_delete_profile',
-            'permission_callback' => function() {
-                return current_user_can('manage_options');
-            },
-        ],
-    ]);
-
     // Blog routes
     register_rest_route('wbrp/v1', '/blogs', [
         [
@@ -293,45 +274,6 @@ function wbrp_register_rest_routes() {
             },
         ],
     ]);
-}
-
-/**
- * Delete profile data
- */
-function wbrp_delete_profile() {
-    delete_option('wbrp_profile');
-    return new WP_REST_Response(['success' => true], 200);
-}
-
-/**
- * Get profile data
- */
-function wbrp_get_profile() {
-    $profile = get_option('wbrp_profile', null);
-
-    if (!$profile) {
-        return new WP_REST_Response(['profile' => null], 200);
-    }
-
-    return new WP_REST_Response(['profile' => $profile], 200);
-}
-
-/**
- * Save profile data
- */
-function wbrp_save_profile(WP_REST_Request $request) {
-    $data = $request->get_json_params();
-
-    $profile = [
-        'business_type' => sanitize_text_field($data['business_type'] ?? ''),
-        'niche' => sanitize_text_field($data['niche'] ?? ''),
-        'target_audience' => sanitize_text_field($data['target_audience'] ?? ''),
-        'brand_voice' => sanitize_text_field($data['brand_voice'] ?? 'conversational'),
-    ];
-
-    update_option('wbrp_profile', $profile);
-
-    return new WP_REST_Response(['profile' => $profile, 'success' => true], 200);
 }
 
 /**
