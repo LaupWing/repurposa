@@ -76,12 +76,6 @@ async function apiRequest<T>(
 // API METHODS
 // ============================================
 
-export interface ProfileContext {
-    business_type?: string;
-    niche?: string;
-    target_audience?: string;
-}
-
 export async function generateTopics(
     roughIdea: string,
     options?: { target_audience?: string }
@@ -116,18 +110,16 @@ export async function generateBlog(
     });
 }
 
-export interface RefinePromptResponse {
-    prompt: string;
+export interface RefineTextResponse {
+    text: string;
 }
 
-export async function refinePrompt(
-    prompt: string,
-    targetAudience?: string,
-    instruction?: string
-): Promise<RefinePromptResponse> {
-    return apiRequest<RefinePromptResponse>('/blog/refine-prompt', {
-        prompt,
-        target_audience: targetAudience,
+export async function refineText(
+    text: string,
+    instruction: string
+): Promise<RefineTextResponse> {
+    return apiRequest<RefineTextResponse>('/refine-text', {
+        text,
         instruction,
     });
 }

@@ -9,7 +9,7 @@ import { useState } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
 import { FileText, Sparkles, HelpCircle, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateTopics, refinePrompt, type TopicSuggestion } from '../../../services/api';
+import { generateTopics, refineText, type TopicSuggestion } from '../../../services/api';
 import { useProfile } from '../../../context/ProfileContext';
 
 // ============================================
@@ -44,8 +44,8 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
 
         setIsRefining(true);
         try {
-            const response = await refinePrompt(topic, targetAudience, editInstruction);
-            onTopicChange(response.prompt);
+            const response = await refineText(topic, editInstruction);
+            onTopicChange(response.text);
             setShowEditPopover(false);
             setEditInstruction('');
             toast.success('Prompt updated!');
@@ -142,8 +142,8 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
                     {/* Tooltip */}
                     {showRefineTooltip && !showEditPopover && (
                         <div className="absolute bottom-full right-0 mb-2 w-48 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg pointer-events-none">
-                            <p className="font-semibold">Edit prompt</p>
-                            <p className="text-gray-300 mt-0.5">Change prompt with AI</p>
+                            <p className="font-semibold">Edit text</p>
+                            <p className="text-gray-300 mt-0.5">Modify with AI</p>
                         </div>
                     )}
 
@@ -151,7 +151,7 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
                     {showEditPopover && (
                         <div className="absolute bottom-full right-0 mb-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl p-3 z-10">
                             <div className="flex items-center justify-between mb-2">
-                                <p className="text-sm font-semibold text-gray-900">Edit prompt</p>
+                                <p className="text-sm font-semibold text-gray-900">Edit text</p>
                                 <button
                                     onClick={() => { setShowEditPopover(false); setEditInstruction(''); }}
                                     className="p-1 text-gray-400 hover:text-gray-600 rounded"
@@ -159,7 +159,7 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
                                     <X size={14} />
                                 </button>
                             </div>
-                            <p className="text-xs text-gray-500 mb-2">Tell AI how to change your topic</p>
+                            <p className="text-xs text-gray-500 mb-2">Tell AI how to modify your text</p>
                             <textarea
                                 value={editInstruction}
                                 onChange={(e) => setEditInstruction(e.target.value)}

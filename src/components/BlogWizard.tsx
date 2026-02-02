@@ -129,15 +129,10 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                 purpose: section.purpose,
             }));
 
-            const blogProfileContext = {
-                business_type: profile?.business_type,
-                niche: profile?.niche,
-                target_audience: data.targetAudience || profile?.target_audience,
-            };
             const response = await generateBlog(
                 data.topic,
                 outlineForApi,
-                blogProfileContext
+                { target_audience: data.targetAudience || profile?.target_audience }
             );
 
             onComplete({
