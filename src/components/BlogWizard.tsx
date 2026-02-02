@@ -33,6 +33,7 @@ export interface OutlineSection {
 
 export interface WizardData {
     topic: string;
+    targetAudience: string;
     roughOutline: string[];
     outline: OutlineSection[];
     generatedTitle?: string;
@@ -54,6 +55,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
     const [data, setData] = useState<WizardData>({
         topic: '',
+        targetAudience: profile?.target_audience || '',
         roughOutline: [],
         outline: [],
     });
@@ -91,10 +93,15 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         setIsGeneratingOutline(true);
 
         try {
+            const profileContext = {
+                business_type: profile?.business_type,
+                niche: profile?.niche,
+                target_audience: data.targetAudience || profile?.target_audience,
+            };
             const response = await generateOutline(
                 data.topic,
                 data.roughOutline,
-                profile ?? undefined
+                profileContext
             );
 
             // Convert API response to our format (add IDs)
@@ -127,10 +134,15 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                 purpose: section.purpose,
             }));
 
+            const blogProfileContext = {
+                business_type: profile?.business_type,
+                niche: profile?.niche,
+                target_audience: data.targetAudience || profile?.target_audience,
+            };
             const response = await generateBlog(
                 data.topic,
                 outlineForApi,
-                profile ?? undefined
+                blogProfileContext
             );
 
             onComplete({
@@ -196,6 +208,8 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                         <Step1Topic
                             topic={data.topic}
                             onTopicChange={updateTopic}
+                            targetAudience={data.targetAudience}
+                            onTargetAudienceChange={(value) => setData(prev => ({ ...prev, targetAudience: value }))}
                         />
                     )}
 

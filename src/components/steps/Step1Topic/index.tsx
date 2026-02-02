@@ -19,13 +19,15 @@ import { useProfile } from '../../../context/ProfileContext';
 interface Step1TopicProps {
     topic: string;
     onTopicChange: (topic: string) => void;
+    targetAudience: string;
+    onTargetAudienceChange: (value: string) => void;
 }
 
 // ============================================
 // COMPONENT
 // ============================================
 
-export default function Step1Topic({ topic, onTopicChange }: Step1TopicProps) {
+export default function Step1Topic({ topic, onTopicChange, targetAudience, onTargetAudienceChange }: Step1TopicProps) {
     const { profile } = useProfile();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [prompt, setPrompt] = useState('');
@@ -73,6 +75,20 @@ export default function Step1Topic({ topic, onTopicChange }: Step1TopicProps) {
 
     return (
         <div className="space-y-5">
+            {/* Target Audience */}
+            <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    Who's this blog for?
+                </label>
+                <input
+                    type="text"
+                    value={targetAudience}
+                    onChange={(e) => onTargetAudienceChange(e.target.value)}
+                    placeholder="e.g., small business owners, busy moms, startup founders"
+                    className="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+            </div>
+
             {/* Label */}
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                 <FileText size={16} className="text-blue-600" />
