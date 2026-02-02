@@ -191,11 +191,52 @@ function wbrp_register_post_types() {
 }
 
 /**
- * Register REST API routes for profile
+ * Register REST API routes
  */
 add_action('rest_api_init', 'wbrp_register_rest_routes');
 
 function wbrp_register_rest_routes() {
+    // Auth token route — stores/retrieves the Sanctum token
+    register_rest_route('wbrp/v1', '/auth/token', [
+        [
+            'methods' => 'GET',
+            'callback' => function() {
+                $token = get_option('wbrp_auth_token', '');
+                return new WP_REST_Response(['token' => $token], 200);
+            },
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ],
+        [
+            'methods' => 'POST',
+            'callback' => function(WP_REST_Request $request) {
+                $data = $request->get_json_params();
+                $token = sanitize_text_field($data['token'] ?? '');
+
+                if (empty($token)) {
+                    return new WP_REST_Response(['error' => 'Token is required'], 400);
+                }
+
+                update_option('wbrp_auth_token', $token);
+                return new WP_REST_Response(['success' => true], 200);
+            },
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ],
+        [
+            'methods' => 'DELETE',
+            'callback' => function() {
+                delete_option('wbrp_auth_token');
+                return new WP_REST_Response(['success' => true], 200);
+            },
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ],
+    ]);
+
     // Blog routes
     register_rest_route('wbrp/v1', '/blogs', [
         [

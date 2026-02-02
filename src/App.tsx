@@ -14,7 +14,7 @@ import BlogsPage from './components/pages/BlogsPage';
 import BlogViewPage from './components/pages/BlogViewPage';
 import SchedulePage from './components/pages/SchedulePage';
 import ConnectionsPage from './components/pages/ConnectionsPage';
-import OnboardingModal, { type ProfileData } from './components/OnboardingModal';
+import ConnectAccount from './components/ConnectAccount';
 import type { WizardData } from './components/BlogWizard';
 
 // ============================================
@@ -33,27 +33,8 @@ interface AppProps {
 // ============================================
 
 function AppContent({ initialPage, postId }: AppProps) {
-    const { profile, isLoading, setProfile } = useProfile();
-    const [blogData, setBlogData] = useState<WizardData | null>(null);
-
-    const handleOnboardingComplete = async (data: ProfileData) => {
-        try {
-            await apiFetch({
-                path: '/wbrp/v1/profile',
-                method: 'POST',
-                data,
-            });
-            setProfile(data);
-            toast.success('Profile saved!', {
-                description: "You're all set! Start creating content.",
-            });
-        } catch (error) {
-            console.error('Failed to save profile:', error);
-            toast.error('Failed to save profile', {
-                description: 'Please try again.',
-            });
-        }
-    };
+    const { isLoading, isConnected } = useProfile();
+    const [justConnected, setJustConnected] = useState(false);
 
     const handleWizardComplete = async (data: WizardData) => {
         try {
@@ -68,7 +49,6 @@ function AppContent({ initialPage, postId }: AppProps) {
                 },
             });
 
-            setBlogData(data);
             toast.success('Blog created!', {
                 description: 'Your blog has been saved as a draft.',
             });
@@ -85,6 +65,21 @@ function AppContent({ initialPage, postId }: AppProps) {
 
     if (isLoading) {
         return null;
+    }
+
+    // Not connected — show connect screen
+    if (!isConnected && !justConnected) {
+        return (
+            <>
+                <Toaster position="bottom-right" richColors />
+                <ConnectAccount onConnected={() => {
+                    setJustConnected(true);
+                    toast.success('Account connected!');
+                    // Reload to fetch profile with new token
+                    window.location.reload();
+                }} />
+            </>
+        );
     }
 
     const renderPage = () => {
@@ -107,10 +102,6 @@ function AppContent({ initialPage, postId }: AppProps) {
     return (
         <>
             <Toaster position="bottom-right" richColors />
-            <OnboardingModal
-                isOpen={!profile}
-                onComplete={handleOnboardingComplete}
-            />
             {renderPage()}
         </>
     );
