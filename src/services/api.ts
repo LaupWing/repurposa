@@ -2,12 +2,19 @@
  * API Service
  *
  * Handles all API calls to the Laravel backend.
- * Base URL: http://localhost:8080/api
+ * Config is passed from PHP via wp_localize_script as window.wbrpConfig.
  */
 
-// Configuration - TODO: Move to WordPress settings
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
-const API_KEY = 'test-key-12345'; // TODO: Get from WordPress settings
+declare global {
+    interface Window {
+        wbrpConfig: {
+            apiUrl: string;
+            token: string;
+        };
+    }
+}
+
+const getConfig = () => window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
 
 // ============================================
 // TYPES
@@ -43,15 +50,18 @@ export interface GenerateBlogResponse {
 
 async function apiRequest<T>(
     endpoint: string,
-    data: Record<string, unknown>
+    data: Record<string, unknown>,
+    method: string = 'POST'
 ): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
+    const { apiUrl, token } = getConfig();
+    const response = await fetch(`${apiUrl}/api${endpoint}`, {
+        method,
         headers: {
             'Content-Type': 'application/json',
-            'X-API-Key': API_KEY,
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(data),
+        body: method !== 'GET' ? JSON.stringify(data) : undefined,
     });
 
     if (!response.ok) {
