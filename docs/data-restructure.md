@@ -4,14 +4,17 @@
 
 Currently all data (blogs, tweets, profile/settings) is stored locally in WordPress custom post types and options. This operation moves the source of truth to the Laravel backend so we can support user accounts, OAuth, scheduling, and payments.
 
-## Current State (WordPress stores everything)
+## Current State (partially migrated)
 
-| Data | Storage | Method |
-|---|---|---|
-| Blogs | `wbrp_blog` custom post type | WordPress DB |
-| Tweets | `wbrp_tweet` custom post type (post_parent = blog) | WordPress DB |
-| Profile | `wbrp_profile` in `wp_options` | WordPress DB |
-| Published posts | Regular WordPress `post` type | WordPress DB |
+| Data | Storage | Method | Status |
+|---|---|---|---|
+| Auth token | `wbrp_auth_token` in `wp_options` | WordPress DB | Done |
+| Profile | `user_profiles` table | Laravel DB | Done |
+| Wizard | `wizards` table | Laravel DB | Done |
+| Blogs (creation) | `POST /api/blogs` | Laravel DB | Next |
+| Blogs (list/view/edit) | `wbrp_blog` custom post type | WordPress DB | TODO |
+| Tweets | `wbrp_tweet` custom post type | WordPress DB | TODO |
+| Published posts | Regular WordPress `post` type | WordPress DB | Stays |
 
 ## Target State (Laravel stores everything, WordPress is a thin client)
 
@@ -41,12 +44,18 @@ Currently all data (blogs, tweets, profile/settings) is stored locally in WordPr
 
 ### Endpoints Needed on Laravel
 
-#### Auth (new)
+#### Auth (done)
 - `GET /auth/wordpress/register` — Register page (popup)
 - `POST /auth/wordpress/register` — Create account, return Sanctum token
 - `GET /auth/wordpress/login` — Login page (popup)
 - `POST /auth/wordpress/login` — Validate credentials, return Sanctum token
 - `GET /auth/wordpress/callback` — PostMessage token back to plugin, close popup
+
+#### Wizard (done)
+- `GET /api/wizard` — Get current wizard or 404
+- `POST /api/wizard` — Create wizard (returns existing if one exists)
+- `PUT /api/wizard` — Partial update (send only changed fields)
+- `DELETE /api/wizard` — Discard wizard
 
 #### Blogs (move from WordPress REST → Laravel API)
 - `GET /api/blogs` — List user's blogs
@@ -60,7 +69,7 @@ Currently all data (blogs, tweets, profile/settings) is stored locally in WordPr
 - `POST /api/blogs/{id}/tweets` — Save tweets for a blog
 - `DELETE /api/blogs/{id}/tweets` — Delete tweets for a blog
 
-#### Profile (move from WordPress REST → Laravel API)
+#### Profile (done)
 - `GET /api/profile` — Get user profile
 - `POST /api/profile` — Save/update profile
 
@@ -120,11 +129,17 @@ Currently all data (blogs, tweets, profile/settings) is stored locally in WordPr
 
 ## Migration Order
 
-1. **Auth flow** — WordPress plugin ↔ Laravel account connection
-2. **Profile** — Move profile CRUD to Laravel API
-3. **Blogs** — Move blog CRUD to Laravel API
-4. **Tweets** — Move tweet CRUD to Laravel API
-5. **OAuth** — Social media connections via Laravel
-6. **Scheduling** — Queue + publishing times via Laravel
-7. **Payments** — Stripe integration (future)
-8. **Cleanup** — Remove old WordPress custom post types and REST routes
+1. ~~**Auth flow** — WordPress plugin ↔ Laravel account connection~~ (done)
+2. ~~**Profile** — Move profile CRUD to Laravel API~~ (done)
+3. ~~**Wizard** — Blog creation wizard state persisted to Laravel~~ (done)
+4. **Blogs** — Move blog CRUD to Laravel API (next)
+   - `POST /api/blogs` for saving finished blog from wizard
+   - `GET /api/blogs` for blog list page
+   - `GET /api/blogs/{id}` + `PUT /api/blogs/{id}` for blog view/edit
+   - `DELETE /api/blogs/{id}` for deleting blogs
+   - Blog publish endpoint (creates real WP post from Laravel data)
+5. **Tweets** — Move tweet CRUD to Laravel API
+6. **OAuth** — Social media connections via Laravel
+7. **Scheduling** — Queue + publishing times via Laravel
+8. **Payments** — Stripe integration (future)
+9. **Cleanup** — Remove old WordPress custom post types and REST routes

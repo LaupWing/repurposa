@@ -3,20 +3,26 @@
 ## Active
 
 ### 1. Data Restructure — Move source of truth from WordPress to Laravel
-**Status:** Not started
+**Status:** In progress
 **Priority:** High
 **Reference:** [docs/data-restructure.md](./data-restructure.md)
 
 Move all data storage (blogs, tweets, profile, settings) from WordPress custom post types and options to the Laravel backend. WordPress becomes a thin client that only stores a Sanctum token and publishes final posts.
 
 **Steps:**
-- [ ] Build WordPress auth flow (register/login popup → Sanctum token)
-- [ ] Move profile CRUD to Laravel API
-- [ ] Move blog CRUD to Laravel API
+- [x] Build WordPress auth flow (register/login popup → Sanctum token)
+- [x] Move profile CRUD to Laravel API
+- [x] Update `src/services/api.ts` to use Sanctum token auth (`Bearer {token}`)
+- [x] Add connection status UI in plugin (connected/disconnected state)
+- [x] Wire up wizard lifecycle (GET/POST/PUT `/api/wizard`) with resume support
+- [x] Auto-save wizard fields (topic, target_audience, rough_outline, outline) on change
+- [x] Lift Step1 local state (generatedTopics, topicHistory, topicHistoryIndex) into BlogWizard for persistence
+- [ ] Wire up `POST /api/blogs` to save finished blog (replaces `POST /wbrp/v1/blogs`)
+- [ ] Wire up blog list page (`BlogsPage`) to use Laravel API
+- [ ] Wire up blog view/edit page (`BlogViewPage`) to use Laravel API
+- [ ] Wire up blog publish to create real WP post from Laravel data
 - [ ] Move tweet CRUD to Laravel API
-- [ ] Update `src/services/api.ts` to use Sanctum token auth
-- [ ] Remove WordPress custom post types and REST routes
-- [ ] Add connection status UI in plugin (connected/disconnected state)
+- [ ] Remove WordPress custom post types and REST routes (cleanup)
 
 ### 2. OAuth — Social media connections
 **Status:** Not started
@@ -48,4 +54,11 @@ Move all data storage (blogs, tweets, profile, settings) from WordPress custom p
 
 ## Completed
 
-_(none yet)_
+- Auth flow (register/login popup → Sanctum token storage)
+- Profile CRUD moved to Laravel API
+- Sanctum token auth in `api.ts`
+- ConnectAccount screen for disconnected state
+- Wizard API integration (create, resume, auto-save all fields)
+- Step 1 state lifted for persistence (generatedTopics, topicHistory)
+- Step 2 rough outline auto-save + edit functionality
+- Step 3 outline auto-save (reorder, edit, delete)
