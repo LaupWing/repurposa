@@ -66,6 +66,11 @@ export default function Step2RoughOutline({
         onRoughOutlineChange(roughOutline.filter((_, i) => i !== index));
     };
 
+    // Edit an idea
+    const editIdea = (index: number, newText: string) => {
+        onRoughOutlineChange(roughOutline.map((item, i) => i === index ? newText : item));
+    };
+
     // Handle drag end
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
@@ -150,6 +155,7 @@ export default function Step2RoughOutline({
                                     id={`idea-${index}`}
                                     idea={idea}
                                     onRemove={() => removeIdea(index)}
+                                    onEdit={(newText) => editIdea(index, newText)}
                                 />
                             ))}
                         </div>

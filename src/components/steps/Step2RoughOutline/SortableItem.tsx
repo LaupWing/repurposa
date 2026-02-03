@@ -5,10 +5,10 @@
  * Uses @dnd-kit for drag and drop functionality.
  */
 
-import { useState } from '@wordpress/element';
+import { useState, useRef, useEffect } from '@wordpress/element';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2 } from 'lucide-react';
+import { GripVertical, Trash2, Pencil, Check, X } from 'lucide-react';
 
 // ============================================
 // TYPES
@@ -18,14 +18,24 @@ interface SortableItemProps {
     id: string;
     idea: string;
     onRemove: () => void;
+    onEdit: (newText: string) => void;
 }
 
 // ============================================
 // COMPONENT
 // ============================================
 
-export default function SortableItem({ id, idea, onRemove }: SortableItemProps) {
+export default function SortableItem({ id, idea, onRemove, onEdit }: SortableItemProps) {
     const [showConfirm, setShowConfirm] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editText, setEditText] = useState(idea);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isEditing]);
 
     const {
         attributes,
@@ -58,20 +68,86 @@ export default function SortableItem({ id, idea, onRemove }: SortableItemProps) 
                 <GripVertical size={16} />
             </button>
 
-            {/* Idea Text */}
-            <div className="flex-1 text-sm text-gray-700">
-                {idea}
-            </div>
-
-            {/* Delete Button */}
-            {!showConfirm ? (
-                <button
-                    type="button"
-                    onClick={() => setShowConfirm(true)}
-                    className="shrink-0 p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 transition-opacity"
+            {/* Idea Text / Edit Input */}
+            {isEditing ? (
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (editText.trim()) {
+                                onEdit(editText.trim());
+                                setIsEditing(false);
+                            }
+                        }
+                        if (e.key === 'Escape') {
+                            setEditText(idea);
+                            setIsEditing(false);
+                        }
+                    }}
+                    className="flex-1 px-2 py-1 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+            ) : (
+                <div
+                    className="flex-1 text-sm text-gray-700 cursor-pointer"
+                    onDoubleClick={() => {
+                        setEditText(idea);
+                        setIsEditing(true);
+                    }}
                 >
-                    <Trash2 size={14} className="text-red-500" />
-                </button>
+                    {idea}
+                </div>
+            )}
+
+            {/* Action Buttons */}
+            {isEditing ? (
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (editText.trim()) {
+                                onEdit(editText.trim());
+                                setIsEditing(false);
+                            }
+                        }}
+                        className="shrink-0 p-1.5 rounded hover:bg-green-50"
+                    >
+                        <Check size={14} className="text-green-600" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setEditText(idea);
+                            setIsEditing(false);
+                        }}
+                        className="shrink-0 p-1.5 rounded hover:bg-gray-100"
+                    >
+                        <X size={14} className="text-gray-500" />
+                    </button>
+                </div>
+            ) : !showConfirm ? (
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setEditText(idea);
+                            setIsEditing(true);
+                        }}
+                        className="shrink-0 p-1.5 rounded hover:bg-gray-200"
+                    >
+                        <Pencil size={14} className="text-gray-500" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setShowConfirm(true)}
+                        className="shrink-0 p-1.5 rounded hover:bg-red-50"
+                    >
+                        <Trash2 size={14} className="text-red-500" />
+                    </button>
+                </div>
             ) : (
                 <div className="flex items-center gap-2">
                     <button
