@@ -7,7 +7,7 @@
  * - Step 3: Review generated outline & generate blog
  */
 
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { ArrowRight, ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,7 +18,15 @@ import Step3GeneratedOutline from './steps/Step3GeneratedOutline';
 import { GeneratingOverlay } from './GeneratingOverlay';
 
 // API & Context
-import { generateOutline, generateBlog } from '../services/api';
+import {
+    generateOutline,
+    generateBlog,
+    getWizard,
+    createWizard,
+    updateWizard,
+    type TopicSuggestion,
+    type TopicHistoryEntry,
+} from '../services/api';
 import { useProfile } from '../context/ProfileContext';
 
 // ============================================
@@ -34,6 +42,9 @@ export interface OutlineSection {
 export interface WizardData {
     topic: string;
     targetAudience: string;
+    generatedTopics: TopicSuggestion[];
+    topicHistory: TopicHistoryEntry[];
+    topicHistoryIndex: number;
     roughOutline: string[];
     outline: OutlineSection[];
     generatedTitle?: string;
@@ -50,15 +61,60 @@ interface BlogWizardProps {
 
 export default function BlogWizard({ onComplete }: BlogWizardProps) {
     const { profile } = useProfile();
+    const [isLoading, setIsLoading] = useState(true);
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
     const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
     const [data, setData] = useState<WizardData>({
         topic: '',
         targetAudience: profile?.target_audience || '',
+        generatedTopics: [],
+        topicHistory: [],
+        topicHistoryIndex: 0,
         roughOutline: [],
         outline: [],
     });
+
+    // ============================================
+    // WIZARD LIFECYCLE
+    // ============================================
+    useEffect(() => {
+        let cancelled = false;
+
+        async function init() {
+            try {
+                const wizard = await getWizard();
+                if (cancelled) return;
+
+                setData({
+                    topic: wizard.topic || '',
+                    targetAudience: wizard.target_audience || profile?.target_audience || '',
+                    generatedTopics: wizard.generated_topics || [],
+                    topicHistory: wizard.topic_history || [],
+                    topicHistoryIndex: wizard.topic_history_index || 0,
+                    roughOutline: wizard.rough_outline || [],
+                    outline: (wizard.outline || []).map((s, i) => ({
+                        id: `section-${i + 1}`,
+                        title: s.title,
+                        purpose: s.purpose,
+                    })),
+                });
+                setCurrentStep(wizard.current_step || 1);
+            } catch {
+                // 404 = no wizard yet, create one
+                try {
+                    await createWizard();
+                } catch (err) {
+                    console.error('Failed to create wizard:', err);
+                }
+            } finally {
+                if (!cancelled) setIsLoading(false);
+            }
+        }
+
+        init();
+        return () => { cancelled = true; };
+    }, []);
 
     // ============================================
     // HELPERS
@@ -68,8 +124,15 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         return true;
     };
 
-    const nextStep = (): void => {
-        if (currentStep < 3) setCurrentStep(currentStep + 1);
+    const handleStep1Next = (): void => {
+        setCurrentStep(2);
+        updateWizard({
+            topic: data.topic,
+            target_audience: data.targetAudience,
+            topic_history: data.topicHistory.length > 0 ? data.topicHistory : null,
+            topic_history_index: data.topicHistoryIndex,
+            current_step: 2,
+        }).catch(err => console.error('Failed to save wizard:', err));
     };
 
     const prevStep = (): void => {
@@ -153,6 +216,16 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     // ============================================
     // RENDER
     // ============================================
+    if (isLoading) {
+        return (
+            <div className="max-w-3xl mx-auto mt-6">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 flex items-center justify-center">
+                    <Loader2 size={24} className="animate-spin text-gray-400" />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-3xl mx-auto mt-6">
             <div className="relative bg-white rounded-lg shadow-sm border border-gray-200">
@@ -200,6 +273,11 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                             onTopicChange={updateTopic}
                             targetAudience={data.targetAudience}
                             onTargetAudienceChange={(value) => setData(prev => ({ ...prev, targetAudience: value }))}
+                            generatedTopics={data.generatedTopics}
+                            onGeneratedTopicsChange={(topics) => setData(prev => ({ ...prev, generatedTopics: topics }))}
+                            topicHistory={data.topicHistory}
+                            topicHistoryIndex={data.topicHistoryIndex}
+                            onTopicHistoryUpdate={(history, index) => setData(prev => ({ ...prev, topicHistory: history, topicHistoryIndex: index }))}
                         />
                     )}
 
@@ -237,7 +315,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
 
                     {currentStep === 1 && (
                         <button
-                            onClick={nextStep}
+                            onClick={handleStep1Next}
                             disabled={!canProceed()}
                             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >

@@ -9,7 +9,7 @@ import { useState } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
 import { FileText, Sparkles, HelpCircle, X, Loader2, Undo2, Redo2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateTopics, refineText, type TopicSuggestion } from '../../../services/api';
+import { generateTopics, refineText, type TopicSuggestion, type TopicHistoryEntry } from '../../../services/api';
 import { useProfile } from '../../../context/ProfileContext';
 
 // ============================================
@@ -21,52 +21,60 @@ interface Step1TopicProps {
     onTopicChange: (topic: string) => void;
     targetAudience: string;
     onTargetAudienceChange: (value: string) => void;
+    generatedTopics: TopicSuggestion[];
+    onGeneratedTopicsChange: (topics: TopicSuggestion[]) => void;
+    topicHistory: TopicHistoryEntry[];
+    topicHistoryIndex: number;
+    onTopicHistoryUpdate: (history: TopicHistoryEntry[], index: number) => void;
 }
 
 // ============================================
 // COMPONENT
 // ============================================
 
-export default function Step1Topic({ topic, onTopicChange, targetAudience, onTargetAudienceChange }: Step1TopicProps) {
+export default function Step1Topic({
+    topic,
+    onTopicChange,
+    targetAudience,
+    onTargetAudienceChange,
+    generatedTopics,
+    onGeneratedTopicsChange,
+    topicHistory,
+    topicHistoryIndex,
+    onTopicHistoryUpdate,
+}: Step1TopicProps) {
     const { profile } = useProfile();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
-    const [suggestions, setSuggestions] = useState<TopicSuggestion[]>([]);
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const [isRefining, setIsRefining] = useState(false);
     const [showRefineTooltip, setShowRefineTooltip] = useState(false);
     const [showEditPopover, setShowEditPopover] = useState(false);
     const [editInstruction, setEditInstruction] = useState('');
-
-    // History: tracks AI edits for undo/redo
-    // Each entry: { text: result, label: instruction used }
-    // history[0] = original text before first AI edit
-    const [history, setHistory] = useState<{ text: string; label: string }[]>([]);
-    const [historyIndex, setHistoryIndex] = useState(-1); // -1 = no history yet
     const [showHistory, setShowHistory] = useState(false);
 
-    const hasHistory = history.length > 1;
-    const canUndo = historyIndex > 0;
-    const canRedo = historyIndex < history.length - 1;
+    const hasHistory = topicHistory.length > 1;
+    const canUndo = topicHistoryIndex > 0;
+    const canRedo = topicHistoryIndex < topicHistory.length - 1;
 
     const handleUndo = () => {
         if (!canUndo) return;
-        const newIndex = historyIndex - 1;
-        setHistoryIndex(newIndex);
-        onTopicChange(history[newIndex].text);
+        const newIndex = topicHistoryIndex - 1;
+        onTopicHistoryUpdate(topicHistory, newIndex);
+        onTopicChange(topicHistory[newIndex].text);
     };
 
     const handleRedo = () => {
         if (!canRedo) return;
-        const newIndex = historyIndex + 1;
-        setHistoryIndex(newIndex);
-        onTopicChange(history[newIndex].text);
+        const newIndex = topicHistoryIndex + 1;
+        onTopicHistoryUpdate(topicHistory, newIndex);
+        onTopicChange(topicHistory[newIndex].text);
     };
 
     const handleHistorySelect = (index: number) => {
-        setHistoryIndex(index);
-        onTopicChange(history[index].text);
+        onTopicHistoryUpdate(topicHistory, index);
+        onTopicChange(topicHistory[index].text);
         setShowHistory(false);
     };
 
@@ -77,15 +85,14 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
         try {
             const response = await refineText(topic, editInstruction);
 
-            // If first edit, save the original text as entry 0
-            let newHistory = history.slice(0, historyIndex + 1);
+            // Build history locally (server auto-saves topic_history via refine-text)
+            let newHistory = topicHistory.slice(0, topicHistoryIndex + 1);
             if (newHistory.length === 0) {
                 newHistory = [{ text: topic, label: 'Original' }];
             }
 
             newHistory.push({ text: response.text, label: editInstruction });
-            setHistory(newHistory);
-            setHistoryIndex(newHistory.length - 1);
+            onTopicHistoryUpdate(newHistory, newHistory.length - 1);
 
             onTopicChange(response.text);
             setShowEditPopover(false);
@@ -106,7 +113,6 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
-        setSuggestions([]);
         setPrompt('');
     };
 
@@ -120,10 +126,11 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
         setIsGenerating(true);
 
         try {
+            // Server auto-saves generated_topics to wizard
             const response = await generateTopics(searchTerm, {
                 target_audience: targetAudience || profile?.target_audience,
             });
-            setSuggestions(response.suggestions);
+            onGeneratedTopicsChange(response.suggestions);
         } catch (error) {
             console.error('Failed to generate topics:', error);
             toast.error('Failed to generate topics', {
@@ -136,13 +143,12 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
 
     const handleSelectTopic = (selectedTopic: string) => {
         // Track in history
-        let newHistory = history.slice(0, historyIndex + 1);
+        let newHistory = topicHistory.slice(0, topicHistoryIndex + 1);
         if (newHistory.length === 0 && topic.trim()) {
             newHistory = [{ text: topic, label: 'Original' }];
         }
         newHistory.push({ text: selectedTopic, label: 'Generated topic' });
-        setHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
+        onTopicHistoryUpdate(newHistory, newHistory.length - 1);
 
         onTopicChange(selectedTopic);
         handleCloseModal();
@@ -214,15 +220,15 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
                                         <p className="text-xs font-semibold text-gray-900">Edit history</p>
                                     </div>
                                     <div className="max-h-48 overflow-y-auto">
-                                        {history.map((entry, index) => (
+                                        {topicHistory.map((entry, index) => (
                                             <button
                                                 key={index}
                                                 onClick={() => handleHistorySelect(index)}
                                                 className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
-                                                    index === historyIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                                    index === topicHistoryIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                                                 }`}
                                             >
-                                                <p className={`font-medium truncate ${index === historyIndex ? 'text-blue-700' : 'text-gray-900'}`}>
+                                                <p className={`font-medium truncate ${index === topicHistoryIndex ? 'text-blue-700' : 'text-gray-900'}`}>
                                                     {entry.label}
                                                 </p>
                                                 <p className="text-gray-400 truncate mt-0.5">
@@ -371,12 +377,12 @@ export default function Step1Topic({ topic, onTopicChange, targetAudience, onTar
                         </button>
 
                         {/* Suggestions List */}
-                        {suggestions.length > 0 && (
+                        {generatedTopics.length > 0 && (
                             <div className="mt-4 pt-4 border-t border-gray-200 space-y-2 max-h-64 overflow-y-auto">
                                 <p className="text-xs font-medium text-gray-500 mb-2">
                                     Click to use:
                                 </p>
-                                {suggestions.map((suggestion, index) => (
+                                {generatedTopics.map((suggestion, index) => (
                                     <div
                                         key={index}
                                         className="relative flex items-start gap-2 group"
