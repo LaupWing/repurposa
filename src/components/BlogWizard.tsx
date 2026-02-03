@@ -151,6 +151,23 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     return () => clearTimeout(timer);
   }, [data.roughOutline]);
 
+  // Debounced auto-save for outline
+  useEffect(() => {
+    if (!isInitialized.current) return;
+
+    const timer = setTimeout(() => {
+      const outlineForApi =
+        data.outline.length > 0
+          ? data.outline.map((s) => ({ title: s.title, purpose: s.purpose }))
+          : null;
+      updateWizard({ outline: outlineForApi }).catch((err) =>
+        console.error("Failed to auto-save wizard:", err),
+      );
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [data.outline]);
+
   // ============================================
   // HELPERS
   // ============================================
