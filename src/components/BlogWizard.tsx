@@ -7,7 +7,7 @@
  * - Step 3: Review generated outline & generate blog
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { ArrowRight, ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -115,6 +115,25 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         init();
         return () => { cancelled = true; };
     }, []);
+
+    // Debounced auto-save for topic + target_audience
+    const isInitialized = useRef(false);
+    useEffect(() => {
+        // Skip the first render (initial state / wizard load)
+        if (!isInitialized.current) {
+            if (!isLoading) isInitialized.current = true;
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            updateWizard({
+                topic: data.topic || null,
+                target_audience: data.targetAudience || null,
+            }).catch(err => console.error('Failed to auto-save wizard:', err));
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [data.topic, data.targetAudience]);
 
     // ============================================
     // HELPERS

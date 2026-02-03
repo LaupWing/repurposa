@@ -5,7 +5,7 @@
  * Includes AI-powered topic generation (modal).
  */
 
-import { useState } from '@wordpress/element';
+import { useState, useRef, useEffect } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
 import { FileText, Sparkles, HelpCircle, X, Loader2, Undo2, Redo2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -53,6 +53,19 @@ export default function Step1Topic({
     const [showEditPopover, setShowEditPopover] = useState(false);
     const [editInstruction, setEditInstruction] = useState('');
     const [showHistory, setShowHistory] = useState(false);
+    const historyRef = useRef<HTMLDivElement>(null);
+
+    // Close history popover on outside click
+    useEffect(() => {
+        if (!showHistory) return;
+        const handleClick = (e: MouseEvent) => {
+            if (historyRef.current && !historyRef.current.contains(e.target as Node)) {
+                setShowHistory(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [showHistory]);
 
     const hasHistory = topicHistory.length > 1;
     const canUndo = topicHistoryIndex > 0;
@@ -204,7 +217,7 @@ export default function Step1Topic({
                         >
                             <Redo2 size={14} />
                         </button>
-                        <div className="relative">
+                        <div className="relative" ref={historyRef}>
                             <button
                                 onClick={() => setShowHistory(!showHistory)}
                                 className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
