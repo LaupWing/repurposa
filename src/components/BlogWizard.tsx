@@ -357,23 +357,39 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                     )}
 
                     {currentStep === 2 && (
-                        <button
-                            onClick={handleGenerateOutline}
-                            disabled={isGeneratingOutline}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                        >
-                            {isGeneratingOutline ? (
-                                <>
-                                    <Loader2 size={16} className="animate-spin" />
-                                    Generating...
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles size={16} />
-                                    Generate <em className="font-serif font-normal italic ml-0.5">Outline</em>
-                                </>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={handleGenerateOutline}
+                                disabled={isGeneratingOutline}
+                                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 transition-colors ${
+                                    data.outline.length > 0
+                                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                }`}
+                            >
+                                {isGeneratingOutline ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles size={16} />
+                                        {data.outline.length > 0 ? 'Regenerate' : 'Generate'} <em className="font-serif font-normal italic">Outline</em>
+                                    </>
+                                )}
+                            </button>
+                            {data.outline.length > 0 && (
+                                <button
+                                    onClick={() => setCurrentStep(3)}
+                                    disabled={isGeneratingOutline}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                >
+                                    Next
+                                    <ArrowRight size={16} />
+                                </button>
                             )}
-                        </button>
+                        </div>
                     )}
 
                     {currentStep === 3 && (
