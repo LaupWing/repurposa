@@ -44,6 +44,33 @@ export interface GenerateBlogResponse {
     seo_description?: string;
 }
 
+export interface TopicHistoryEntry {
+    text: string;
+    label: string;
+}
+
+export interface WizardData {
+    id: number;
+    user_id: number;
+    topic: string | null;
+    target_audience: string | null;
+    generated_topics: TopicSuggestion[] | null;
+    topic_history: TopicHistoryEntry[] | null;
+    topic_history_index: number;
+    rough_outline: string[] | null;
+    outline: OutlineSection[] | null;
+    current_step: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateBlogResponse {
+    id: number;
+    title: string;
+    content: string;
+    status: string;
+}
+
 // ============================================
 // API CLIENT
 // ============================================
@@ -154,4 +181,36 @@ export async function generateTweets(
         blog_content: blogContent,
         ...(ctaLink && { cta_link: ctaLink }),
     });
+}
+
+// ============================================
+// WIZARD API
+// ============================================
+
+export async function getWizard(): Promise<WizardData> {
+    return apiRequest<WizardData>('/wizard', {}, 'GET');
+}
+
+export async function createWizard(): Promise<WizardData> {
+    return apiRequest<WizardData>('/wizard', {});
+}
+
+export async function updateWizard(
+    data: Partial<Pick<WizardData, 'topic' | 'target_audience' | 'generated_topics' | 'topic_history' | 'topic_history_index' | 'rough_outline' | 'outline' | 'current_step'>>
+): Promise<WizardData> {
+    return apiRequest<WizardData>('/wizard', data as Record<string, unknown>, 'PUT');
+}
+
+// ============================================
+// BLOG CRUD API
+// ============================================
+
+export async function createBlog(data: {
+    title: string;
+    content: string;
+    topic?: string;
+    rough_outline?: string[];
+    outline?: OutlineSection[];
+}): Promise<CreateBlogResponse> {
+    return apiRequest<CreateBlogResponse>('/blogs', data as Record<string, unknown>);
 }
