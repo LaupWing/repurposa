@@ -135,6 +135,19 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         return () => clearTimeout(timer);
     }, [data.topic, data.targetAudience]);
 
+    // Debounced auto-save for rough_outline
+    useEffect(() => {
+        if (!isInitialized.current) return;
+
+        const timer = setTimeout(() => {
+            updateWizard({
+                rough_outline: data.roughOutline.length > 0 ? data.roughOutline : null,
+            }).catch(err => console.error('Failed to auto-save wizard:', err));
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [data.roughOutline]);
+
     // ============================================
     // HELPERS
     // ============================================
