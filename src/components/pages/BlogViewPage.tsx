@@ -223,6 +223,9 @@ function BlogEditor({
                 data: { title, content, thumbnail },
             });
 
+            // Update wp_status on Laravel
+            await updateBlog(post.id, { wp_status: 'published' });
+
             onPublished(response.post_id, response.post_url);
 
             toast.success(

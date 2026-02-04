@@ -225,7 +225,7 @@ export async function getBlog(id: number): Promise<BlogPost> {
 
 export async function updateBlog(
     id: number,
-    data: { title?: string; content?: string; thumbnail?: string }
+    data: { title?: string; content?: string; thumbnail?: string; wp_status?: BlogPost['wp_status'] }
 ): Promise<BlogPost> {
     return apiRequest<BlogPost>(`/blogs/${id}`, data as Record<string, unknown>, 'PUT');
 }
