@@ -611,43 +611,6 @@ function ConfirmGenerateModal({
     );
 }
 
-// ============================================
-// SWIPE FILE TEMPLATES (boilerplate)
-// ============================================
-
-const swipeTemplates = [
-    {
-        id: 'hot-take',
-        label: 'Hot Take',
-        structure: 'Bold claim → Evidence → Reframe',
-        template: 'Most people think [common belief].\n\nBut here\'s what they\'re missing:\n\n[Your insight]',
-    },
-    {
-        id: 'listicle',
-        label: 'Listicle',
-        structure: 'Hook → Numbered list → Takeaway',
-        template: '[Number] things I learned about [topic]:\n\n1.\n2.\n3.\n\nThe biggest takeaway?',
-    },
-    {
-        id: 'story',
-        label: 'Story',
-        structure: 'Hook → Conflict → Resolution',
-        template: '[Time frame] ago, I [situation].\n\nEveryone told me [common advice].\n\nInstead, I [what you did].\n\nHere\'s what happened:',
-    },
-    {
-        id: 'question',
-        label: 'Question Hook',
-        structure: 'Question → Insight → CTA',
-        template: 'Why do most [audience] struggle with [problem]?\n\nIt\'s not because [common reason].\n\nIt\'s because [real reason].\n\n[What to do instead]',
-    },
-    {
-        id: 'contrarian',
-        label: 'Contrarian',
-        structure: 'Unpopular opinion → Why → Proof',
-        template: 'Unpopular opinion: [bold statement]\n\nHere\'s why:\n\n[Reasoning]\n\nThe data backs this up:',
-    },
-];
-
 function AddShortPostModal({
     isOpen,
     onClose,
@@ -659,24 +622,35 @@ function AddShortPostModal({
 }) {
     const [mode, setMode] = useState<'choose' | 'custom'>('choose');
     const [customContent, setCustomContent] = useState('');
-    const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+    const [selectedSwipe, setSelectedSwipe] = useState<number | null>(null);
+    const [swipes, setSwipes] = useState<Swipe[]>([]);
+    const [loadingSwipes, setLoadingSwipes] = useState(false);
 
-    if (!isOpen) return null;
+    useEffect(() => {
+        if (!isOpen || swipes.length > 0) return;
+        setLoadingSwipes(true);
+        getSwipes()
+            .then(setSwipes)
+            .catch(() => toast.error('Failed to load swipe files'))
+            .finally(() => setLoadingSwipes(false));
+    }, [isOpen]);
 
     const handleAdd = () => {
         if (mode === 'custom') {
             if (!customContent.trim()) return;
             onAdd(customContent.trim());
         } else {
-            const tpl = swipeTemplates.find(t => t.id === selectedTemplate);
-            if (!tpl) return;
-            onAdd(tpl.template);
+            const swipe = swipes.find(s => s.id === selectedSwipe);
+            if (!swipe) return;
+            onAdd(swipe.content);
         }
         setCustomContent('');
-        setSelectedTemplate(null);
+        setSelectedSwipe(null);
         setMode('choose');
         onClose();
     };
+
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -718,25 +692,42 @@ function AddShortPostModal({
 
                 <div className="px-5 py-4 max-h-112 overflow-y-auto">
                     {mode === 'choose' ? (
-                        <div className="grid grid-cols-2 gap-2">
-                            {swipeTemplates.map((tpl) => (
-                                <button
-                                    key={tpl.id}
-                                    onClick={() => setSelectedTemplate(tpl.id)}
-                                    className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                                        selectedTemplate === tpl.id
-                                            ? 'border-blue-400 bg-blue-50'
-                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-sm font-medium text-gray-900">{tpl.label}</span>
-                                        <span className="text-[10px] text-gray-400">{tpl.structure}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-500 whitespace-pre-wrap">{tpl.template}</p>
-                                </button>
-                            ))}
-                        </div>
+                        loadingSwipes ? (
+                            <div className="flex items-center justify-center py-12 text-sm text-gray-400">Loading swipe files...</div>
+                        ) : swipes.length === 0 ? (
+                            <div className="flex items-center justify-center py-12 text-sm text-gray-400">No swipe files available</div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-2">
+                                {swipes.map((swipe) => (
+                                    <button
+                                        key={swipe.id}
+                                        onClick={() => setSelectedSwipe(swipe.id)}
+                                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                            selectedSwipe === swipe.id
+                                                ? 'border-blue-400 bg-blue-50'
+                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <div className="mb-1.5">
+                                            <span className="text-[10px] text-gray-400">{swipe.structure}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 whitespace-pre-wrap mb-2">{swipe.content}</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {swipe.emotions.map((emotion) => (
+                                                <span
+                                                    key={emotion}
+                                                    className={`rounded-full border px-1.5 py-0.5 text-[9px] ${
+                                                        emotionColors[emotion] || 'border-gray-200 bg-gray-100 text-gray-600'
+                                                    }`}
+                                                >
+                                                    {emotion}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )
                     ) : (
                         <textarea
                             value={customContent}
@@ -758,7 +749,7 @@ function AddShortPostModal({
                     </button>
                     <button
                         onClick={handleAdd}
-                        disabled={mode === 'choose' ? !selectedTemplate : !customContent.trim()}
+                        disabled={mode === 'choose' ? !selectedSwipe : !customContent.trim()}
                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
                     >
                         Add Post
