@@ -29,6 +29,7 @@ Move all data storage (blogs, tweets, profile, settings) from WordPress custom p
 - [ ] Remove old tweet API calls from frontend
 - [ ] Add regenerate blog feature (generate new content for existing post via Laravel)
 - [ ] Add delete blog confirmation modal (replace `confirm()` with proper modal)
+- [ ] Wire up TipTap AI actions (improve, rewrite, shorter, longer, fix) — Laravel `refineText` endpoint + frontend hook-up
 
 ### 2. OAuth — Social media connections
 **Status:** Not started
