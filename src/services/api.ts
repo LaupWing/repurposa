@@ -186,6 +186,22 @@ export async function getShortPosts(postId: number): Promise<ShortPost[]> {
     return response.data;
 }
 
+export interface Swipe {
+    id: number;
+    user_id: number | null;
+    hook: string;
+    content: string;
+    emotions: string[];
+    structure: string;
+    media: unknown[] | null;
+    why_it_works: string;
+}
+
+export async function getSwipes(): Promise<Swipe[]> {
+    const response = await apiRequest<{ data: Swipe[] }>('/repurpose/swipes', {}, 'GET');
+    return response.data;
+}
+
 // ============================================
 // WIZARD API
 // ============================================

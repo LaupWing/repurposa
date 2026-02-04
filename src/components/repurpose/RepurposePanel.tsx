@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { generateShortPosts, getShortPosts } from '../../services/api';
-import type { ShortPost } from '../../services/api';
+import { generateShortPosts, getShortPosts, getSwipes } from '../../services/api';
+import type { ShortPost, Swipe } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 
 // ============================================
