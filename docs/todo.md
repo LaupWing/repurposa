@@ -24,12 +24,12 @@ Move all data storage (blogs, tweets, profile, settings) from WordPress custom p
 - [x] Wire up blog view page (`BlogViewPage`) to fetch from Laravel API (`GET /api/blogs/{id}`)
 - [x] Wire up blog save (`BlogViewPage`) to use Laravel API (`PUT /api/blogs/{id}`)
 - [x] Wire up blog delete to use Laravel API (`DELETE /api/blogs/{id}`)
-- [ ] Re-add slim WP publish route (`POST /wbrp/v1/blogs/{id}/publish`) that creates real WP post from Laravel data
-- [ ] Move tweet CRUD to Laravel API (`GET/POST/DELETE /api/blogs/{id}/tweets`)
-- [ ] Remove old tweet API calls from frontend
+- [x] Re-add slim WP publish route (`POST /wbrp/v1/blogs/{id}/publish`) that creates real WP post from Laravel data
+- [x] Move short posts to Laravel API (`GET/POST /api/blogs/{id}/short-posts`, `POST /api/repurpose/generate-short-posts`)
+- [x] Remove old tweet API calls from frontend, rename tweet → short post
+- [ ] Wire up TipTap AI actions (improve, rewrite, shorter, longer, fix) — Laravel `refineText` endpoint + frontend hook-up
 - [ ] Add regenerate blog feature (generate new content for existing post via Laravel)
 - [ ] Add delete blog confirmation modal (replace `confirm()` with proper modal)
-- [ ] Wire up TipTap AI actions (improve, rewrite, shorter, longer, fix) — Laravel `refineText` endpoint + frontend hook-up
 
 ### 2. OAuth — Social media connections
 **Status:** Not started
@@ -71,3 +71,7 @@ Move all data storage (blogs, tweets, profile, settings) from WordPress custom p
 - Step 3 outline auto-save (reorder, edit, delete)
 - Removed `wbrp_blog` and `wbrp_tweet` custom post types
 - Removed all WordPress REST routes/callbacks for blogs and tweets
+- Blog CRUD wired to Laravel API (list, view, save, delete)
+- WP publish route re-added (slim, receives content from frontend)
+- Short posts generation + listing wired to Laravel API
+- Renamed all tweet references to short post in frontend
