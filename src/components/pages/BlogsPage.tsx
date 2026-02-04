@@ -6,24 +6,16 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
-import apiFetch from '@wordpress/api-fetch';
 import { FileText, Search, Filter, Plus, Trash2, Pencil, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { getBlogs } from '../../services/api';
+import type { BlogPost } from '../../services/api';
 
 // ============================================
 // TYPES
 // ============================================
 
-interface Post {
-    id: number;
-    title: string;
-    content: string | null;
-    thumbnail?: string;
-    status: 'draft' | 'generating' | 'completed' | 'published';
-    created_at: string;
-}
-
-type StatusFilter = 'all' | 'draft' | 'generating' | 'completed' | 'published';
+type StatusFilter = 'all' | 'draft' | 'published';
 
 // ============================================
 // HELPERS
@@ -51,18 +43,14 @@ function truncateContent(content: string | null, maxLength: number = 100): strin
 // SUB-COMPONENTS
 // ============================================
 
-function StatusDot({ status }: { status: Post['status'] }) {
+function StatusDot({ status }: { status: BlogPost['wp_status'] }) {
     const colors = {
         published: 'bg-green-500',
-        completed: 'bg-blue-500',
-        generating: 'bg-yellow-500',
         draft: 'bg-orange-500',
     };
 
     const glowColors = {
         published: 'bg-green-400',
-        completed: 'bg-blue-400',
-        generating: 'bg-yellow-400',
         draft: 'bg-orange-400',
     };
 
@@ -78,11 +66,9 @@ function StatusDot({ status }: { status: Post['status'] }) {
     );
 }
 
-function PostCard({ post, onEdit, onDelete }: { post: Post; onEdit: (id: number) => void; onDelete: (id: number) => void }) {
+function PostCard({ post, onEdit, onDelete }: { post: BlogPost; onEdit: (id: number) => void; onDelete: (id: number) => void }) {
     const statusColors = {
         published: 'text-green-600',
-        completed: 'text-blue-600',
-        generating: 'text-yellow-600',
         draft: 'text-orange-600',
     };
 
@@ -114,7 +100,7 @@ function PostCard({ post, onEdit, onDelete }: { post: Post; onEdit: (id: number)
                 {/* Header: Status + Date + Delete */}
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                        <StatusDot status={post.status} />
+                        <StatusDot status={post.wp_status} />
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                             {formatDate(post.created_at)} at {formatTime(post.created_at)}
                         </span>
@@ -139,8 +125,8 @@ function PostCard({ post, onEdit, onDelete }: { post: Post; onEdit: (id: number)
 
                 {/* Footer: Status + Edit */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <span className={`text-xs font-medium capitalize ${statusColors[post.status]}`}>
-                        {post.status}
+                    <span className={`text-xs font-medium capitalize ${statusColors[post.wp_status]}`}>
+                        {post.wp_status}
                     </span>
                     <button
                         onClick={(e) => { e.stopPropagation(); onEdit(post.id); }}
@@ -168,8 +154,6 @@ function FilterDropdown({
     const options: { value: StatusFilter; label: string }[] = [
         { value: 'all', label: 'All' },
         { value: 'draft', label: 'Draft' },
-        { value: 'generating', label: 'Generating' },
-        { value: 'completed', label: 'Completed' },
         { value: 'published', label: 'Published' },
     ];
 
@@ -214,7 +198,7 @@ function FilterDropdown({
 // ============================================
 
 export default function BlogsPage() {
-    const [posts, setPosts] = useState<Post[]>([]);
+    const [posts, setPosts] = useState<BlogPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -224,10 +208,8 @@ export default function BlogsPage() {
     useEffect(() => {
         const fetchBlogs = async () => {
             try {
-                const response = await apiFetch<{ blogs: Post[] }>({
-                    path: '/wbrp/v1/blogs',
-                });
-                setPosts(response.blogs);
+                const blogs = await getBlogs();
+                setPosts(blogs);
             } catch (error) {
                 console.error('Failed to fetch blogs:', error);
                 toast.error('Failed to load blogs');
@@ -246,7 +228,7 @@ export default function BlogsPage() {
             post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             post.content?.toLowerCase().includes(searchQuery.toLowerCase());
 
-        const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
+        const matchesStatus = statusFilter === 'all' || post.wp_status === statusFilter;
 
         return matchesSearch && matchesStatus;
     });

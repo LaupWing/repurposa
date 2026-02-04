@@ -214,6 +214,11 @@ export interface BlogPost {
     updated_at?: string;
 }
 
+export async function getBlogs(): Promise<BlogPost[]> {
+    const response = await apiRequest<{ data: BlogPost[] }>('/blogs', {}, 'GET');
+    return response.data;
+}
+
 export async function getBlog(id: number): Promise<BlogPost> {
     return apiRequest<BlogPost>(`/blogs/${id}`, {}, 'GET');
 }
