@@ -795,6 +795,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             why_it_works: 'Manually created post',
         };
         setShortPosts(prev => [...prev, newPost]);
+        toast.success('Short post added');
     };
 
     // Load saved short posts on mount
@@ -833,6 +834,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             const response = await generateShortPosts(blogId, blogContent, ctaLink);
 
             setShortPosts(response.short_posts.map(shortPostToPattern));
+            toast.success(`${response.short_posts.length} short posts generated`);
         } catch (error) {
             console.error('Failed to generate short posts:', error);
             toast.error('Failed to generate short posts', {
