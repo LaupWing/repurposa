@@ -5,7 +5,6 @@
  */
 
 import { useState, useEffect, useRef } from '@wordpress/element';
-import apiFetch from '@wordpress/api-fetch';
 import {
     Share2,
     FileText,
@@ -27,7 +26,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { generateTweets } from '../../services/api';
+import { generateShortPosts, getShortPosts } from '../../services/api';
+import type { ShortPost } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 
 // ============================================
@@ -50,47 +50,16 @@ interface Thread {
     tweets: { id: string; content: string; characterCount: number }[];
 }
 
-interface SavedTweet {
-    id: number;
-    content: string;
-    inspiration_id: string;
-    inspiration_content: string;
-    inspiration_hook: string;
-    emotions: string[];
-    structure: string;
-    why_it_works: string;
-    cta_tweet?: string | null;
+function shortPostToPattern(sp: ShortPost): TweetPattern {
+    return {
+        id: sp.id,
+        content: sp.content,
+        emotions: sp.metadata?.emotions || [],
+        structure: sp.metadata?.structure || '',
+        why_it_works: sp.metadata?.why_it_works || '',
+        cta_tweet: sp.cta_content || undefined,
+    };
 }
-
-// ============================================
-// SAMPLE DATA (placeholder until API)
-// ============================================
-
-const sampleTweets: TweetPattern[] = [
-    {
-        id: 1,
-        content: "\"Must be nice.\"\nYes.\nIt is.\nIt would be nice for you too if you stopped waiting for perfection and launched your MVP fast. In 2026, speed is survival.",
-        emotions: ['Confident', 'Unapologetic'],
-        structure: 'Commentary on objection + Harsh truth with hook',
-        why_it_works: 'Takes a common jealous phrase and flips it. The quote hook pulls you in, the punchline hits hard.',
-        cta_tweet: "There's a lot more at stake when it comes to launching quickly and effectively. Dive into the full insights here: https://example.com/blog-post",
-    },
-    {
-        id: 3,
-        content: "Nobody:\n\"I want to take six months to build my MVP and watch competitors steal my customers.\"\n90% of entrepreneurs:\nDo exactly that.\nWake up.",
-        emotions: ['Frustrated', 'Provocative', 'Urgent'],
-        structure: 'Interesting observation + Harsh truth + Meme format',
-        why_it_works: '"Nobody:" meme format creates instant pattern recognition. Absurdity technique — nobody would SAY this, but people DO it.',
-        cta_tweet: "If you think speed doesn't matter, you're missing the bigger picture. Discover why launching fast is your only option: https://example.com/blog-post",
-    },
-    {
-        id: 20,
-        content: "Hard pill to swallow:\nIf your MVP takes six months, you've already lost. In a world where speed is the only advantage, waiting for perfection is a luxury you can't afford.",
-        emotions: ['Honest', 'Motivational', 'Provocative'],
-        structure: 'Harsh truth with hook + Unique perspective on common problem',
-        why_it_works: '"Hard pill to swallow:" hook signals uncomfortable truth, creates curiosity. Puts responsibility on the reader.',
-    },
-];
 
 const sampleThreads: Thread[] = [];
 
@@ -660,31 +629,21 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [tweets, setTweets] = useState<TweetPattern[]>([]);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-    // Load saved tweets on mount
+    // Load saved short posts on mount
     useEffect(() => {
         if (!blogId) return;
-        const loadTweets = async () => {
+        const loadShortPosts = async () => {
             setIsLoading(true);
             try {
-                const response = await apiFetch<{ tweets: SavedTweet[] }>({
-                    path: `/wbrp/v1/blogs/${blogId}/tweets`,
-                });
-                const patterns: TweetPattern[] = response.tweets.map((t) => ({
-                    id: t.id,
-                    content: t.content,
-                    emotions: t.emotions,
-                    structure: t.structure,
-                    why_it_works: t.why_it_works,
-                    cta_tweet: t.cta_tweet || undefined,
-                }));
-                setTweets(patterns);
+                const shortPosts = await getShortPosts(blogId);
+                setTweets(shortPosts.map(shortPostToPattern));
             } catch (error) {
-                console.error('Failed to load tweets:', error);
+                console.error('Failed to load short posts:', error);
             } finally {
                 setIsLoading(false);
             }
         };
-        loadTweets();
+        loadShortPosts();
     }, [blogId]);
 
     const onGenerateClick = () => {
@@ -694,7 +653,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const handleGenerateTweets = async (includeCta: boolean = false) => {
         setShowConfirmModal(false);
 
-        if (!blogContent) {
+        if (!blogContent || !blogId) {
             toast.error('No blog content available to repurpose.');
             return;
         }
@@ -703,41 +662,12 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
 
         try {
             const ctaLink = includeCta && publishedPostUrl ? publishedPostUrl : undefined;
-            const response = await generateTweets(blogContent, ctaLink);
+            const response = await generateShortPosts(blogId, blogContent, ctaLink);
 
-            const patterns: TweetPattern[] = response.tweets.map((tweet) => ({
-                id: tweet.inspiration.id,
-                content: tweet.generated_tweet,
-                emotions: tweet.inspiration.emotions,
-                structure: tweet.inspiration.structure,
-                why_it_works: tweet.inspiration.why_it_works,
-                cta_tweet: tweet.cta_tweet,
-            }));
-
-            setTweets(patterns);
-
-            // Save to WordPress
-            if (blogId) {
-                await apiFetch({
-                    path: `/wbrp/v1/blogs/${blogId}/tweets`,
-                    method: 'POST',
-                    data: {
-                        tweets: response.tweets.map((tweet) => ({
-                            content: tweet.generated_tweet,
-                            inspiration_id: tweet.inspiration.id,
-                            inspiration_content: tweet.inspiration.content,
-                            inspiration_hook: tweet.inspiration.hook,
-                            emotions: tweet.inspiration.emotions,
-                            structure: tweet.inspiration.structure,
-                            why_it_works: tweet.inspiration.why_it_works,
-                            cta_tweet: tweet.cta_tweet || '',
-                        })),
-                    },
-                });
-            }
+            setTweets(response.short_posts.map(shortPostToPattern));
         } catch (error) {
-            console.error('Failed to generate tweets:', error);
-            toast.error('Failed to generate tweets', {
+            console.error('Failed to generate short posts:', error);
+            toast.error('Failed to generate short posts', {
                 description: error instanceof Error ? error.message : 'Please try again.',
             });
         } finally {

@@ -146,35 +146,44 @@ export async function refineText(
 }
 
 // ============================================
-// REPURPOSE API
+// SHORT POSTS API
 // ============================================
 
-export interface GeneratedTweet {
-    generated_tweet: string;
-    cta_tweet?: string;
-    inspiration: {
-        id: number;
-        hook: string;
-        content: string;
-        structure: string;
-        emotions: string[];
-        why_it_works: string;
-        media: unknown[];
-    };
+export interface ShortPostMetadata {
+    inspiration_id: number;
+    hook: string;
+    structure: string;
+    emotions: string[];
+    why_it_works: string;
+    media: unknown[];
 }
 
-export interface GenerateTweetsResponse {
-    tweets: GeneratedTweet[];
+export interface ShortPost {
+    id: number;
+    content: string;
+    cta_content?: string | null;
+    metadata: ShortPostMetadata;
 }
 
-export async function generateTweets(
+export interface GenerateShortPostsResponse {
+    short_posts: ShortPost[];
+}
+
+export async function generateShortPosts(
+    postId: number,
     blogContent: string,
     ctaLink?: string
-): Promise<GenerateTweetsResponse> {
-    return apiRequest<GenerateTweetsResponse>('/repurpose/generate-tweets', {
+): Promise<GenerateShortPostsResponse> {
+    return apiRequest<GenerateShortPostsResponse>('/repurpose/generate-short-posts', {
+        post_id: postId,
         blog_content: blogContent,
         ...(ctaLink && { cta_link: ctaLink }),
     });
+}
+
+export async function getShortPosts(postId: number): Promise<ShortPost[]> {
+    const response = await apiRequest<{ data: ShortPost[] }>(`/blogs/${postId}/short-posts`, {}, 'GET');
+    return response.data;
 }
 
 // ============================================
