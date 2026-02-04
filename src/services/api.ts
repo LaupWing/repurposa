@@ -205,7 +205,9 @@ export interface BlogPost {
     content: string;
     seo_description?: string;
     thumbnail?: string;
-    status: string;
+    wp_status: 'draft' | 'published';
+    published_post_id?: number | null;
+    published_post_url?: string | null;
     topic?: string;
     outline?: OutlineSection[];
     created_at?: string;

@@ -28,27 +28,13 @@ import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
 import ImagePickerModal from '../ImagePickerModal';
 import { generateBlog, getBlog } from '../../services/api';
-import type { OutlineSection } from '../../services/api';
+import type { BlogPost } from '../../services/api';
 
 // ============================================
 // TYPES
 // ============================================
 
 type ContentTab = 'blog' | 'short' | 'threads' | 'visuals' | 'video' | 'settings';
-
-interface BlogPost {
-    id: number;
-    title: string;
-    content: string;
-    thumbnail?: string;
-    status: 'draft' | 'generating' | 'completed' | 'published';
-    published_post_id?: number | null;
-    published_post_url?: string | null;
-    topic?: string;
-    outline?: OutlineSection[];
-    created_at?: string;
-    updated_at?: string;
-}
 
 interface BlogViewPageProps {
     postId?: number;
