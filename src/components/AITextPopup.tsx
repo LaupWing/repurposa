@@ -1,11 +1,8 @@
 /**
  * AI Text Popup
  *
- * Lightweight selection-based popup with AI actions for plain text areas.
- * Attach to any textarea — when user selects text, a floating toolbar appears
- * directly above the selection with quick AI actions.
- * Uses a mirror div to calculate the position of selected text within the textarea.
- * Uses the refineText API endpoint.
+ * Floating toolbar that appears above selected text in a textarea.
+ * Left-aligned with the textarea, vertically above the selection.
  */
 
 import { useState, useEffect } from '@wordpress/element';
@@ -37,6 +34,7 @@ const actions = [
 export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) {
     const [selection, setSelection] = useState({ start: 0, end: 0 });
     const [hasSelection, setHasSelection] = useState(false);
+    const [position, setPosition] = useState({ top: 0, left: 0 });
     const [loading, setLoading] = useState<string | null>(null);
 
     useEffect(() => {
@@ -49,6 +47,27 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
             const { selectionStart, selectionEnd } = textarea;
             if (selectionStart !== selectionEnd) {
                 setSelection({ start: selectionStart, end: selectionEnd });
+
+                const rect = textarea.getBoundingClientRect();
+                const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20;
+                const paddingTop = parseFloat(getComputedStyle(textarea).paddingTop) || 0;
+
+                // Count newlines before selection to find which line it's on
+                const textBefore = textarea.value.substring(0, selectionStart);
+                const lines = textBefore.split('\n');
+                // Account for wrapping: measure each line's wrapped line count
+                const charPerLine = Math.floor(textarea.clientWidth / (parseFloat(getComputedStyle(textarea).fontSize) * 0.6)) || 80;
+                let totalLines = 0;
+                for (const line of lines) {
+                    totalLines += Math.max(1, Math.ceil(line.length / charPerLine));
+                }
+                const lineOffset = (totalLines - 1) * lineHeight;
+
+                setPosition({
+                    top: rect.top + paddingTop + lineOffset - textarea.scrollTop - 36,
+                    left: rect.left,
+                });
+
                 setHasSelection(true);
             } else {
                 setHasSelection(false);
@@ -65,13 +84,18 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
                 timeout = setTimeout(checkSelection, 50);
             }
         };
+        const handleMouseDown = () => {
+            setHasSelection(false);
+        };
 
         textarea.addEventListener('mouseup', handleMouseUp);
+        textarea.addEventListener('mousedown', handleMouseDown);
         textarea.addEventListener('keyup', handleKeyUp);
 
         return () => {
             clearTimeout(timeout);
             textarea.removeEventListener('mouseup', handleMouseUp);
+            textarea.removeEventListener('mousedown', handleMouseDown);
             textarea.removeEventListener('keyup', handleKeyUp);
         };
     }, [textareaRef]);
@@ -98,13 +122,16 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
     if (!hasSelection) return null;
 
     return (
-        <div className="inline-flex items-center gap-0.5 p-1 rounded-lg border border-gray-200 bg-gray-50 mb-2">
+        <div
+            className="fixed z-50 inline-flex items-center gap-0.5 p-1 rounded-lg border border-gray-200 bg-white shadow-lg"
+            style={{ top: position.top, left: position.left }}
+        >
             {actions.map(({ id, label, icon: Icon, instruction }) => (
                 <button
                     key={id}
                     onClick={() => handleAction(id, instruction)}
-                    disabled={loading !== null || !hasSelection}
-                    className="h-7 px-2 text-xs flex items-center gap-1 rounded hover:bg-white disabled:opacity-50 transition-colors"
+                    disabled={loading !== null}
+                    className="h-7 px-2 text-xs flex items-center gap-1 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors whitespace-nowrap"
                 >
                     {loading === id ? (
                         <Loader2 size={12} className="animate-spin" />
