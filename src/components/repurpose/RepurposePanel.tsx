@@ -1,7 +1,7 @@
 /**
  * Repurpose Panel Component
  *
- * Panel for generating tweets, threads, visuals from blog content.
+ * Panel for generating short posts, threads, visuals from blog content.
  */
 
 import { useState, useEffect, useRef } from '@wordpress/element';
@@ -36,13 +36,13 @@ import { GeneratingOverlay } from '../GeneratingOverlay';
 
 type TabType = 'short' | 'threads' | 'visuals' | 'video';
 
-interface TweetPattern {
+interface ShortPostPattern {
     id: number;
     content: string;
     emotions: string[];
     structure: string;
     why_it_works: string;
-    cta_tweet?: string;
+    cta_content?: string;
 }
 
 interface Thread {
@@ -50,14 +50,14 @@ interface Thread {
     tweets: { id: string; content: string; characterCount: number }[];
 }
 
-function shortPostToPattern(sp: ShortPost): TweetPattern {
+function shortPostToPattern(sp: ShortPost): ShortPostPattern {
     return {
         id: sp.id,
         content: sp.content,
         emotions: sp.metadata?.emotions || [],
         structure: sp.metadata?.structure || '',
         why_it_works: sp.metadata?.why_it_works || '',
-        cta_tweet: sp.cta_content || undefined,
+        cta_content: sp.cta_content || undefined,
     };
 }
 
@@ -82,8 +82,8 @@ const emotionColors: Record<string, string> = {
 // SUB-COMPONENTS
 // ============================================
 
-function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta }: {
-    pattern: TweetPattern;
+function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta }: {
+    pattern: ShortPostPattern;
     index: number;
     onDelete: () => void;
     onDeleteCta: () => void;
@@ -96,7 +96,7 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
     const [isEditing, setIsEditing] = useState(false);
     const [isEditingCta, setIsEditingCta] = useState(false);
     const [editContent, setEditContent] = useState(pattern.content);
-    const [editCtaContent, setEditCtaContent] = useState(pattern.cta_tweet || '');
+    const [editCtaContent, setEditCtaContent] = useState(pattern.cta_content || '');
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -115,13 +115,13 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
     const handleCopy = () => {
         navigator.clipboard.writeText(pattern.content);
         setCopied(true);
-        toast.success('Tweet copied to clipboard');
+        toast.success('Short post copied to clipboard');
         setTimeout(() => setCopied(false), 2000);
     };
 
     const handleCopyCta = () => {
-        if (!pattern.cta_tweet) return;
-        navigator.clipboard.writeText(pattern.cta_tweet);
+        if (!pattern.cta_content) return;
+        navigator.clipboard.writeText(pattern.cta_content);
         setCopiedCta(true);
         toast.success('CTA copied to clipboard');
         setTimeout(() => setCopiedCta(false), 2000);
@@ -143,13 +143,13 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
     };
 
     const handleCancelCtaEdit = () => {
-        setEditCtaContent(pattern.cta_tweet || '');
+        setEditCtaContent(pattern.cta_content || '');
         setIsEditingCta(false);
     };
 
     return (
         <div className="group relative mb-4">
-            {/* Main Tweet */}
+            {/* Main Short Post */}
             <div className="relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
                 {/* Pattern number */}
                 <div className="absolute -top-2 -left-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white shadow-sm">
@@ -286,7 +286,7 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
             </div>
 
             {/* Add CTA button when no CTA exists */}
-            {!pattern.cta_tweet && (
+            {!pattern.cta_content && (
                 <div className="ml-6 mt-2">
                     <button
                         onClick={onAddCta}
@@ -298,8 +298,8 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
                 </div>
             )}
 
-            {/* CTA Reply Tweet */}
-            {pattern.cta_tweet && (
+            {/* CTA Reply */}
+            {pattern.cta_content && (
                 <div className="relative ml-6 mt-0">
                     {/* Thread connector line */}
                     <div className="absolute top-0 left-4 h-4 w-0.5 bg-gray-200" />
@@ -342,7 +342,7 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
                                 </div>
                             ) : (
                                 <p className="text-sm leading-relaxed text-gray-800">
-                                    {pattern.cta_tweet}
+                                    {pattern.cta_content}
                                 </p>
                             )}
                         </div>
@@ -350,8 +350,8 @@ function TweetCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, on
                         {/* Footer */}
                         {!isEditingCta && (
                             <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                                <span className={`font-mono text-[10px] ${(pattern.cta_tweet?.length || 0) > 280 ? 'text-red-500' : 'text-gray-400'}`}>
-                                    {pattern.cta_tweet?.length || 0}/280
+                                <span className={`font-mono text-[10px] ${(pattern.cta_content?.length || 0) > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                    {pattern.cta_content?.length || 0}/280
                                 </span>
                                 <div className="flex items-center gap-1">
                                     <button
@@ -485,7 +485,7 @@ function EmptyState({
     isPublished?: boolean;
 }) {
     const config = {
-        short: { title: 'Short Posts', button: 'Generate Tweets', icon: Share2 },
+        short: { title: 'Short Posts', button: 'Generate Short Posts', icon: Share2 },
         threads: { title: 'Threads', button: 'Generate Threads', icon: FileText },
         visuals: { title: 'Visuals', button: 'Generate Visuals', icon: Image },
         video: { title: 'Video Scripts', button: 'Generate Scripts', icon: Video },
@@ -504,7 +504,7 @@ function EmptyState({
             </p>
             {!isPublished && type === 'short' && (
                 <p className="mb-4 max-w-[280px] text-xs text-amber-600">
-                    Tip: Publish your blog first to create tweets with effective CTAs that link back to your post.
+                    Tip: Publish your blog first to create short posts with effective CTAs that link back to your post.
                 </p>
             )}
             <button
@@ -539,7 +539,7 @@ function ConfirmGenerateModal({
             <div className="absolute inset-0 bg-black/50" onClick={onClose} />
             <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-                    <h2 className="text-base font-semibold text-gray-900">Generate Tweets</h2>
+                    <h2 className="text-base font-semibold text-gray-900">Generate Short Posts</h2>
                     <button
                         onClick={onClose}
                         className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
@@ -603,7 +603,7 @@ function ConfirmGenerateModal({
                         onClick={() => onConfirm(includeCta && !!isPublished)}
                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                     >
-                        Generate Tweets
+                        Generate Short Posts
                     </button>
                 </div>
             </div>
@@ -626,7 +626,7 @@ interface RepurposePanelProps {
 export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [tweets, setTweets] = useState<TweetPattern[]>([]);
+    const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>([]);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     // Load saved short posts on mount
@@ -636,7 +636,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             setIsLoading(true);
             try {
                 const shortPosts = await getShortPosts(blogId);
-                setTweets(shortPosts.map(shortPostToPattern));
+                setShortPosts(shortPosts.map(shortPostToPattern));
             } catch (error) {
                 console.error('Failed to load short posts:', error);
             } finally {
@@ -650,7 +650,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         setShowConfirmModal(true);
     };
 
-    const handleGenerateTweets = async (includeCta: boolean = false) => {
+    const handleGenerateShortPosts = async (includeCta: boolean = false) => {
         setShowConfirmModal(false);
 
         if (!blogContent || !blogId) {
@@ -664,7 +664,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             const ctaLink = includeCta && publishedPostUrl ? publishedPostUrl : undefined;
             const response = await generateShortPosts(blogId, blogContent, ctaLink);
 
-            setTweets(response.short_posts.map(shortPostToPattern));
+            setShortPosts(response.short_posts.map(shortPostToPattern));
         } catch (error) {
             console.error('Failed to generate short posts:', error);
             toast.error('Failed to generate short posts', {
@@ -679,27 +679,27 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const renderContent = () => {
         switch (initialTab) {
             case 'short':
-                return tweets.length === 0 ? (
+                return shortPosts.length === 0 ? (
                     <EmptyState type="short" onGenerate={onGenerateClick} isGenerating={isGenerating} isPublished={isPublished} />
                 ) : (
                     <div>
                         <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Generated Tweets</h3>
+                            <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Generated Short Posts</h3>
                             <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                {tweets.length} tweets
+                                {shortPosts.length} short posts
                             </span>
                         </div>
                         <div className="pl-2">
-                            {tweets.map((pattern, index) => (
-                                <TweetCard
+                            {shortPosts.map((pattern, index) => (
+                                <ShortPostCard
                                     key={pattern.id}
                                     pattern={pattern}
                                     index={index}
-                                    onDelete={() => setTweets(prev => prev.filter(t => t.id !== pattern.id))}
-                                    onDeleteCta={() => setTweets(prev => prev.map(t => t.id === pattern.id ? { ...t, cta_tweet: undefined } : t))}
-                                    onAddCta={() => setTweets(prev => prev.map(t => t.id === pattern.id ? { ...t, cta_tweet: 'Read the full post here: ' } : t))}
-                                    onEdit={(content) => setTweets(prev => prev.map(t => t.id === pattern.id ? { ...t, content } : t))}
-                                    onEditCta={(content) => setTweets(prev => prev.map(t => t.id === pattern.id ? { ...t, cta_tweet: content } : t))}
+                                    onDelete={() => setShortPosts(prev => prev.filter(p => p.id !== pattern.id))}
+                                    onDeleteCta={() => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: undefined } : p))}
+                                    onAddCta={() => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: 'Read the full post here: ' } : p))}
+                                    onEdit={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p))}
+                                    onEditCta={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p))}
                                 />
                             ))}
                         </div>
@@ -738,14 +738,14 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         <div className="relative flex h-full flex-col bg-white">
             {isGenerating && (
                 <GeneratingOverlay
-                    title="Generating Tweets"
-                    description="Analyzing your blog content and crafting engaging tweets..."
+                    title="Generating Short Posts"
+                    description="Analyzing your blog content and crafting engaging short posts..."
                 />
             )}
             <ConfirmGenerateModal
                 isOpen={showConfirmModal}
                 onClose={() => setShowConfirmModal(false)}
-                onConfirm={handleGenerateTweets}
+                onConfirm={handleGenerateShortPosts}
                 isPublished={isPublished}
             />
             {/* Content - No internal tabs, parent controls which content to show */}
