@@ -612,6 +612,164 @@ function ConfirmGenerateModal({
 }
 
 // ============================================
+// SWIPE FILE TEMPLATES (boilerplate)
+// ============================================
+
+const swipeTemplates = [
+    {
+        id: 'hot-take',
+        label: 'Hot Take',
+        structure: 'Bold claim → Evidence → Reframe',
+        template: 'Most people think [common belief].\n\nBut here\'s what they\'re missing:\n\n[Your insight]',
+    },
+    {
+        id: 'listicle',
+        label: 'Listicle',
+        structure: 'Hook → Numbered list → Takeaway',
+        template: '[Number] things I learned about [topic]:\n\n1.\n2.\n3.\n\nThe biggest takeaway?',
+    },
+    {
+        id: 'story',
+        label: 'Story',
+        structure: 'Hook → Conflict → Resolution',
+        template: '[Time frame] ago, I [situation].\n\nEveryone told me [common advice].\n\nInstead, I [what you did].\n\nHere\'s what happened:',
+    },
+    {
+        id: 'question',
+        label: 'Question Hook',
+        structure: 'Question → Insight → CTA',
+        template: 'Why do most [audience] struggle with [problem]?\n\nIt\'s not because [common reason].\n\nIt\'s because [real reason].\n\n[What to do instead]',
+    },
+    {
+        id: 'contrarian',
+        label: 'Contrarian',
+        structure: 'Unpopular opinion → Why → Proof',
+        template: 'Unpopular opinion: [bold statement]\n\nHere\'s why:\n\n[Reasoning]\n\nThe data backs this up:',
+    },
+];
+
+function AddShortPostModal({
+    isOpen,
+    onClose,
+    onAdd,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onAdd: (content: string) => void;
+}) {
+    const [mode, setMode] = useState<'choose' | 'custom'>('choose');
+    const [customContent, setCustomContent] = useState('');
+    const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+
+    if (!isOpen) return null;
+
+    const handleAdd = () => {
+        if (mode === 'custom') {
+            if (!customContent.trim()) return;
+            onAdd(customContent.trim());
+        } else {
+            const tpl = swipeTemplates.find(t => t.id === selectedTemplate);
+            if (!tpl) return;
+            onAdd(tpl.template);
+        }
+        setCustomContent('');
+        setSelectedTemplate(null);
+        setMode('choose');
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                    <h2 className="text-base font-semibold text-gray-900">Add Short Post</h2>
+                    <button
+                        onClick={onClose}
+                        className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                {/* Mode tabs */}
+                <div className="flex border-b border-gray-200">
+                    <button
+                        onClick={() => setMode('choose')}
+                        className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+                            mode === 'choose'
+                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        Swipe File
+                    </button>
+                    <button
+                        onClick={() => setMode('custom')}
+                        className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+                            mode === 'custom'
+                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        Write Your Own
+                    </button>
+                </div>
+
+                <div className="px-5 py-4 max-h-112 overflow-y-auto">
+                    {mode === 'choose' ? (
+                        <div className="grid grid-cols-2 gap-2">
+                            {swipeTemplates.map((tpl) => (
+                                <button
+                                    key={tpl.id}
+                                    onClick={() => setSelectedTemplate(tpl.id)}
+                                    className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                        selectedTemplate === tpl.id
+                                            ? 'border-blue-400 bg-blue-50'
+                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-sm font-medium text-gray-900">{tpl.label}</span>
+                                        <span className="text-[10px] text-gray-400">{tpl.structure}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 whitespace-pre-wrap">{tpl.template}</p>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <textarea
+                            value={customContent}
+                            onChange={(e) => setCustomContent(e.target.value)}
+                            placeholder="Write your short post..."
+                            className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                            rows={6}
+                            style={{ fieldSizing: 'content' } as React.CSSProperties}
+                        />
+                    )}
+                </div>
+
+                <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-gray-200 bg-gray-50">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleAdd}
+                        disabled={mode === 'choose' ? !selectedTemplate : !customContent.trim()}
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        Add Post
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 
@@ -628,6 +786,18 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [isLoading, setIsLoading] = useState(false);
     const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>([]);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [showAddModal, setShowAddModal] = useState(false);
+
+    const handleAddShortPost = (content: string) => {
+        const newPost: ShortPostPattern = {
+            id: Date.now(),
+            content,
+            emotions: [],
+            structure: 'Custom',
+            why_it_works: 'Manually created post',
+        };
+        setShortPosts(prev => [...prev, newPost]);
+    };
 
     // Load saved short posts on mount
     useEffect(() => {
@@ -685,9 +855,18 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                     <div>
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Generated Short Posts</h3>
-                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                {shortPosts.length} short posts
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                    {shortPosts.length} short posts
+                                </span>
+                                <button
+                                    onClick={() => setShowAddModal(true)}
+                                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                                >
+                                    <Plus size={14} />
+                                    Add
+                                </button>
+                            </div>
                         </div>
                         <div className="pl-2">
                             {shortPosts.map((pattern, index) => (
@@ -747,6 +926,11 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 onClose={() => setShowConfirmModal(false)}
                 onConfirm={handleGenerateShortPosts}
                 isPublished={isPublished}
+            />
+            <AddShortPostModal
+                isOpen={showAddModal}
+                onClose={() => setShowAddModal(false)}
+                onAdd={handleAddShortPost}
             />
             {/* Content - No internal tabs, parent controls which content to show */}
             <div className="flex-1 overflow-y-auto p-6">
