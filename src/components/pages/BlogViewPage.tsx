@@ -22,12 +22,11 @@ import {
     Trash2,
     Loader2,
     Settings,
-    RefreshCw,
 } from 'lucide-react';
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
 import ImagePickerModal from '../ImagePickerModal';
-import { generateBlog, getBlog, updateBlog } from '../../services/api';
+import { getBlog, updateBlog, deleteBlog } from '../../services/api';
 import type { BlogPost } from '../../services/api';
 
 // ============================================
@@ -456,35 +455,20 @@ function SettingsPanel({
         });
     };
 
-    const statusLabel = post.published_post_id ? 'Published' : 'Draft';
-    const statusColor = post.published_post_id
-        ? 'text-green-700 bg-green-50 border-green-200'
-        : 'text-orange-700 bg-orange-50 border-orange-200';
+    const statusLabels: Record<string, string> = {
+        draft: 'Draft',
+        published: 'Published',
+        'out-of-sync': 'Out of Sync',
+    };
+    const statusColors: Record<string, string> = {
+        draft: 'text-orange-700 bg-orange-50 border-orange-200',
+        published: 'text-green-700 bg-green-50 border-green-200',
+        'out-of-sync': 'text-yellow-700 bg-yellow-50 border-yellow-200',
+    };
 
     return (
         <div className="h-full overflow-y-auto">
             <div className="mx-auto max-w-2xl px-4 py-8 space-y-8">
-                {/* Regenerate Blog */}
-                <div>
-                    <button
-                        onClick={handleRegenerate}
-                        disabled={isRegenerating || !post.topic || !post.outline?.length}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                    >
-                        {isRegenerating ? (
-                            <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                            <RefreshCw size={16} />
-                        )}
-                        {isRegenerating ? 'Regenerating...' : 'Regenerate Blog'}
-                    </button>
-                    {(!post.topic || !post.outline?.length) && (
-                        <p className="mt-2 text-xs text-gray-400">
-                            Topic and outline data are required to regenerate.
-                        </p>
-                    )}
-                </div>
-
                 {/* Blog Info */}
                 <div>
                     <h3 className="text-sm font-semibold text-gray-900 mb-4">Blog Info</h3>
@@ -504,8 +488,8 @@ function SettingsPanel({
                         <div>
                             <dt className="text-xs font-medium text-gray-500 mb-1">Status</dt>
                             <dd>
-                                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded border ${statusColor}`}>
-                                    {statusLabel}
+                                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded border ${statusColors[post.wp_status] || statusColors.draft}`}>
+                                    {statusLabels[post.wp_status] || post.wp_status}
                                 </span>
                             </dd>
                         </div>
@@ -713,10 +697,6 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                     {activeTab === 'settings' && (
                         <SettingsPanel
                             post={post}
-                            onRegenerated={(title, content) => {
-                                setPost(prev => prev ? { ...prev, title, content } : prev);
-                                setActiveTab('blog');
-                            }}
                             onDeleted={handleBack}
                         />
                     )}
