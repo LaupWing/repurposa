@@ -41,6 +41,7 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
     const [showCustom, setShowCustom] = useState(false);
     const [customInstruction, setCustomInstruction] = useState('');
     const customInputRef = useRef<HTMLInputElement>(null);
+    const popupRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const textarea = textareaRef.current;
@@ -93,15 +94,36 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
             setHasSelection(false);
         };
 
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                setHasSelection(false);
+            }
+        };
+
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as Node;
+            if (
+                !textarea.contains(target) &&
+                !popupRef.current?.contains(target)
+            ) {
+                setHasSelection(false);
+                setShowCustom(false);
+            }
+        };
+
         textarea.addEventListener('mouseup', handleMouseUp);
         textarea.addEventListener('mousedown', handleMouseDown);
         textarea.addEventListener('keyup', handleKeyUp);
+        textarea.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('mousedown', handleClickOutside);
 
         return () => {
             clearTimeout(timeout);
             textarea.removeEventListener('mouseup', handleMouseUp);
             textarea.removeEventListener('mousedown', handleMouseDown);
             textarea.removeEventListener('keyup', handleKeyUp);
+            textarea.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [textareaRef]);
 
@@ -135,6 +157,7 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
 
     return (
         <div
+            ref={popupRef}
             className="fixed z-50 inline-flex items-center gap-0.5 p-1 rounded-lg border border-gray-200 bg-white shadow-lg"
             style={{ top: position.top, left: position.left }}
         >
