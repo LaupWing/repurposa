@@ -8,7 +8,7 @@
 import { useState, useEffect } from '@wordpress/element';
 import { FileText, Search, Filter, Plus, Trash2, Pencil, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { getBlogs } from '../../services/api';
+import { getBlogs, deleteBlog } from '../../services/api';
 import type { BlogPost } from '../../services/api';
 
 // ============================================
@@ -102,7 +102,7 @@ function PostCard({ post, onEdit, onDelete }: { post: BlogPost; onEdit: (id: num
                     <div className="flex items-center gap-2">
                         <StatusDot status={post.wp_status} />
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                            {formatDate(post.created_at)} at {formatTime(post.created_at)}
+                            {post.created_at ? `${formatDate(post.created_at)} at ${formatTime(post.created_at)}` : '—'}
                         </span>
                     </div>
                     <button
@@ -241,10 +241,7 @@ export default function BlogsPage() {
         if (!confirm('Are you sure you want to delete this blog?')) return;
 
         try {
-            await apiFetch({
-                path: `/wbrp/v1/blogs/${id}`,
-                method: 'DELETE',
-            });
+            await deleteBlog(id);
             setPosts(posts.filter(p => p.id !== id));
             toast.success('Blog deleted');
         } catch (error) {

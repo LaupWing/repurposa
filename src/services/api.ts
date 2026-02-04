@@ -230,3 +230,7 @@ export async function updateBlog(
     return apiRequest<BlogPost>(`/blogs/${id}`, data as Record<string, unknown>, 'PUT');
 }
 
+export async function deleteBlog(id: number): Promise<void> {
+    await apiRequest<{ success: boolean }>(`/blogs/${id}`, {}, 'DELETE');
+}
+

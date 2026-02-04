@@ -27,6 +27,7 @@ Move all data storage (blogs, tweets, profile, settings) from WordPress custom p
 - [ ] Wire up blog publish to create real WP post from Laravel data
 - [ ] Move tweet CRUD to Laravel API (`GET/POST/DELETE /api/blogs/{id}/tweets`)
 - [ ] Remove old tweet API calls from frontend
+- [ ] Add delete blog confirmation modal (replace `confirm()` with proper modal)
 
 ### 2. OAuth — Social media connections
 **Status:** Not started
