@@ -743,7 +743,7 @@ function AddShortPostModal({
                             onChange={(e) => setCustomContent(e.target.value)}
                             placeholder="Write your short post..."
                             className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
-                            rows={6}
+                            rows={12}
                             style={{ fieldSizing: 'content' } as React.CSSProperties}
                         />
                     )}
