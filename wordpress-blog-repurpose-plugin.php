@@ -159,36 +159,6 @@ function wbrp_render_app($page, $post_id = null) {
     <?php
 }
 
-/**
- * Register custom post type for generated blogs
- */
-add_action('init', 'wbrp_register_post_types');
-
-function wbrp_register_post_types() {
-    register_post_type('wbrp_blog', [
-        'labels' => [
-            'name' => 'WBRP Blogs',
-            'singular_name' => 'WBRP Blog',
-        ],
-        'public' => false,
-        'show_ui' => false,
-        'show_in_rest' => false,
-        'supports' => ['title', 'editor', 'custom-fields'],
-        'capability_type' => 'post',
-    ]);
-
-    register_post_type('wbrp_tweet', [
-        'labels' => [
-            'name' => 'WBRP Tweets',
-            'singular_name' => 'WBRP Tweet',
-        ],
-        'public' => false,
-        'show_ui' => false,
-        'show_in_rest' => false,
-        'supports' => ['editor', 'custom-fields'],
-        'capability_type' => 'post',
-    ]);
-}
 
 /**
  * Register REST API routes
