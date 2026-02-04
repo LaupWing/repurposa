@@ -27,7 +27,7 @@ import {
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
 import ImagePickerModal from '../ImagePickerModal';
-import { generateBlog } from '../../services/api';
+import { generateBlog, getBlog } from '../../services/api';
 import type { OutlineSection } from '../../services/api';
 
 // ============================================
@@ -621,10 +621,8 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
 
         const fetchBlog = async () => {
             try {
-                const response = await apiFetch<{ blog: BlogPost }>({
-                    path: `/wbrp/v1/blogs/${postId}`,
-                });
-                setPost(response.blog);
+                const blog = await getBlog(postId);
+                setPost(blog);
             } catch (error) {
                 console.error('Failed to fetch blog:', error);
                 toast.error('Failed to load blog');

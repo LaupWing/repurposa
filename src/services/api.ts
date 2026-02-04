@@ -195,3 +195,24 @@ export async function updateWizard(
     return apiRequest<WizardData>('/wizard', data as Record<string, unknown>, 'PUT');
 }
 
+// ============================================
+// BLOG API
+// ============================================
+
+export interface BlogPost {
+    id: number;
+    title: string;
+    content: string;
+    seo_description?: string;
+    thumbnail?: string;
+    status: string;
+    topic?: string;
+    outline?: OutlineSection[];
+    created_at?: string;
+    updated_at?: string;
+}
+
+export async function getBlog(id: number): Promise<BlogPost> {
+    return apiRequest<BlogPost>(`/blogs/${id}`, {}, 'GET');
+}
+
