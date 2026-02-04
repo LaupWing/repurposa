@@ -17,12 +17,16 @@ Move all data storage (blogs, tweets, profile, settings) from WordPress custom p
 - [x] Wire up wizard lifecycle (GET/POST/PUT `/api/wizard`) with resume support
 - [x] Auto-save wizard fields (topic, target_audience, rough_outline, outline) on change
 - [x] Lift Step1 local state (generatedTopics, topicHistory, topicHistoryIndex) into BlogWizard for persistence
-- [ ] Wire up `POST /api/blogs` to save finished blog (replaces `POST /wbrp/v1/blogs`)
-- [ ] Wire up blog list page (`BlogsPage`) to use Laravel API
-- [ ] Wire up blog view/edit page (`BlogViewPage`) to use Laravel API
+- [x] Remove WordPress custom post types (`wbrp_blog`, `wbrp_tweet`)
+- [x] Remove WordPress REST routes and callbacks for blogs and tweets
+- [ ] Remove old WordPress API calls from frontend (`src/services/api.ts`)
+- [ ] Wire up `POST /api/blogs` to save finished blog from wizard
+- [ ] Wire up blog list page (`BlogsPage`) to use Laravel API (`GET /api/blogs`)
+- [ ] Wire up blog view/edit page (`BlogViewPage`) to use Laravel API (`GET/PUT /api/blogs/{id}`)
+- [ ] Wire up blog delete to use Laravel API (`DELETE /api/blogs/{id}`)
 - [ ] Wire up blog publish to create real WP post from Laravel data
-- [ ] Move tweet CRUD to Laravel API
-- [ ] Remove WordPress custom post types and REST routes (cleanup)
+- [ ] Move tweet CRUD to Laravel API (`GET/POST/DELETE /api/blogs/{id}/tweets`)
+- [ ] Remove old tweet API calls from frontend
 
 ### 2. OAuth — Social media connections
 **Status:** Not started
@@ -62,3 +66,5 @@ Move all data storage (blogs, tweets, profile, settings) from WordPress custom p
 - Step 1 state lifted for persistence (generatedTopics, topicHistory)
 - Step 2 rough outline auto-save + edit functionality
 - Step 3 outline auto-save (reorder, edit, delete)
+- Removed `wbrp_blog` and `wbrp_tweet` custom post types
+- Removed all WordPress REST routes/callbacks for blogs and tweets
