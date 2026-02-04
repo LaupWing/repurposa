@@ -19,11 +19,11 @@ Move all data storage (blogs, tweets, profile, settings) from WordPress custom p
 - [x] Lift Step1 local state (generatedTopics, topicHistory, topicHistoryIndex) into BlogWizard for persistence
 - [x] Remove WordPress custom post types (`wbrp_blog`, `wbrp_tweet`)
 - [x] Remove WordPress REST routes and callbacks for blogs and tweets
-- [ ] Remove old WordPress API calls from frontend (`src/services/api.ts`)
-- [ ] Wire up `POST /api/blogs` to save finished blog from wizard
-- [ ] Wire up blog list page (`BlogsPage`) to use Laravel API (`GET /api/blogs`)
-- [ ] Wire up blog view/edit page (`BlogViewPage`) to use Laravel API (`GET/PUT /api/blogs/{id}`)
-- [ ] Wire up blog delete to use Laravel API (`DELETE /api/blogs/{id}`)
+- [x] Wire up `POST /api/blog/generate-blog` to save finished blog from wizard (generates + saves + deletes wizard)
+- [x] Wire up blog list page (`BlogsPage`) to use Laravel API (`GET /api/blogs`)
+- [x] Wire up blog view page (`BlogViewPage`) to fetch from Laravel API (`GET /api/blogs/{id}`)
+- [x] Wire up blog save (`BlogViewPage`) to use Laravel API (`PUT /api/blogs/{id}`)
+- [x] Wire up blog delete to use Laravel API (`DELETE /api/blogs/{id}`)
 - [ ] Wire up blog publish to create real WP post from Laravel data
 - [ ] Move tweet CRUD to Laravel API (`GET/POST/DELETE /api/blogs/{id}/tweets`)
 - [ ] Remove old tweet API calls from frontend
