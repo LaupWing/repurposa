@@ -702,7 +702,7 @@ function AddShortPostModal({
                                     <button
                                         key={swipe.id}
                                         onClick={() => setSelectedSwipe(swipe.id)}
-                                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                        className={`w-full text-left p-3 rounded-lg border transition-colors flex flex-col ${
                                             selectedSwipe === swipe.id
                                                 ? 'border-blue-400 bg-blue-50'
                                                 : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -711,8 +711,8 @@ function AddShortPostModal({
                                         <div className="mb-1.5">
                                             <span className="text-[10px] text-gray-400">{swipe.structure}</span>
                                         </div>
-                                        <p className="text-xs text-gray-500 whitespace-pre-wrap mb-2">{swipe.content}</p>
-                                        <div className="flex flex-wrap gap-1">
+                                        <p className="text-xs text-gray-500 whitespace-pre-wrap flex-1 mb-2 flex items-center">{swipe.content}</p>
+                                        <div className="flex flex-wrap gap-1 mt-auto">
                                             {swipe.emotions.map((emotion) => (
                                                 <span
                                                     key={emotion}
@@ -733,8 +733,8 @@ function AddShortPostModal({
                             value={customContent}
                             onChange={(e) => setCustomContent(e.target.value)}
                             placeholder="Write your short post..."
-                            className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
-                            rows={12}
+                            className="w-full min-h-80 rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                            rows={18}
                             style={{ fieldSizing: 'content' } as React.CSSProperties}
                         />
                     )}
