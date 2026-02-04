@@ -27,7 +27,7 @@ import {
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
 import ImagePickerModal from '../ImagePickerModal';
-import { generateBlog, getBlog } from '../../services/api';
+import { generateBlog, getBlog, updateBlog } from '../../services/api';
 import type { BlogPost } from '../../services/api';
 
 // ============================================
@@ -172,10 +172,15 @@ function BlogEditor({
     const [title, setTitle] = useState(post.title);
     const [content, setContent] = useState(post.content);
     const [thumbnail, setThumbnail] = useState(post.thumbnail || '');
+    const [savedTitle, setSavedTitle] = useState(post.title);
+    const [savedContent, setSavedContent] = useState(post.content);
+    const [savedThumbnail, setSavedThumbnail] = useState(post.thumbnail || '');
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
+
+    const isDirty = title !== savedTitle || content !== savedContent || thumbnail !== savedThumbnail;
 
     const handleAIRequest = (selectedText: string, action: string) => {
         console.log(`AI Action: ${action}`, selectedText);
@@ -185,11 +190,10 @@ function BlogEditor({
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            await apiFetch({
-                path: `/wbrp/v1/blogs/${post.id}`,
-                method: 'PUT',
-                data: { title, content, thumbnail },
-            });
+            await updateBlog(post.id, { title, content, thumbnail });
+            setSavedTitle(title);
+            setSavedContent(content);
+            setSavedThumbnail(thumbnail);
             toast.success('Draft saved successfully');
         } catch (error) {
             console.error('Failed to save:', error);
@@ -269,8 +273,8 @@ function BlogEditor({
                 <div className="flex items-center gap-2">
                     <button
                         onClick={handleSave}
-                        disabled={isSaving}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        disabled={isSaving || !isDirty}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                         {isSaving ? 'Saving...' : 'Save'}
