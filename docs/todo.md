@@ -24,9 +24,10 @@ Move all data storage (blogs, tweets, profile, settings) from WordPress custom p
 - [x] Wire up blog view page (`BlogViewPage`) to fetch from Laravel API (`GET /api/blogs/{id}`)
 - [x] Wire up blog save (`BlogViewPage`) to use Laravel API (`PUT /api/blogs/{id}`)
 - [x] Wire up blog delete to use Laravel API (`DELETE /api/blogs/{id}`)
-- [ ] Wire up blog publish to create real WP post from Laravel data
+- [ ] Re-add slim WP publish route (`POST /wbrp/v1/blogs/{id}/publish`) that creates real WP post from Laravel data
 - [ ] Move tweet CRUD to Laravel API (`GET/POST/DELETE /api/blogs/{id}/tweets`)
 - [ ] Remove old tweet API calls from frontend
+- [ ] Add regenerate blog feature (generate new content for existing post via Laravel)
 - [ ] Add delete blog confirmation modal (replace `confirm()` with proper modal)
 
 ### 2. OAuth — Social media connections
