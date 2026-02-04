@@ -11,6 +11,7 @@ import { FileText, Sparkles, HelpCircle, X, Loader2, Undo2, Redo2, Clock } from 
 import { toast } from 'sonner';
 import { generateTopics, refineText, type TopicSuggestion, type TopicHistoryEntry } from '../../../services/api';
 import { useProfile } from '../../../context/ProfileContext';
+import { AITextPopup } from '../../AITextPopup';
 
 // ============================================
 // TYPES
@@ -54,6 +55,7 @@ export default function Step1Topic({
     const [editInstruction, setEditInstruction] = useState('');
     const [showHistory, setShowHistory] = useState(false);
     const historyRef = useRef<HTMLDivElement>(null);
+    const topicTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Close history popover on outside click
     useEffect(() => {
@@ -191,7 +193,9 @@ export default function Step1Topic({
 
             {/* Textarea with refine button */}
             <div className="relative">
+                <AITextPopup textareaRef={topicTextareaRef} value={topic} onChange={onTopicChange} />
                 <textarea
+                    ref={topicTextareaRef}
                     value={topic}
                     onChange={(e) => onTopicChange(e.target.value)}
                     placeholder="e.g., 5 mistakes beginners make that sabotage their weight loss"
