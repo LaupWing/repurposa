@@ -5,7 +5,7 @@
  * Left-aligned with the textarea, vertically above the selection.
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import {
     Sparkles,
     Wand2,
@@ -13,6 +13,8 @@ import {
     Maximize2,
     RefreshCw,
     Loader2,
+    MessageSquare,
+    Send,
 } from 'lucide-react';
 import { refineText } from '../services/api';
 import { toast } from 'sonner';
@@ -36,6 +38,9 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
     const [hasSelection, setHasSelection] = useState(false);
     const [position, setPosition] = useState({ top: 0, left: 0 });
     const [loading, setLoading] = useState<string | null>(null);
+    const [showCustom, setShowCustom] = useState(false);
+    const [customInstruction, setCustomInstruction] = useState('');
+    const customInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const textarea = textareaRef.current;
@@ -64,7 +69,7 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
                 const lineOffset = (totalLines - 1) * lineHeight;
 
                 setPosition({
-                    top: rect.top + paddingTop + lineOffset - textarea.scrollTop - 36,
+                    top: rect.top + paddingTop + lineOffset - textarea.scrollTop - 44,
                     left: rect.left,
                 });
 
@@ -119,6 +124,13 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
         }
     };
 
+    const handleCustomSubmit = () => {
+        if (!customInstruction.trim()) return;
+        handleAction('custom', customInstruction.trim());
+        setCustomInstruction('');
+        setShowCustom(false);
+    };
+
     if (!hasSelection) return null;
 
     return (
@@ -141,6 +153,46 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
                     {label}
                 </button>
             ))}
+
+            <div className="w-px h-5 bg-gray-200 mx-0.5" />
+
+            <div className="relative">
+                <button
+                    onClick={() => { setShowCustom(!showCustom); setTimeout(() => customInputRef.current?.focus(), 50); }}
+                    disabled={loading !== null}
+                    className="h-7 px-2 text-xs flex items-center gap-1 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors whitespace-nowrap"
+                >
+                    {loading === 'custom' ? (
+                        <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                        <MessageSquare size={12} />
+                    )}
+                    Other
+                </button>
+
+                {showCustom && (
+                    <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-white rounded-lg border border-gray-200 shadow-lg z-50">
+                        <div className="flex items-center gap-1.5">
+                            <input
+                                ref={customInputRef}
+                                type="text"
+                                value={customInstruction}
+                                onChange={(e) => setCustomInstruction(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleCustomSubmit(); if (e.key === 'Escape') setShowCustom(false); }}
+                                placeholder="e.g. Make it funnier..."
+                                className="flex-1 h-8 px-2 text-xs border border-gray-300 rounded-md bg-gray-50 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                            />
+                            <button
+                                onClick={handleCustomSubmit}
+                                disabled={!customInstruction.trim() || loading !== null}
+                                className="h-8 w-8 flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shrink-0"
+                            >
+                                <Send size={12} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
