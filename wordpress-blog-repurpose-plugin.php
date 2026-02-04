@@ -207,5 +207,81 @@ function wbrp_register_rest_routes() {
         ],
     ]);
 
+    // Publish route — creates/updates a real WordPress post from Laravel data
+    register_rest_route('wbrp/v1', '/blogs/(?P<id>\d+)/publish', [
+        [
+            'methods' => 'POST',
+            'callback' => 'wbrp_publish_blog',
+            'permission_callback' => function () {
+                return current_user_can('manage_options');
+            },
+        ],
+    ]);
+}
+
+/**
+ * Publish a blog as a real WordPress post.
+ * Receives { title, content, thumbnail } directly from the frontend.
+ * The id param is the Laravel post ID, stored as meta for tracking.
+ */
+function wbrp_publish_blog(WP_REST_Request $request) {
+    $laravel_id = $request->get_param('id');
+    $data = $request->get_json_params();
+
+    $title = sanitize_text_field($data['title'] ?? '');
+    $content = wp_kses_post($data['content'] ?? '');
+    $thumbnail = esc_url_raw($data['thumbnail'] ?? '');
+
+    if (empty($title) && empty($content)) {
+        return new WP_REST_Response(['error' => 'Title or content is required'], 400);
+    }
+
+    // Check if we already published this Laravel post
+    $existing_posts = get_posts([
+        'post_type' => 'post',
+        'meta_key' => '_wbrp_laravel_id',
+        'meta_value' => $laravel_id,
+        'posts_per_page' => 1,
+        'post_status' => 'any',
+    ]);
+
+    if (!empty($existing_posts)) {
+        // Update the existing WordPress post
+        $wp_post_id = $existing_posts[0]->ID;
+        wp_update_post([
+            'ID' => $wp_post_id,
+            'post_title' => $title,
+            'post_content' => $content,
+        ]);
+
+        return new WP_REST_Response([
+            'success' => true,
+            'post_id' => $wp_post_id,
+            'post_url' => get_permalink($wp_post_id),
+            'updated' => true,
+        ], 200);
+    }
+
+    // Create a new WordPress post
+    $wp_post_id = wp_insert_post([
+        'post_type' => 'post',
+        'post_title' => $title,
+        'post_content' => $content,
+        'post_status' => 'publish',
+    ]);
+
+    if (is_wp_error($wp_post_id)) {
+        return new WP_REST_Response(['error' => $wp_post_id->get_error_message()], 500);
+    }
+
+    // Store the Laravel ID for future syncing
+    update_post_meta($wp_post_id, '_wbrp_laravel_id', $laravel_id);
+
+    return new WP_REST_Response([
+        'success' => true,
+        'post_id' => $wp_post_id,
+        'post_url' => get_permalink($wp_post_id),
+        'updated' => false,
+    ], 201);
 }
 
