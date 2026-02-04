@@ -177,6 +177,7 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                 <div className="mb-3">
                     {isEditing ? (
                         <div>
+                            <AITextPopup textareaRef={editTextareaRef} value={editContent} onChange={setEditContent} />
                             <textarea
                                 ref={editTextareaRef}
                                 value={editContent}
@@ -185,7 +186,6 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                                 rows={5}
                                 style={{ fieldSizing: 'content' } as React.CSSProperties}
                             />
-                            <AITextPopup textareaRef={editTextareaRef} value={editContent} onChange={setEditContent} />
                             <div className="mt-2 flex items-center justify-between">
                                 <span className={`text-xs font-mono ${editContent.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
                                     {editContent.length}/280
@@ -323,6 +323,7 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                         <div className="mb-3">
                             {isEditingCta ? (
                                 <div>
+                                    <AITextPopup textareaRef={editCtaTextareaRef} value={editCtaContent} onChange={setEditCtaContent} />
                                     <textarea
                                         ref={editCtaTextareaRef}
                                         value={editCtaContent}
@@ -331,7 +332,6 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                                         rows={3}
                                         style={{ fieldSizing: 'content' } as React.CSSProperties}
                                     />
-                                    <AITextPopup textareaRef={editCtaTextareaRef} value={editCtaContent} onChange={setEditCtaContent} />
                                     <div className="mt-2 flex items-center justify-end gap-2">
                                         <button
                                             onClick={handleCancelCtaEdit}
