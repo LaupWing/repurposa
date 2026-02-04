@@ -15,7 +15,7 @@ import type { BlogPost } from '../../services/api';
 // TYPES
 // ============================================
 
-type StatusFilter = 'all' | 'draft' | 'published';
+type StatusFilter = 'all' | 'draft' | 'published' | 'out-of-sync';
 
 // ============================================
 // HELPERS
@@ -46,11 +46,13 @@ function truncateContent(content: string | null, maxLength: number = 100): strin
 function StatusDot({ status }: { status: BlogPost['wp_status'] }) {
     const colors = {
         published: 'bg-green-500',
+        'out-of-sync': 'bg-yellow-500',
         draft: 'bg-orange-500',
     };
 
     const glowColors = {
         published: 'bg-green-400',
+        'out-of-sync': 'bg-yellow-400',
         draft: 'bg-orange-400',
     };
 
@@ -69,6 +71,7 @@ function StatusDot({ status }: { status: BlogPost['wp_status'] }) {
 function PostCard({ post, onEdit, onDelete }: { post: BlogPost; onEdit: (id: number) => void; onDelete: (id: number) => void }) {
     const statusColors = {
         published: 'text-green-600',
+        'out-of-sync': 'text-yellow-600',
         draft: 'text-orange-600',
     };
 
@@ -155,6 +158,7 @@ function FilterDropdown({
         { value: 'all', label: 'All' },
         { value: 'draft', label: 'Draft' },
         { value: 'published', label: 'Published' },
+        { value: 'out-of-sync', label: 'Out of Sync' },
     ];
 
     return (
