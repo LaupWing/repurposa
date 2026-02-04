@@ -29,6 +29,7 @@ import { Tooltip } from '@wordpress/components';
 import { generateShortPosts, getShortPosts, getSwipes } from '../../services/api';
 import type { ShortPost, Swipe } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
+import { AITextPopup } from '../AITextPopup';
 
 // ============================================
 // TYPES
@@ -99,6 +100,8 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     const [editCtaContent, setEditCtaContent] = useState(pattern.cta_content || '');
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const editCtaTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Close menu on outside click
     useEffect(() => {
@@ -175,12 +178,14 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                     {isEditing ? (
                         <div>
                             <textarea
+                                ref={editTextareaRef}
                                 value={editContent}
                                 onChange={(e) => setEditContent(e.target.value)}
                                 className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
                                 rows={5}
                                 style={{ fieldSizing: 'content' } as React.CSSProperties}
                             />
+                            <AITextPopup textareaRef={editTextareaRef} value={editContent} onChange={setEditContent} />
                             <div className="mt-2 flex items-center justify-between">
                                 <span className={`text-xs font-mono ${editContent.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
                                     {editContent.length}/280
@@ -319,12 +324,14 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                             {isEditingCta ? (
                                 <div>
                                     <textarea
+                                        ref={editCtaTextareaRef}
                                         value={editCtaContent}
                                         onChange={(e) => setEditCtaContent(e.target.value)}
                                         className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
                                         rows={3}
                                         style={{ fieldSizing: 'content' } as React.CSSProperties}
                                     />
+                                    <AITextPopup textareaRef={editCtaTextareaRef} value={editCtaContent} onChange={setEditCtaContent} />
                                     <div className="mt-2 flex items-center justify-end gap-2">
                                         <button
                                             onClick={handleCancelCtaEdit}
