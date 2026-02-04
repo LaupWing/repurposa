@@ -39,6 +39,7 @@ export interface GenerateOutlineResponse {
 }
 
 export interface GenerateBlogResponse {
+    id: number;
     title: string;
     content: string;
     seo_description?: string;
@@ -62,13 +63,6 @@ export interface WizardData {
     current_step: number;
     created_at: string;
     updated_at: string;
-}
-
-export interface CreateBlogResponse {
-    id: number;
-    title: string;
-    content: string;
-    status: string;
 }
 
 // ============================================
@@ -201,16 +195,3 @@ export async function updateWizard(
     return apiRequest<WizardData>('/wizard', data as Record<string, unknown>, 'PUT');
 }
 
-// ============================================
-// BLOG CRUD API
-// ============================================
-
-export async function createBlog(data: {
-    title: string;
-    content: string;
-    topic?: string;
-    rough_outline?: string[];
-    outline?: OutlineSection[];
-}): Promise<CreateBlogResponse> {
-    return apiRequest<CreateBlogResponse>('/blogs', data as Record<string, unknown>);
-}

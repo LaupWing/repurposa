@@ -47,6 +47,7 @@ export interface WizardData {
   topicHistoryIndex: number;
   roughOutline: string[];
   outline: OutlineSection[];
+  generatedBlogId?: number;
   generatedTitle?: string;
   generatedContent?: string;
 }
@@ -251,6 +252,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
 
       onComplete({
         ...data,
+        generatedBlogId: response.id,
         generatedTitle: response.title,
         generatedContent: response.content,
       });

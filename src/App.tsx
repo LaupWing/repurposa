@@ -6,7 +6,6 @@
  */
 
 import { useState } from '@wordpress/element';
-import apiFetch from '@wordpress/api-fetch';
 import { Toaster, toast } from 'sonner';
 import { ProfileProvider, useProfile } from './context/ProfileContext';
 import BlogWizard from './components/BlogWizard';
@@ -36,31 +35,13 @@ function AppContent({ initialPage, postId }: AppProps) {
     const { isLoading, isConnected } = useProfile();
     const [justConnected, setJustConnected] = useState(false);
 
-    const handleWizardComplete = async (data: WizardData) => {
-        try {
-            await apiFetch({
-                path: '/wbrp/v1/blogs',
-                method: 'POST',
-                data: {
-                    title: data.generatedTitle,
-                    content: data.generatedContent,
-                    topic: data.topic,
-                    outline: data.outline,
-                },
-            });
+    const handleWizardComplete = (data: WizardData) => {
+        toast.success('Blog created!', {
+            description: 'Your blog has been saved as a draft.',
+        });
 
-            toast.success('Blog created!', {
-                description: 'Your blog has been saved as a draft.',
-            });
-
-            // Redirect to blogs page
-            window.location.href = 'admin.php?page=blog-repurpose-blogs';
-        } catch (error) {
-            console.error('Failed to save blog:', error);
-            toast.error('Failed to save blog', {
-                description: 'Please try again.',
-            });
-        }
+        // Redirect to blog view page with the Laravel post ID
+        window.location.href = `admin.php?page=blog-repurpose-blogs&post_id=${data.generatedBlogId}`;
     };
 
     if (isLoading) {
