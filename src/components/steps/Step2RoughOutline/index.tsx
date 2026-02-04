@@ -5,7 +5,7 @@
  * Items can be reordered via drag and drop.
  */
 
-import { useState } from '@wordpress/element';
+import { useState, useRef } from '@wordpress/element';
 import {
     DndContext,
     closestCenter,
@@ -23,6 +23,7 @@ import {
 } from '@dnd-kit/sortable';
 import { FileText, Plus } from 'lucide-react';
 import SortableItem from './SortableItem';
+import { AITextPopup } from '../../AITextPopup';
 
 // ============================================
 // TYPES
@@ -44,6 +45,7 @@ export default function Step2RoughOutline({
     onRoughOutlineChange,
 }: Step2RoughOutlineProps) {
     const [newIdea, setNewIdea] = useState('');
+    const newIdeaRef = useRef<HTMLTextAreaElement>(null);
 
     // Drag and drop sensors
     const sensors = useSensors(
@@ -112,29 +114,33 @@ export default function Step2RoughOutline({
             </div>
 
             {/* Input for new idea */}
-            <div className="flex gap-2 h-11">
-                <input
-                    type="text"
-                    value={newIdea}
-                    onChange={(e) => setNewIdea(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addIdea();
-                        }
-                    }}
-                    placeholder="e.g., I struggled with yo-yo dieting for 10 years..."
-                    className="flex-1 px-4 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={{ border: '1px solid #d1d5db', margin: 0, height: '100%' }}
-                />
-                <button
-                    type="button"
-                    onClick={addIdea}
-                    disabled={!newIdea.trim()}
-                    className="w-11 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                >
-                    <Plus size={18} />
-                </button>
+            <div>
+                <AITextPopup textareaRef={newIdeaRef} value={newIdea} onChange={setNewIdea} />
+                <div className="flex gap-2">
+                    <textarea
+                        ref={newIdeaRef}
+                        value={newIdea}
+                        onChange={(e) => setNewIdea(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                addIdea();
+                            }
+                        }}
+                        placeholder="e.g., I struggled with yo-yo dieting for 10 years..."
+                        rows={2}
+                        className="flex-1 px-4 py-2.5 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        style={{ border: '1px solid #d1d5db', margin: 0, fieldSizing: 'content' } as React.CSSProperties}
+                    />
+                    <button
+                        type="button"
+                        onClick={addIdea}
+                        disabled={!newIdea.trim()}
+                        className="w-11 self-end h-11 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center shrink-0"
+                    >
+                        <Plus size={18} />
+                    </button>
+                </div>
             </div>
 
             {/* List of ideas */}

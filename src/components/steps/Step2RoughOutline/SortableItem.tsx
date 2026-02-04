@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from '@wordpress/element';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2, Pencil, Check, X } from 'lucide-react';
+import { AITextPopup } from '../../AITextPopup';
 
 // ============================================
 // TYPES
@@ -29,11 +30,11 @@ export default function SortableItem({ id, idea, onRemove, onEdit }: SortableIte
     const [showConfirm, setShowConfirm] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(idea);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const editRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
-        if (isEditing && inputRef.current) {
-            inputRef.current.focus();
+        if (isEditing && editRef.current) {
+            editRef.current.focus();
         }
     }, [isEditing]);
 
@@ -70,26 +71,30 @@ export default function SortableItem({ id, idea, onRemove, onEdit }: SortableIte
 
             {/* Idea Text / Edit Input */}
             {isEditing ? (
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (editText.trim()) {
-                                onEdit(editText.trim());
+                <div className="flex-1">
+                    <AITextPopup textareaRef={editRef} value={editText} onChange={setEditText} />
+                    <textarea
+                        ref={editRef}
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                if (editText.trim()) {
+                                    onEdit(editText.trim());
+                                    setIsEditing(false);
+                                }
+                            }
+                            if (e.key === 'Escape') {
+                                setEditText(idea);
                                 setIsEditing(false);
                             }
-                        }
-                        if (e.key === 'Escape') {
-                            setEditText(idea);
-                            setIsEditing(false);
-                        }
-                    }}
-                    className="flex-1 px-2 py-1 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                        }}
+                        rows={2}
+                        className="w-full px-2 py-1 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        style={{ fieldSizing: 'content' } as React.CSSProperties}
+                    />
+                </div>
             ) : (
                 <div
                     className="flex-1 text-sm text-gray-700 cursor-pointer"
