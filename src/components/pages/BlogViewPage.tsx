@@ -206,13 +206,13 @@ function BlogEditor({
     const handlePublish = async (publishNow: boolean) => {
         setIsPublishing(true);
         try {
-            // Save latest content first
-            await apiFetch({
-                path: `/wbrp/v1/blogs/${post.id}`,
-                method: 'PUT',
-                data: { title, content, thumbnail },
-            });
+            // Save latest content to Laravel first
+            await updateBlog(post.id, { title, content, thumbnail });
+            setSavedTitle(title);
+            setSavedContent(content);
+            setSavedThumbnail(thumbnail);
 
+            // Create/update real WordPress post
             const response = await apiFetch<{
                 success: boolean;
                 post_id: number;
@@ -221,6 +221,7 @@ function BlogEditor({
             }>({
                 path: `/wbrp/v1/blogs/${post.id}/publish`,
                 method: 'POST',
+                data: { title, content, thumbnail },
             });
 
             onPublished(response.post_id, response.post_url);
@@ -420,55 +421,19 @@ function BlogEditor({
 
 function SettingsPanel({
     post,
-    onRegenerated,
     onDeleted,
 }: {
     post: BlogPost;
-    onRegenerated: (title: string, content: string) => void;
     onDeleted: () => void;
 }) {
-    const [isRegenerating, setIsRegenerating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    const handleRegenerate = async () => {
-        if (!post.topic || !post.outline?.length) {
-            toast.error('Cannot regenerate: missing topic or outline data');
-            return;
-        }
-
-        setIsRegenerating(true);
-        try {
-            const response = await generateBlog(post.topic, post.outline);
-
-            // Save the regenerated content
-            await apiFetch({
-                path: `/wbrp/v1/blogs/${post.id}`,
-                method: 'PUT',
-                data: {
-                    title: response.title,
-                    content: response.content,
-                },
-            });
-
-            onRegenerated(response.title, response.content);
-            toast.success('Blog regenerated successfully');
-        } catch (error) {
-            console.error('Failed to regenerate blog:', error);
-            toast.error('Failed to regenerate blog');
-        } finally {
-            setIsRegenerating(false);
-        }
-    };
 
     const handleDelete = async () => {
         if (!confirm('Are you sure you want to delete this blog? This action cannot be undone.')) return;
 
         setIsDeleting(true);
         try {
-            await apiFetch({
-                path: `/wbrp/v1/blogs/${post.id}`,
-                method: 'DELETE',
-            });
+            await deleteBlog(post.id);
             toast.success('Blog deleted');
             onDeleted();
         } catch (error) {
