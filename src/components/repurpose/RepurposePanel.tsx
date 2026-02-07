@@ -16,6 +16,7 @@ import {
     Lightbulb,
     Layout,
     Calendar,
+    Clock,
     Pencil,
     ImagePlus,
     AlertTriangle,
@@ -24,9 +25,10 @@ import {
     Plus,
     MoreHorizontal,
 } from 'lucide-react';
+import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill } from 'react-icons/ri';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { generateShortPosts, getShortPosts, getSwipes } from '../../services/api';
+import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule } from '../../services/api';
 import type { ShortPost, Swipe } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
@@ -83,7 +85,7 @@ const emotionColors: Record<string, string> = {
 // SUB-COMPONENTS
 // ============================================
 
-function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta }: {
+function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule }: {
     pattern: ShortPostPattern;
     index: number;
     onDelete: () => void;
@@ -91,6 +93,7 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     onAddCta: () => void;
     onEdit: (content: string) => void;
     onEditCta: (content: string) => void;
+    onSchedule: () => void;
 }) {
     const [copied, setCopied] = useState(false);
     const [copiedCta, setCopiedCta] = useState(false);
@@ -245,7 +248,10 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                             >
                                 <Pencil size={14} />
                             </button>
-                            <button className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                            <button
+                                onClick={onSchedule}
+                                className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                            >
                                 <Calendar size={14} />
                             </button>
                             {/* More menu */}
@@ -768,6 +774,356 @@ function AddShortPostModal({
 }
 
 // ============================================
+// SCHEDULE POST MODAL
+// ============================================
+
+type SchedulePlatform = 'x' | 'linkedin' | 'threads';
+
+const SCHEDULE_PLATFORMS: { id: SchedulePlatform; name: string; icon: React.ReactNode; bg: string }[] = [
+    { id: 'x', name: 'X', icon: <RiTwitterXFill size={14} />, bg: 'bg-black' },
+    { id: 'linkedin', name: 'LinkedIn', icon: <RiLinkedinFill size={14} />, bg: 'bg-blue-700' },
+    { id: 'threads', name: 'Threads', icon: <RiThreadsFill size={14} />, bg: 'bg-gray-900' },
+];
+
+const API_TO_UI_PLATFORM: Record<string, SchedulePlatform> = { twitter: 'x', linkedin: 'linkedin', threads: 'threads' };
+
+const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+
+interface UpcomingSlot {
+    date: Date;
+    dateLabel: string;
+    timeLabel: string;
+    platforms: SchedulePlatform[];
+}
+
+function getUpcomingSlots(
+    schedule: Record<string, { enabled: boolean; slots: { id: string; time: string; platforms: string[] }[] }>,
+    count: number,
+): UpcomingSlot[] {
+    const now = new Date();
+    const slots: UpcomingSlot[] = [];
+
+    // Look ahead 14 days
+    for (let d = 0; d < 14 && slots.length < count; d++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
+        const dayKey = DAY_KEYS[date.getDay()];
+        const daySchedule = schedule[dayKey];
+        if (!daySchedule?.enabled) continue;
+
+        for (const slot of daySchedule.slots) {
+            if (slots.length >= count) break;
+            const [hours, minutes] = slot.time.split(':').map(Number);
+            const slotDate = new Date(date);
+            slotDate.setHours(hours, minutes, 0, 0);
+
+            // Skip past slots
+            if (slotDate <= now) continue;
+
+            const today = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            let dateLabel: string;
+            if (slotDate.toDateString() === today.toDateString()) {
+                dateLabel = 'Today';
+            } else if (slotDate.toDateString() === tomorrow.toDateString()) {
+                dateLabel = 'Tomorrow';
+            } else {
+                dateLabel = slotDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            }
+
+            const timeLabel = slotDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+            slots.push({
+                date: slotDate,
+                dateLabel,
+                timeLabel,
+                platforms: slot.platforms.map((p) => API_TO_UI_PLATFORM[p] || p as SchedulePlatform),
+            });
+        }
+    }
+
+    return slots;
+}
+
+function getDefaultDate(): string {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+}
+
+function getDefaultTime(): string {
+    const now = new Date();
+    now.setHours(now.getHours() + 1, 0, 0, 0);
+    return now.toTimeString().slice(0, 5);
+}
+
+function SchedulePostModal({
+    isOpen,
+    post,
+    onClose,
+    onSchedule,
+}: {
+    isOpen: boolean;
+    post: ShortPostPattern | null;
+    onClose: () => void;
+    onSchedule: (post: ShortPostPattern, platforms: SchedulePlatform[], dateTime: string) => void;
+}) {
+    const [selectedPlatforms, setSelectedPlatforms] = useState<SchedulePlatform[]>(['x']);
+    const [date, setDate] = useState(getDefaultDate);
+    const [time, setTime] = useState(getDefaultTime);
+    const [upcomingSlots, setUpcomingSlots] = useState<UpcomingSlot[]>([]);
+    const [loadingSlots, setLoadingSlots] = useState(false);
+    const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
+    const [useCustom, setUseCustom] = useState(false);
+
+    // Fetch schedule & reset state when modal opens
+    useEffect(() => {
+        if (!isOpen) return;
+        setSelectedPlatforms(['x']);
+        setDate(getDefaultDate());
+        setTime(getDefaultTime());
+        setSelectedSlotIndex(null);
+        setUseCustom(false);
+
+        setLoadingSlots(true);
+        getPublishingSchedule()
+            .then((data) => {
+                if (data.schedule) {
+                    const slots = getUpcomingSlots(data.schedule, 6);
+                    setUpcomingSlots(slots);
+                    // Auto-select first slot if available
+                    if (slots.length > 0) {
+                        setSelectedSlotIndex(0);
+                        setSelectedPlatforms(slots[0].platforms);
+                    }
+                } else {
+                    setUpcomingSlots([]);
+                }
+            })
+            .catch(() => {
+                setUpcomingSlots([]);
+            })
+            .finally(() => setLoadingSlots(false));
+    }, [isOpen]);
+
+    if (!isOpen || !post) return null;
+
+    const togglePlatform = (id: SchedulePlatform) => {
+        setSelectedPlatforms((prev) => {
+            if (prev.includes(id)) {
+                if (prev.length === 1) return prev;
+                return prev.filter((p) => p !== id);
+            }
+            return [...prev, id];
+        });
+    };
+
+    const handleSelectSlot = (index: number) => {
+        setSelectedSlotIndex(index);
+        setUseCustom(false);
+        setSelectedPlatforms(upcomingSlots[index].platforms);
+    };
+
+    const handleUseCustom = () => {
+        setUseCustom(true);
+        setSelectedSlotIndex(null);
+    };
+
+    const handleSchedule = () => {
+        if (selectedSlotIndex !== null && !useCustom) {
+            const slot = upcomingSlots[selectedSlotIndex];
+            onSchedule(post, selectedPlatforms, slot.date.toISOString());
+        } else {
+            const dateTime = `${date}T${time}`;
+            onSchedule(post, selectedPlatforms, dateTime);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                    <h2 className="text-base font-semibold text-gray-900">Schedule <em className="font-serif font-normal italic">Post</em></h2>
+                    <button
+                        onClick={onClose}
+                        className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="px-5 py-4 space-y-5">
+                    {/* Post preview */}
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                        <p className="text-sm text-gray-700 line-clamp-3 whitespace-pre-wrap">{post.content}</p>
+                    </div>
+
+                    {/* Upcoming slots from schedule */}
+                    {loadingSlots ? (
+                        <div className="flex items-center justify-center py-4 text-sm text-gray-400">
+                            Loading your schedule...
+                        </div>
+                    ) : upcomingSlots.length > 0 ? (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Next available slots</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {upcomingSlots.map((slot, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleSelectSlot(idx)}
+                                        className={`text-left p-2.5 rounded-lg border transition-all ${
+                                            selectedSlotIndex === idx && !useCustom
+                                                ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400'
+                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <div className="text-xs font-medium text-gray-900">{slot.dateLabel}</div>
+                                        <div className="text-xs text-gray-500 mt-0.5">{slot.timeLabel}</div>
+                                        <div className="flex items-center gap-1 mt-1.5">
+                                            {slot.platforms.map((pid) => {
+                                                const p = SCHEDULE_PLATFORMS.find((sp) => sp.id === pid);
+                                                if (!p) return null;
+                                                return (
+                                                    <span
+                                                        key={pid}
+                                                        className={`inline-flex items-center justify-center w-5 h-5 rounded ${p.bg} text-white`}
+                                                    >
+                                                        {p.icon}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            {/* Custom time toggle */}
+                            <button
+                                onClick={handleUseCustom}
+                                className={`mt-2 w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                                    useCustom
+                                        ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 text-blue-700'
+                                        : 'border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700'
+                                }`}
+                            >
+                                Pick a custom date &amp; time
+                            </button>
+                        </div>
+                    ) : null}
+
+                    {/* Custom date/time picker - show when no schedule or custom selected */}
+                    {(useCustom || upcomingSlots.length === 0) && !loadingSlots && (
+                        <div className="space-y-4">
+                            {/* Platform selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Platforms</label>
+                                <div className="flex items-center gap-2">
+                                    {SCHEDULE_PLATFORMS.map((p) => {
+                                        const active = selectedPlatforms.includes(p.id);
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => togglePlatform(p.id)}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                    active
+                                                        ? `${p.bg} text-white`
+                                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                                                }`}
+                                            >
+                                                {p.icon}
+                                                {p.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Date & Time */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        <span className="flex items-center gap-1.5">
+                                            <Calendar size={14} className="text-gray-400" />
+                                            Date
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        min={getDefaultDate()}
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        <span className="flex items-center gap-1.5">
+                                            <Clock size={14} className="text-gray-400" />
+                                            Time
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="time"
+                                        value={time}
+                                        onChange={(e) => setTime(e.target.value)}
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Platform override when using a slot */}
+                    {selectedSlotIndex !== null && !useCustom && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Platforms</label>
+                            <div className="flex items-center gap-2">
+                                {SCHEDULE_PLATFORMS.map((p) => {
+                                    const active = selectedPlatforms.includes(p.id);
+                                    return (
+                                        <button
+                                            key={p.id}
+                                            onClick={() => togglePlatform(p.id)}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                active
+                                                    ? `${p.bg} text-white`
+                                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                                            }`}
+                                        >
+                                            {p.icon}
+                                            {p.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-gray-200 bg-gray-50">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSchedule}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                    >
+                        <Calendar size={14} />
+                        Schedule
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 
@@ -785,6 +1141,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>([]);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [schedulingPost, setSchedulingPost] = useState<ShortPostPattern | null>(null);
 
     const handleAddShortPost = (content: string) => {
         const newPost: ShortPostPattern = {
@@ -845,6 +1202,24 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         }
     };
 
+    const handleSchedulePost = (post: ShortPostPattern, platforms: SchedulePlatform[], dateTime: string) => {
+        const platformNames = platforms
+            .map((id) => SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name)
+            .filter(Boolean)
+            .join(', ');
+        const date = new Date(dateTime);
+        const formattedTime = date.toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+        });
+        toast.success('Post scheduled!', {
+            description: `${platformNames} · ${formattedTime}`,
+        });
+        setSchedulingPost(null);
+    };
+
     // Show content based on initialTab (parent controls the tab)
     const renderContent = () => {
         switch (initialTab) {
@@ -879,6 +1254,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     onAddCta={() => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: 'Read the full post here: ' } : p))}
                                     onEdit={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p))}
                                     onEditCta={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p))}
+                                    onSchedule={() => setSchedulingPost(pattern)}
                                 />
                             ))}
                         </div>
@@ -931,6 +1307,12 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 isOpen={showAddModal}
                 onClose={() => setShowAddModal(false)}
                 onAdd={handleAddShortPost}
+            />
+            <SchedulePostModal
+                isOpen={!!schedulingPost}
+                post={schedulingPost}
+                onClose={() => setSchedulingPost(null)}
+                onSchedule={handleSchedulePost}
             />
             {/* Content - No internal tabs, parent controls which content to show */}
             <div className="flex-1 overflow-y-auto p-6">
