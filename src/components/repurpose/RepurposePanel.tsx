@@ -17,6 +17,8 @@ import {
     Layout,
     Calendar,
     Clock,
+    ChevronLeft,
+    ChevronRight,
     Pencil,
     ImagePlus,
     AlertTriangle,
@@ -800,13 +802,13 @@ interface UpcomingSlot {
 
 function getUpcomingSlots(
     schedule: Record<string, { enabled: boolean; slots: { id: string; time: string; platforms: string[] }[] }>,
-    count: number,
+    maxSlots: number,
 ): UpcomingSlot[] {
     const now = new Date();
     const slots: UpcomingSlot[] = [];
 
-    // Look ahead 14 days
-    for (let d = 0; d < 14 && slots.length < count; d++) {
+    // Look ahead 30 days to gather enough slots for pagination
+    for (let d = 0; d < 30 && slots.length < maxSlots; d++) {
         const date = new Date(now);
         date.setDate(date.getDate() + d);
         const dayKey = DAY_KEYS[date.getDay()];
@@ -814,7 +816,7 @@ function getUpcomingSlots(
         if (!daySchedule?.enabled) continue;
 
         for (const slot of daySchedule.slots) {
-            if (slots.length >= count) break;
+            if (slots.length >= maxSlots) break;
             const [hours, minutes] = slot.time.split(':').map(Number);
             const slotDate = new Date(date);
             slotDate.setHours(hours, minutes, 0, 0);
@@ -878,6 +880,8 @@ function SchedulePostModal({
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
     const [useCustom, setUseCustom] = useState(false);
+    const [slotPage, setSlotPage] = useState(0);
+    const slotsPerPage = 6;
 
     // Fetch schedule & reset state when modal opens
     useEffect(() => {
@@ -887,23 +891,27 @@ function SchedulePostModal({
         setTime(getDefaultTime());
         setSelectedSlotIndex(null);
         setUseCustom(false);
+        setSlotPage(0);
 
         setLoadingSlots(true);
         getPublishingSchedule()
             .then((data) => {
+                console.log('[ScheduleModal] API response:', data);
                 if (data.schedule) {
-                    const slots = getUpcomingSlots(data.schedule, 6);
+                    const slots = getUpcomingSlots(data.schedule, 60);
+                    console.log('[ScheduleModal] Computed slots:', slots.length, slots);
                     setUpcomingSlots(slots);
-                    // Auto-select first slot if available
                     if (slots.length > 0) {
                         setSelectedSlotIndex(0);
                         setSelectedPlatforms(slots[0].platforms);
                     }
                 } else {
+                    console.log('[ScheduleModal] No schedule in response');
                     setUpcomingSlots([]);
                 }
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error('[ScheduleModal] API error:', err);
                 setUpcomingSlots([]);
             })
             .finally(() => setLoadingSlots(false));
@@ -921,10 +929,14 @@ function SchedulePostModal({
         });
     };
 
-    const handleSelectSlot = (index: number) => {
-        setSelectedSlotIndex(index);
+    const pageStart = slotPage * slotsPerPage;
+    const pageSlots = upcomingSlots.slice(pageStart, pageStart + slotsPerPage);
+    const totalPages = Math.ceil(upcomingSlots.length / slotsPerPage);
+
+    const handleSelectSlot = (absoluteIndex: number) => {
+        setSelectedSlotIndex(absoluteIndex);
         setUseCustom(false);
-        setSelectedPlatforms(upcomingSlots[index].platforms);
+        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms);
     };
 
     const handleUseCustom = () => {
@@ -945,7 +957,7 @@ function SchedulePostModal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden">
+            <div className={"relative bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 overflow-hidden"}>
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
                     <h2 className="text-base font-semibold text-gray-900">Schedule <em className="font-serif font-normal italic">Post</em></h2>
@@ -968,16 +980,24 @@ function SchedulePostModal({
                         <div className="flex items-center justify-center py-4 text-sm text-gray-400">
                             Loading your schedule...
                         </div>
-                    ) : upcomingSlots.length > 0 ? (
+                    ) : upcomingSlots.length === 0 ? (
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                            <Calendar size={16} className="text-gray-400 shrink-0" />
+                            <p className="text-xs text-gray-500">
+                                No publishing schedule set up yet. <a href="admin.php?page=blog-repurpose-schedule" className="text-blue-600 hover:underline">Configure your times</a> to see quick-pick slots here.
+                            </p>
+                        </div>
+                    ) : (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Next available slots</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {upcomingSlots.map((slot, idx) => {
-                                    const isSelected = selectedSlotIndex === idx && !useCustom;
+                                {pageSlots.map((slot, idx) => {
+                                    const absoluteIdx = pageStart + idx;
+                                    const isSelected = selectedSlotIndex === absoluteIdx && !useCustom;
                                     return (
                                         <div
-                                            key={idx}
-                                            onClick={() => handleSelectSlot(idx)}
+                                            key={absoluteIdx}
+                                            onClick={() => handleSelectSlot(absoluteIdx)}
                                             className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
                                                 isSelected
                                                     ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400'
@@ -1005,7 +1025,7 @@ function SchedulePostModal({
                                                             key={p.id}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                if (!isSelected) handleSelectSlot(idx);
+                                                                if (!isSelected) handleSelectSlot(absoluteIdx);
                                                                 togglePlatform(p.id);
                                                             }}
                                                             className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
@@ -1027,19 +1047,42 @@ function SchedulePostModal({
                                     );
                                 })}
                             </div>
-                            {/* Custom time toggle */}
-                            <button
-                                onClick={handleUseCustom}
-                                className={`mt-2 w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
-                                    useCustom
-                                        ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 text-blue-700'
-                                        : 'border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700'
-                                }`}
-                            >
-                                Pick a custom date &amp; time
-                            </button>
+                            {/* Pagination + Custom time */}
+                            <div className="mt-3 flex items-center justify-between">
+                                <button
+                                    onClick={handleUseCustom}
+                                    className={`text-left px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                                        useCustom
+                                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 text-blue-700'
+                                            : 'border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700'
+                                    }`}
+                                >
+                                    Pick a custom date &amp; time
+                                </button>
+                                {totalPages > 1 && (
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => setSlotPage((p) => Math.max(0, p - 1))}
+                                            disabled={slotPage === 0}
+                                            className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <ChevronLeft size={16} />
+                                        </button>
+                                        <span className="text-xs text-gray-400 px-2">
+                                            {slotPage + 1} / {totalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setSlotPage((p) => Math.min(totalPages - 1, p + 1))}
+                                            disabled={slotPage === totalPages - 1}
+                                            className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    ) : null}
+                    )}
 
                     {/* Custom date/time picker - show when no schedule or custom selected */}
                     {(useCustom || upcomingSlots.length === 0) && !loadingSlots && (
