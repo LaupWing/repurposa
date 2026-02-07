@@ -364,7 +364,7 @@ export default function ConnectionsPage() {
                     <img
                       src={platform.profilePicture}
                       alt=""
-                      className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white"
+                      className="absolute -bottom-2.5 -right-2.5 w-7 h-7 rounded-full border-2 border-white"
                     />
                   )}
                 </div>
