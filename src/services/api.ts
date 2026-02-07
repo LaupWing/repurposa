@@ -301,7 +301,10 @@ export interface ScheduledPost {
     platform: string;
     scheduled_at: string;
     status: 'pending' | 'publishing' | 'published' | 'failed';
+    schedulable_type?: string;
+    schedulable_id?: number;
     social_account?: { id: number; platform: string; platform_username: string };
+    post?: { id: number; title: string } | null;
     created_at: string;
     updated_at: string;
 }

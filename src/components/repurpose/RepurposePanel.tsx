@@ -90,7 +90,7 @@ const emotionColors: Record<string, string> = {
 // SUB-COMPONENTS
 // ============================================
 
-function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule }: {
+function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, autoEdit }: {
     pattern: ShortPostPattern;
     index: number;
     onDelete: () => void;
@@ -99,10 +99,19 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     onEdit: (content: string) => void;
     onEditCta: (content: string) => void;
     onSchedule: () => void;
+    autoEdit?: boolean;
 }) {
     const [copied, setCopied] = useState(false);
     const [copiedCta, setCopiedCta] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
+    const [isEditing, setIsEditing] = useState(!!autoEdit);
+    const cardRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll into view when deep-linked
+    useEffect(() => {
+        if (autoEdit && cardRef.current) {
+            cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [autoEdit]);
     const [isEditingCta, setIsEditingCta] = useState(false);
     const [editContent, setEditContent] = useState(pattern.content);
     const [editCtaContent, setEditCtaContent] = useState(pattern.cta_content || '');
@@ -159,7 +168,7 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     };
 
     return (
-        <div className="group relative mb-4">
+        <div ref={cardRef} className="group relative mb-4">
             {/* Main Short Post */}
             <div className="relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
                 {/* Pattern number */}
@@ -1322,9 +1331,10 @@ interface RepurposePanelProps {
     blogId?: number;
     isPublished?: boolean;
     publishedPostUrl?: string | null;
+    editShortPostId?: number;
 }
 
-export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl }: RepurposePanelProps) {
+export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>([]);
@@ -1431,6 +1441,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     onEdit={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p))}
                                     onEditCta={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p))}
                                     onSchedule={() => setSchedulingPost(pattern)}
+                                    autoEdit={pattern.id === editShortPostId}
                                 />
                             ))}
                         </div>

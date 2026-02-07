@@ -18,7 +18,6 @@ import {
     Pencil,
     MoreHorizontal,
     Check,
-    Copy,
     MessageSquare,
     ListOrdered,
     Loader2,
@@ -48,6 +47,8 @@ interface ScheduledPost {
     scheduledAt: string;
     status: PostStatus;
     blogTitle?: string;
+    postId?: number | null;
+    schedulableId?: number;
 }
 
 interface TimeSlot {
@@ -103,6 +104,9 @@ function mapApiPost(apiPost: ApiScheduledPost): ScheduledPost {
         postType: 'short',
         scheduledAt: apiPost.scheduled_at,
         status: apiPost.status,
+        blogTitle: apiPost.post?.title,
+        postId: apiPost.post_id,
+        schedulableId: apiPost.schedulable_id,
     };
 }
 
@@ -227,11 +231,9 @@ function StatusIndicator({ status }: { status: PostStatus }) {
 function ScheduledPostCard({
     post,
     onDelete,
-    onEdit,
 }: {
     post: ScheduledPost;
     onDelete: (id: number) => void;
-    onEdit: (id: number) => void;
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -287,27 +289,26 @@ function ScheduledPostCard({
                 </button>
 
                 {menuOpen && (
-                    <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-                        <button
-                            onClick={() => { onEdit(post.id); setMenuOpen(false); }}
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        >
-                            <Pencil size={14} />
-                            Edit
-                        </button>
-                        <button
-                            onClick={() => { setMenuOpen(false); }}
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        >
-                            <Copy size={14} />
-                            Duplicate
-                        </button>
+                    <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                        {post.postId && (
+                            <button
+                                onClick={() => {
+                                    const url = `admin.php?page=blog-repurpose-blogs&post_id=${post.postId}${post.schedulableId ? `&short_post_id=${post.schedulableId}` : ''}`;
+                                    window.location.href = url;
+                                    setMenuOpen(false);
+                                }}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                                <Pencil size={14} />
+                                Edit in Blog
+                            </button>
+                        )}
                         <button
                             onClick={() => { onDelete(post.id); setMenuOpen(false); }}
                             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                         >
-                            <Trash2 size={14} />
-                            Remove
+                            <Calendar size={14} />
+                            Unschedule
                         </button>
                     </div>
                 )}
@@ -561,7 +562,6 @@ export default function SchedulePage() {
                 setIsLoadingSchedule(false);
             });
 
-        // Fetch scheduled posts
         getScheduledPosts()
             .then((data) => {
                 setPosts(data.map(mapApiPost));
@@ -602,11 +602,6 @@ export default function SchedulePage() {
         } catch (error) {
             toast.error('Failed to remove post');
         }
-    };
-
-    const handleEditPost = (id: number) => {
-        // Would open edit modal in real implementation
-        console.log('Edit post:', id);
     };
 
     const handleToggleDay = (day: DayOfWeek) => {
@@ -828,7 +823,6 @@ export default function SchedulePage() {
                                                 key={post.id}
                                                 post={post}
                                                 onDelete={handleDeletePost}
-                                                onEdit={handleEditPost}
                                             />
                                         ))}
                                     </div>

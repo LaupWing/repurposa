@@ -550,7 +550,11 @@ function SettingsPanel({
 // ============================================
 
 export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
-    const [activeTab, setActiveTab] = useState<ContentTab>('blog');
+    // Read short_post_id from URL for deep-linking from schedule queue
+    const urlParams = new URLSearchParams(window.location.search);
+    const shortPostId = urlParams.get('short_post_id') ? parseInt(urlParams.get('short_post_id')!, 10) : undefined;
+
+    const [activeTab, setActiveTab] = useState<ContentTab>(shortPostId ? 'short' : 'blog');
     const [post, setPost] = useState<BlogPost | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -682,7 +686,7 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                     )}
 
                     {activeTab === 'short' && (
-                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} publishedPostUrl={post.published_post_url} />
+                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} publishedPostUrl={post.published_post_url} editShortPostId={shortPostId} />
                     )}
 
                     {activeTab === 'threads' && (
