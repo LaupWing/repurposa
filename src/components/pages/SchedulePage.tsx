@@ -21,6 +21,8 @@ import {
     MessageSquare,
     ListOrdered,
     Loader2,
+    CheckCircle,
+    ExternalLink,
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
@@ -35,7 +37,7 @@ import { useProfile } from '../../context/ProfileContext';
 type Platform = 'x' | 'linkedin' | 'threads' | 'instagram' | 'facebook';
 type PostType = 'short' | 'thread';
 type PostStatus = 'pending' | 'publishing' | 'published' | 'failed';
-type TabType = 'queue' | 'times';
+type TabType = 'queue' | 'published' | 'times';
 type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
 interface ScheduledPost {
@@ -89,6 +91,74 @@ const PLATFORMS: { id: Platform; name: string; icon: React.ReactNode; color: str
 const POST_TYPES: { id: PostType; label: string; icon: React.ReactNode }[] = [
     { id: 'short', label: 'Short Post', icon: <MessageSquare size={13} /> },
     { id: 'thread', label: 'Thread', icon: <ListOrdered size={13} /> },
+];
+
+// ============================================
+// MOCK PUBLISHED DATA
+// ============================================
+
+function getRecentDate(daysAgo: number, hour: number, minute: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    d.setHours(hour, minute, 0, 0);
+    return d.toISOString();
+}
+
+const MOCK_PUBLISHED: ScheduledPost[] = [
+    {
+        id: 901,
+        content: 'Most developers overcomplicate state management.\n\nHere\'s the truth: you don\'t need Redux for 90% of apps.\n\nReact context + useReducer handles it all.',
+        platform: 'x',
+        postType: 'short',
+        scheduledAt: getRecentDate(0, 9, 0),
+        status: 'published',
+        blogTitle: 'Why You Don\'t Need Redux Anymore',
+    },
+    {
+        id: 902,
+        content: 'I spent 3 years building SaaS products nobody wanted.\n\nThen I learned one simple framework that changed everything.\n\nThe "Mom Test" — stop asking people if your idea is good. Instead, ask about their problems.',
+        platform: 'linkedin',
+        postType: 'short',
+        scheduledAt: getRecentDate(0, 9, 0),
+        status: 'published',
+        blogTitle: 'The Mom Test: How to Talk to Customers',
+    },
+    {
+        id: 903,
+        content: 'Hot take: TypeScript doesn\'t slow you down.\n\nWhat slows you down is debugging runtime errors at 2am that a type checker would have caught instantly.',
+        platform: 'x',
+        postType: 'short',
+        scheduledAt: getRecentDate(1, 12, 30),
+        status: 'published',
+        blogTitle: 'TypeScript: Worth the Investment',
+    },
+    {
+        id: 904,
+        content: 'The best marketing strategy for developers?\n\nBuild in public. Share your wins AND your failures.\n\nPeople connect with authenticity, not perfection.',
+        platform: 'threads',
+        postType: 'short',
+        scheduledAt: getRecentDate(1, 9, 0),
+        status: 'published',
+        blogTitle: 'Build in Public: A Developer\'s Guide',
+    },
+    {
+        id: 905,
+        content: 'Stop writing "clean code" and start writing code that ships.\n\nPerfect is the enemy of done. Your users don\'t care about your architecture — they care about solving their problem.',
+        platform: 'linkedin',
+        postType: 'short',
+        scheduledAt: getRecentDate(2, 9, 0),
+        status: 'published',
+        blogTitle: 'Ship First, Refactor Later',
+    },
+    {
+        id: 906,
+        content: 'Every senior developer I know has one thing in common:\n\nThey read more code than they write.\n\nReading codebases teaches you patterns no tutorial ever will.',
+        platform: 'x',
+        postType: 'short',
+        scheduledAt: getRecentDate(3, 17, 0),
+        status: 'published',
+        blogTitle: 'How to Level Up as a Developer',
+    },
 ];
 
 // ============================================
@@ -313,6 +383,47 @@ function ScheduledPostCard({
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+function PublishedPostCard({ post }: { post: ScheduledPost }) {
+    return (
+        <div className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200">
+            {/* Time column */}
+            <div className="shrink-0 w-16 pt-0.5">
+                <span className="text-sm font-semibold text-gray-900">
+                    {formatTime(post.scheduledAt)}
+                </span>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+                {/* Badges row */}
+                <div className="flex items-center gap-2 mb-2">
+                    <PlatformBadge platform={post.platform} />
+                    <PostTypeBadge postType={post.postType} threadCount={post.threadCount} />
+                    <StatusIndicator status={post.status} />
+                </div>
+
+                {/* Post content preview */}
+                <p className="text-sm text-gray-700 leading-relaxed line-clamp-2 mb-1.5">
+                    {post.content}
+                </p>
+
+                {/* Source blog */}
+                {post.blogTitle && (
+                    <p className="text-xs text-gray-400">
+                        From: <span className="text-gray-500">{post.blogTitle}</span>
+                    </p>
+                )}
+            </div>
+
+            {/* View link */}
+            <button className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                <ExternalLink size={13} />
+                View
+            </button>
         </div>
     );
 }
@@ -686,6 +797,17 @@ export default function SchedulePage() {
                     )}
                 </button>
                 <button
+                    onClick={() => setActiveTab('published')}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                        activeTab === 'published'
+                            ? 'border-blue-600 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                    <CheckCircle size={16} />
+                    Published
+                </button>
+                <button
                     onClick={() => setActiveTab('times')}
                     className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
                         activeTab === 'times'
@@ -866,6 +988,52 @@ export default function SchedulePage() {
                     )}
                 </div>
             )}
+
+            {/* ============ PUBLISHED TAB ============ */}
+            {activeTab === 'published' && (() => {
+                const publishedGrouped = groupPostsByDate(MOCK_PUBLISHED);
+                return (
+                    <div>
+                        {MOCK_PUBLISHED.length > 0 ? (
+                            <div className="space-y-6">
+                                {Array.from(publishedGrouped.entries()).map(([dateKey, dayPosts]) => (
+                                    <div key={dateKey}>
+                                        {/* Day header */}
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <h3 className="text-sm font-semibold text-gray-900">
+                                                {formatScheduleDate(dayPosts[0].scheduledAt)}
+                                            </h3>
+                                            <span className="text-xs text-gray-400">
+                                                {dayPosts.length} {dayPosts.length === 1 ? 'post' : 'posts'}
+                                            </span>
+                                            <div className="flex-1 border-t border-gray-100" />
+                                        </div>
+
+                                        {/* Posts list */}
+                                        <div className="space-y-2">
+                                            {dayPosts.map((post) => (
+                                                <PublishedPostCard key={post.id} post={post} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
+                                <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
+                                    <CheckCircle size={28} className="text-green-600" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                    No published posts yet
+                                </h3>
+                                <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                                    Posts that have been successfully published to your social accounts will appear here.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
 
             {/* ============ PUBLISHING TIMES TAB ============ */}
             {activeTab === 'times' && isLoadingSchedule && (
