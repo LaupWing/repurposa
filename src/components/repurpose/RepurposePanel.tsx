@@ -31,7 +31,7 @@ import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFaceb
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
 import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost } from '../../services/api';
-import type { ShortPost, Swipe, SocialAccount } from '../../services/api';
+import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
 
@@ -48,6 +48,7 @@ interface ShortPostPattern {
     structure: string;
     why_it_works: string;
     cta_content?: string;
+    scheduled_post?: ShortPostSchedule | null;
 }
 
 interface Thread {
@@ -63,6 +64,7 @@ function shortPostToPattern(sp: ShortPost): ShortPostPattern {
         structure: sp.metadata?.structure || '',
         why_it_works: sp.metadata?.why_it_works || '',
         cta_content: sp.cta_content || undefined,
+        scheduled_post: sp.scheduled_post || null,
     };
 }
 
@@ -223,11 +225,18 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                 {/* Footer */}
                 {!isEditing && (
                     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                        {/* Left - Char count + Info tooltips */}
+                        {/* Left - Char count + Schedule status + Info tooltips */}
                         <div className="flex items-center gap-3">
                             <span className={`font-mono text-[10px] ${pattern.content.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
                                 {pattern.content.length}/280
                             </span>
+                            {pattern.scheduled_post && (
+                                <span className="flex items-center gap-1 text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                                    <Clock size={10} />
+                                    {pattern.scheduled_post.status === 'published' ? 'Published' :
+                                     pattern.scheduled_post.status === 'failed' ? 'Failed' : 'Scheduled'}
+                                </span>
+                            )}
                             <Tooltip text={pattern.why_it_works} delay={0} placement="top">
                                 <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
                                     <Lightbulb size={14} />
@@ -978,6 +987,8 @@ function SchedulePostModal({
                     social_account_id: account.id,
                     content: post.content,
                     scheduled_at: scheduledAt,
+                    schedulable_type: 'short_post',
+                    schedulable_id: post.id,
                     ...(blogId && { post_id: blogId }),
                 });
             });
@@ -1347,7 +1358,13 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     onAddCta={() => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: 'Read the full post here: ' } : p))}
                                     onEdit={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p))}
                                     onEditCta={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p))}
-                                    onSchedule={() => setSchedulingPost(pattern)}
+                                    onSchedule={() => {
+                                        if (pattern.scheduled_post && pattern.scheduled_post.status === 'pending') {
+                                            toast.info('This post is already scheduled.');
+                                            return;
+                                        }
+                                        setSchedulingPost(pattern);
+                                    }}
                                 />
                             ))}
                         </div>
