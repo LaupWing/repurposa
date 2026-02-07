@@ -158,50 +158,6 @@ function getNextDayDate(daysFromNow: number, time: string): string {
     return date.toISOString();
 }
 
-const DEFAULT_WEEKLY_SCHEDULE: WeeklySchedule = {
-    monday: {
-        enabled: true,
-        slots: [
-            { id: 'mon-1', time: '09:00', platforms: ['x', 'linkedin'] },
-            { id: 'mon-2', time: '12:30', platforms: ['x', 'threads'] },
-        ],
-    },
-    tuesday: {
-        enabled: true,
-        slots: [
-            { id: 'tue-1', time: '09:00', platforms: ['x', 'linkedin'] },
-            { id: 'tue-2', time: '17:00', platforms: ['linkedin'] },
-        ],
-    },
-    wednesday: {
-        enabled: true,
-        slots: [
-            { id: 'wed-1', time: '10:00', platforms: ['x', 'threads'] },
-        ],
-    },
-    thursday: {
-        enabled: true,
-        slots: [
-            { id: 'thu-1', time: '09:00', platforms: ['x', 'linkedin'] },
-            { id: 'thu-2', time: '12:30', platforms: ['threads'] },
-        ],
-    },
-    friday: {
-        enabled: true,
-        slots: [
-            { id: 'fri-1', time: '09:00', platforms: ['x', 'linkedin', 'threads'] },
-        ],
-    },
-    saturday: {
-        enabled: false,
-        slots: [],
-    },
-    sunday: {
-        enabled: false,
-        slots: [],
-    },
-};
-
 // ============================================
 // HELPERS
 // ============================================
@@ -570,7 +526,7 @@ function DayRow({
 export default function SchedulePage() {
     const [activeTab, setActiveTab] = useState<TabType>('queue');
     const [posts, setPosts] = useState<ScheduledPost[]>(MOCK_POSTS);
-    const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>(DEFAULT_WEEKLY_SCHEDULE);
+    const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule | null>(null);
     const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
     const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
     const [typeFilter, setTypeFilter] = useState<PostType | 'all'>('all');
@@ -624,20 +580,23 @@ export default function SchedulePage() {
     };
 
     const handleToggleDay = (day: DayOfWeek) => {
-        setWeeklySchedule((prev) => ({
+        if (!weeklySchedule) return;
+        setWeeklySchedule((prev) => prev ? ({
             ...prev,
             [day]: { ...prev[day], enabled: !prev[day].enabled },
-        }));
+        }) : prev);
     };
 
     const handleUpdateDay = (day: DayOfWeek, schedule: DaySchedule) => {
-        setWeeklySchedule((prev) => ({
+        if (!weeklySchedule) return;
+        setWeeklySchedule((prev) => prev ? ({
             ...prev,
             [day]: schedule,
-        }));
+        }) : prev);
     };
 
     const handleSaveSchedule = async () => {
+        if (!weeklySchedule) return;
         setIsSaving(true);
         try {
             await savePublishingSchedule(weeklySchedule);
@@ -651,10 +610,12 @@ export default function SchedulePage() {
     };
 
     // Count total weekly slots
-    const totalSlots = Object.values(weeklySchedule).reduce(
-        (sum, day) => sum + (day.enabled ? day.slots.length : 0),
-        0
-    );
+    const totalSlots = weeklySchedule
+        ? Object.values(weeklySchedule).reduce(
+            (sum, day) => sum + (day.enabled ? day.slots.length : 0),
+            0
+        )
+        : 0;
 
     return (
         <div className="p-6">
@@ -906,7 +867,7 @@ export default function SchedulePage() {
                                         Weekly <em className="font-serif font-normal italic">Schedule</em>
                                     </h2>
                                     <p className="text-sm text-gray-500 mt-1">
-                                        {totalSlots} time {totalSlots === 1 ? 'slot' : 'slots'} per week across {Object.values(weeklySchedule).filter((d) => d.enabled).length} days
+                                        {totalSlots} time {totalSlots === 1 ? 'slot' : 'slots'} per week across {weeklySchedule ? Object.values(weeklySchedule).filter((d) => d.enabled).length : 0} days
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -922,7 +883,7 @@ export default function SchedulePage() {
 
                         {/* Days */}
                         <div className="px-6 divide-y divide-gray-100">
-                            {DAYS.map((day) => (
+                            {weeklySchedule && DAYS.map((day) => (
                                 <DayRow
                                     key={day.key}
                                     day={day}
