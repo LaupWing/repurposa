@@ -24,6 +24,8 @@ import {
     Loader2,
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill } from 'react-icons/ri';
+import { toast } from 'sonner';
+import { getPublishingSchedule, savePublishingSchedule } from '../../services/api';
 
 // ============================================
 // TYPES
@@ -569,11 +571,28 @@ export default function SchedulePage() {
     const [activeTab, setActiveTab] = useState<TabType>('queue');
     const [posts, setPosts] = useState<ScheduledPost[]>(MOCK_POSTS);
     const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>(DEFAULT_WEEKLY_SCHEDULE);
+    const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
     const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
     const [typeFilter, setTypeFilter] = useState<PostType | 'all'>('all');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const filterRef = useRef<HTMLDivElement>(null);
+
+    // Fetch publishing schedule from API on mount
+    useEffect(() => {
+        getPublishingSchedule()
+            .then((data) => {
+                if (data.schedule) {
+                    setWeeklySchedule(data.schedule as unknown as WeeklySchedule);
+                }
+            })
+            .catch((error) => {
+                console.error('Failed to load publishing schedule:', error);
+            })
+            .finally(() => {
+                setIsLoadingSchedule(false);
+            });
+    }, []);
 
     // Close filter dropdown on outside click
     useEffect(() => {
@@ -620,9 +639,15 @@ export default function SchedulePage() {
 
     const handleSaveSchedule = async () => {
         setIsSaving(true);
-        // Simulate save — would call apiFetch in real implementation
-        await new Promise((r) => setTimeout(r, 800));
-        setIsSaving(false);
+        try {
+            await savePublishingSchedule(weeklySchedule);
+            toast.success('Schedule saved!');
+        } catch (error) {
+            console.error('Failed to save schedule:', error);
+            toast.error('Failed to save schedule');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     // Count total weekly slots
@@ -853,7 +878,12 @@ export default function SchedulePage() {
             )}
 
             {/* ============ PUBLISHING TIMES TAB ============ */}
-            {activeTab === 'times' && (
+            {activeTab === 'times' && isLoadingSchedule && (
+                <div className="flex items-center justify-center min-h-[300px]">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+            )}
+            {activeTab === 'times' && !isLoadingSchedule && (
                 <div className="max-w-3xl">
                     {/* Info banner */}
                     <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg mb-6">

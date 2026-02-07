@@ -267,3 +267,22 @@ export async function disconnectSocialAccount(platform: string): Promise<void> {
     await apiRequest<{ success: boolean }>(`/social/${platform}/disconnect`, {}, 'DELETE');
 }
 
+// ============================================
+// PUBLISHING SCHEDULE API
+// ============================================
+
+export interface PublishingScheduleResponse {
+    schedule: Record<string, { enabled: boolean; slots: { id: string; time: string; platforms: string[] }[] }> | null;
+    timezone: string;
+}
+
+export async function getPublishingSchedule(): Promise<PublishingScheduleResponse> {
+    return apiRequest<PublishingScheduleResponse>('/publishing-schedule', {}, 'GET');
+}
+
+export async function savePublishingSchedule(
+    schedule: Record<string, { enabled: boolean; slots: { id: string; time: string; platforms: string[] }[] }>
+): Promise<PublishingScheduleResponse> {
+    return apiRequest<PublishingScheduleResponse>('/publishing-schedule', { schedule }, 'PUT');
+}
+
