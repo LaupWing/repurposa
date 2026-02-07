@@ -25,7 +25,7 @@ import {
     Plus,
     MoreHorizontal,
 } from 'lucide-react';
-import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill } from 'react-icons/ri';
+import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
 import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule } from '../../services/api';
@@ -777,12 +777,14 @@ function AddShortPostModal({
 // SCHEDULE POST MODAL
 // ============================================
 
-type SchedulePlatform = 'x' | 'linkedin' | 'threads';
+type SchedulePlatform = 'x' | 'linkedin' | 'threads' | 'instagram' | 'facebook';
 
 const SCHEDULE_PLATFORMS: { id: SchedulePlatform; name: string; icon: React.ReactNode; bg: string }[] = [
     { id: 'x', name: 'X', icon: <RiTwitterXFill size={14} />, bg: 'bg-black' },
     { id: 'linkedin', name: 'LinkedIn', icon: <RiLinkedinFill size={14} />, bg: 'bg-blue-700' },
     { id: 'threads', name: 'Threads', icon: <RiThreadsFill size={14} />, bg: 'bg-gray-900' },
+    { id: 'instagram', name: 'Instagram', icon: <RiInstagramFill size={14} />, bg: 'bg-pink-600' },
+    { id: 'facebook', name: 'Facebook', icon: <RiFacebookFill size={14} />, bg: 'bg-blue-600' },
 ];
 
 const API_TO_UI_PLATFORM: Record<string, SchedulePlatform> = { twitter: 'x', linkedin: 'linkedin', threads: 'threads' };
