@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
-import { getPublishingSchedule, savePublishingSchedule } from '../../services/api';
+import { getPublishingSchedule, savePublishingSchedule, getScheduledPosts, deleteScheduledPost } from '../../services/api';
+import type { ScheduledPost as ApiScheduledPost } from '../../services/api';
 import { useProfile } from '../../context/ProfileContext';
 
 // ============================================
@@ -34,7 +35,7 @@ import { useProfile } from '../../context/ProfileContext';
 
 type Platform = 'x' | 'linkedin' | 'threads' | 'instagram' | 'facebook';
 type PostType = 'short' | 'thread';
-type PostStatus = 'scheduled' | 'published' | 'failed';
+type PostStatus = 'pending' | 'publishing' | 'published' | 'failed';
 type TabType = 'queue' | 'times';
 type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
@@ -90,75 +91,19 @@ const POST_TYPES: { id: PostType; label: string; icon: React.ReactNode }[] = [
 ];
 
 // ============================================
-// MOCK DATA
+// API → UI MAPPING
 // ============================================
 
-const MOCK_POSTS: ScheduledPost[] = [
-    {
-        id: 1,
-        content: 'Most founders think they need more traffic.\n\nWhat they actually need is a better offer.\n\nHere\'s the difference:',
-        platform: 'x',
+function mapApiPost(apiPost: ApiScheduledPost): ScheduledPost {
+    const uiPlatform = API_TO_UI_PLATFORM[apiPost.platform] || apiPost.platform as Platform;
+    return {
+        id: apiPost.id,
+        content: apiPost.content,
+        platform: uiPlatform,
         postType: 'short',
-        scheduledAt: getNextDayDate(0, '09:00'),
-        status: 'scheduled',
-        blogTitle: '5 Mistakes Founders Make',
-    },
-    {
-        id: 2,
-        content: 'I spent 3 years building a SaaS that nobody wanted.\n\nThen I changed ONE thing and hit $10k MRR in 6 months.\n\nHere\'s the full breakdown (thread):',
-        platform: 'x',
-        postType: 'thread',
-        threadCount: 7,
-        scheduledAt: getNextDayDate(0, '12:30'),
-        status: 'scheduled',
-        blogTitle: 'From Zero to $10k MRR',
-    },
-    {
-        id: 3,
-        content: 'The biggest myth in content marketing is that you need to post every day.\n\nConsistency matters more than frequency. Here\'s what I mean...',
-        platform: 'linkedin',
-        postType: 'short',
-        scheduledAt: getNextDayDate(0, '17:00'),
-        status: 'scheduled',
-        blogTitle: 'Content Marketing Myths',
-    },
-    {
-        id: 4,
-        content: 'Stop copying what big brands do on social media.\n\nYou don\'t have their budget, team, or brand recognition.\n\nHere\'s what actually works for small businesses:',
-        platform: 'threads',
-        postType: 'short',
-        scheduledAt: getNextDayDate(1, '09:00'),
-        status: 'scheduled',
-        blogTitle: 'Social Media for Small Business',
-    },
-    {
-        id: 5,
-        content: 'I analyzed 500+ LinkedIn posts that went viral.\n\nHere are the 5 patterns every single one followed:\n\n(Save this thread)',
-        platform: 'linkedin',
-        postType: 'thread',
-        threadCount: 6,
-        scheduledAt: getNextDayDate(1, '12:00'),
-        status: 'scheduled',
-        blogTitle: 'LinkedIn Viral Post Patterns',
-    },
-    {
-        id: 6,
-        content: 'The "build in public" trend is broken.\n\nHere\'s what nobody talks about — and what to do instead.',
-        platform: 'threads',
-        postType: 'thread',
-        threadCount: 5,
-        scheduledAt: getNextDayDate(2, '10:00'),
-        status: 'scheduled',
-        blogTitle: 'Build in Public Revisited',
-    },
-];
-
-function getNextDayDate(daysFromNow: number, time: string): string {
-    const date = new Date();
-    date.setDate(date.getDate() + daysFromNow);
-    const [hours, minutes] = time.split(':');
-    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    return date.toISOString();
+        scheduledAt: apiPost.scheduled_at,
+        status: apiPost.status,
+    };
 }
 
 // ============================================
@@ -262,7 +207,8 @@ function PostTypeBadge({ postType, threadCount }: { postType: PostType; threadCo
 
 function StatusIndicator({ status }: { status: PostStatus }) {
     const config = {
-        scheduled: { dot: 'bg-blue-500', glow: 'bg-blue-400', label: 'Scheduled', text: 'text-blue-600' },
+        pending: { dot: 'bg-blue-500', glow: 'bg-blue-400', label: 'Scheduled', text: 'text-blue-600' },
+        publishing: { dot: 'bg-yellow-500', glow: 'bg-yellow-400', label: 'Publishing', text: 'text-yellow-600' },
         published: { dot: 'bg-green-500', glow: 'bg-green-400', label: 'Published', text: 'text-green-600' },
         failed: { dot: 'bg-red-500', glow: 'bg-red-400', label: 'Failed', text: 'text-red-600' },
     };
@@ -580,7 +526,8 @@ function DayRow({
 export default function SchedulePage() {
     const { socialConnections } = useProfile();
     const [activeTab, setActiveTab] = useState<TabType>('queue');
-    const [posts, setPosts] = useState<ScheduledPost[]>(MOCK_POSTS);
+    const [posts, setPosts] = useState<ScheduledPost[]>([]);
+    const [isLoadingPosts, setIsLoadingPosts] = useState(true);
     const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule | null>(null);
     const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
     const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
@@ -613,6 +560,18 @@ export default function SchedulePage() {
             .finally(() => {
                 setIsLoadingSchedule(false);
             });
+
+        // Fetch scheduled posts
+        getScheduledPosts()
+            .then((data) => {
+                setPosts(data.map(mapApiPost));
+            })
+            .catch((error) => {
+                console.error('[SchedulePage] Failed to load scheduled posts:', error);
+            })
+            .finally(() => {
+                setIsLoadingPosts(false);
+            });
     }, []);
 
     // Close filter dropdown on outside click
@@ -635,8 +594,14 @@ export default function SchedulePage() {
 
     const grouped = groupPostsByDate(filteredPosts);
 
-    const handleDeletePost = (id: number) => {
-        setPosts(posts.filter((p) => p.id !== id));
+    const handleDeletePost = async (id: number) => {
+        try {
+            await deleteScheduledPost(id);
+            setPosts(posts.filter((p) => p.id !== id));
+            toast.success('Scheduled post removed');
+        } catch (error) {
+            toast.error('Failed to remove post');
+        }
     };
 
     const handleEditPost = (id: number) => {
@@ -748,7 +713,12 @@ export default function SchedulePage() {
             </div>
 
             {/* ============ QUEUE TAB ============ */}
-            {activeTab === 'queue' && (
+            {activeTab === 'queue' && isLoadingPosts && (
+                <div className="flex items-center justify-center min-h-[300px]">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+            )}
+            {activeTab === 'queue' && !isLoadingPosts && (
                 <div>
                     {/* Filters */}
                     {posts.length > 0 && (
