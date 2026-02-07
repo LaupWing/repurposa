@@ -21,6 +21,7 @@ export interface ProfileData {
 export interface SocialConnection {
     platform: string;
     username: string;
+    profilePicture?: string | null;
 }
 
 export interface UserData {
@@ -76,10 +77,19 @@ const ProfileContext = createContext<ProfileContextType | null>(null);
 // PROVIDER
 // ============================================
 
+interface SocialAccountResponse {
+    id: number;
+    platform: string;
+    platform_user_id: string;
+    platform_username: string;
+    profile_picture: string | null;
+    connected_at: string;
+}
+
 interface ProfileResponse {
     user: UserData;
     profile: ProfileData | null;
-    social_connections?: SocialConnection[];
+    social_accounts?: SocialAccountResponse[];
 }
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
@@ -99,7 +109,11 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         if (response.profile) {
             setProfile(response.profile);
         }
-        setSocialConnections(response.social_connections || []);
+        setSocialConnections((response.social_accounts || []).map(account => ({
+            platform: account.platform,
+            username: account.platform_username,
+            profilePicture: account.profile_picture,
+        })));
     }, []);
 
     // Load user + profile from Laravel on mount

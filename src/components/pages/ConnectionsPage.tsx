@@ -23,6 +23,7 @@ interface SocialPlatform {
   icon: React.ReactNode;
   connected: boolean;
   username?: string;
+  profilePicture?: string | null;
   color: string;
   comingSoon?: boolean;
 }
@@ -116,7 +117,7 @@ export default function ConnectionsPage() {
   const mergedPlatforms = platforms.map((platform) => {
     const connection = socialConnections.find((c) => c.platform === platform.id);
     if (connection) {
-      return { ...platform, connected: true, username: connection.username };
+      return { ...platform, connected: true, username: connection.username, profilePicture: connection.profilePicture };
     }
     return platform;
   });
@@ -353,10 +354,19 @@ export default function ConnectionsPage() {
               className={`flex items-center justify-between py-4 first:pt-0 last:pb-0 ${platform.comingSoon ? 'opacity-50' : ''}`}
             >
               <div className="flex items-center gap-4">
-                <div
-                  className={`w-10 h-10 ${platform.comingSoon ? 'bg-gray-300' : platform.color} text-white rounded-lg flex items-center justify-center`}
-                >
-                  {platform.icon}
+                <div className="relative">
+                  <div
+                    className={`w-10 h-10 ${platform.comingSoon ? 'bg-gray-300' : platform.color} text-white rounded-lg flex items-center justify-center`}
+                  >
+                    {platform.icon}
+                  </div>
+                  {platform.connected && platform.profilePicture && (
+                    <img
+                      src={platform.profilePicture}
+                      alt=""
+                      className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white"
+                    />
+                  )}
                 </div>
                 <div>
                   <h3 className="font-medium text-gray-900">{platform.name}</h3>
