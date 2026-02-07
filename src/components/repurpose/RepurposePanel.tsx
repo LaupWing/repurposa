@@ -26,6 +26,7 @@ import {
     Trash2,
     Plus,
     MoreHorizontal,
+    Send,
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
@@ -306,6 +307,20 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                                         >
                                             <ImagePlus size={14} />
                                             Add Image
+                                        </button>
+                                        <button
+                                            onClick={() => { setMenuOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <Send size={14} />
+                                            Publish Now
+                                        </button>
+                                        <button
+                                            onClick={() => { setMenuOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <Image size={14} />
+                                            Turn into Visual
                                         </button>
                                         <div className="border-t border-gray-100 my-1" />
                                         <button
