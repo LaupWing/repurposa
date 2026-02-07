@@ -14,6 +14,7 @@ import BlogViewPage from './components/pages/BlogViewPage';
 import SchedulePage from './components/pages/SchedulePage';
 import ConnectionsPage from './components/pages/ConnectionsPage';
 import ConnectAccount from './components/ConnectAccount';
+import { ConnectAccountsModal } from './components/ConnectAccountsModal';
 import type { WizardData } from './components/BlogWizard';
 
 // ============================================
@@ -83,6 +84,7 @@ function AppContent({ initialPage, postId }: AppProps) {
     return (
         <>
             <Toaster position="bottom-right" richColors />
+            <ConnectAccountsModal />
             {renderPage()}
         </>
     );
