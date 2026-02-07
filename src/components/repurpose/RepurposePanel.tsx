@@ -970,34 +970,60 @@ function SchedulePostModal({
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Next available slots</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {upcomingSlots.map((slot, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => handleSelectSlot(idx)}
-                                        className={`text-left p-2.5 rounded-lg border transition-all ${
-                                            selectedSlotIndex === idx && !useCustom
-                                                ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400'
-                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <div className="text-xs font-medium text-gray-900">{slot.dateLabel}</div>
-                                        <div className="text-xs text-gray-500 mt-0.5">{slot.timeLabel}</div>
-                                        <div className="flex items-center gap-1 mt-1.5">
-                                            {slot.platforms.map((pid) => {
-                                                const p = SCHEDULE_PLATFORMS.find((sp) => sp.id === pid);
-                                                if (!p) return null;
-                                                return (
-                                                    <span
-                                                        key={pid}
-                                                        className={`inline-flex items-center justify-center w-5 h-5 rounded ${p.bg} text-white`}
-                                                    >
-                                                        {p.icon}
-                                                    </span>
-                                                );
-                                            })}
+                                {upcomingSlots.map((slot, idx) => {
+                                    const isSelected = selectedSlotIndex === idx && !useCustom;
+                                    return (
+                                        <div
+                                            key={idx}
+                                            onClick={() => handleSelectSlot(idx)}
+                                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                                                isSelected
+                                                    ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400'
+                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            {/* Radio check */}
+                                            <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
+                                                isSelected
+                                                    ? 'border-blue-600 bg-blue-600'
+                                                    : 'border-gray-300 bg-white'
+                                            }`}>
+                                                {isSelected && <Check size={12} className="text-white" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm font-medium text-gray-900">{slot.dateLabel}</div>
+                                                <div className="text-xs text-gray-500 mt-0.5">{slot.timeLabel}</div>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                {SCHEDULE_PLATFORMS.map((p) => {
+                                                    const inSlot = slot.platforms.includes(p.id);
+                                                    const active = isSelected && selectedPlatforms.includes(p.id);
+                                                    return (
+                                                        <button
+                                                            key={p.id}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (!isSelected) handleSelectSlot(idx);
+                                                                togglePlatform(p.id);
+                                                            }}
+                                                            className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
+                                                                isSelected
+                                                                    ? active
+                                                                        ? `${p.bg} text-white`
+                                                                        : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
+                                                                    : inSlot
+                                                                        ? `${p.bg} text-white`
+                                                                        : 'bg-gray-100 text-gray-300'
+                                                            }`}
+                                                        >
+                                                            {p.icon}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                    </button>
-                                ))}
+                                    );
+                                })}
                             </div>
                             {/* Custom time toggle */}
                             <button
@@ -1075,31 +1101,6 @@ function SchedulePostModal({
                         </div>
                     )}
 
-                    {/* Platform override when using a slot */}
-                    {selectedSlotIndex !== null && !useCustom && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Platforms</label>
-                            <div className="flex items-center gap-2">
-                                {SCHEDULE_PLATFORMS.map((p) => {
-                                    const active = selectedPlatforms.includes(p.id);
-                                    return (
-                                        <button
-                                            key={p.id}
-                                            onClick={() => togglePlatform(p.id)}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                                active
-                                                    ? `${p.bg} text-white`
-                                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
-                                            }`}
-                                        >
-                                            {p.icon}
-                                            {p.name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Footer */}
