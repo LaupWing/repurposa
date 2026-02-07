@@ -7,6 +7,7 @@
 
 import { useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
+import logoUrl from '../assets/logo.svg';
 
 interface ConnectAccountProps {
     onConnected: () => void;
@@ -73,11 +74,7 @@ export default function ConnectAccount({ onConnected }: ConnectAccountProps) {
 
             <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-8 text-center">
                 <div className="mb-6">
-                    <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg className="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m9.86-2.556a4.5 4.5 0 0 0-1.242-7.244l4.5-4.5a4.5 4.5 0 0 1 6.364 6.364l-1.757 1.757" />
-                        </svg>
-                    </div>
+                    <img src={logoUrl} alt="Repurposa" className="w-14 h-14 rounded-xl mx-auto mb-4 shadow-md" />
                     <h2 className="text-2xl font-bold text-gray-900">
                         Connect Your Account
                     </h2>
