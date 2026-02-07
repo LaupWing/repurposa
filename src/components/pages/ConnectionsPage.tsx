@@ -347,7 +347,7 @@ export default function ConnectionsPage() {
 
         {/* Content */}
         <div className="px-6 py-4 divide-y divide-gray-100">
-          {platforms.map((platform) => (
+          {mergedPlatforms.map((platform) => (
             <div
               key={platform.id}
               className={`flex items-center justify-between py-4 first:pt-0 last:pb-0 ${platform.comingSoon ? 'opacity-50' : ''}`}
@@ -378,16 +378,28 @@ export default function ConnectionsPage() {
                   Coming soon
                 </span>
               ) : platform.connected ? (
-                <button className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                  Disconnect
+                <button
+                  onClick={() => handleDisconnect(platform.id)}
+                  disabled={disconnectingPlatform === platform.id}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {disconnectingPlatform === platform.id ? (
+                    <><Loader2 size={14} className="animate-spin" /> Disconnecting...</>
+                  ) : (
+                    'Disconnect'
+                  )}
                 </button>
               ) : (
                 <button
                   onClick={() => handleConnect(platform.id)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                  disabled={connectingPlatform === platform.id}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
                 >
-                  Connect
-                  <ExternalLink size={14} />
+                  {connectingPlatform === platform.id ? (
+                    <><Loader2 size={14} className="animate-spin" /> Connecting...</>
+                  ) : (
+                    <>Connect <ExternalLink size={14} /></>
+                  )}
                 </button>
               )}
             </div>
