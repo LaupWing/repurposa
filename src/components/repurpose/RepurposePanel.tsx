@@ -926,7 +926,16 @@ function SchedulePostModal({
 
     if (!isOpen || !post) return null;
 
+    const connectedPlatformIds = socialAccounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
+
     const togglePlatform = (id: SchedulePlatform) => {
+        if (!connectedPlatformIds.includes(id)) {
+            const name = SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name || id;
+            toast.error(`Connect ${name} first`, {
+                description: 'Go to Settings → Connected Accounts to link your account.',
+            });
+            return;
+        }
         setSelectedPlatforms((prev) => {
             if (prev.includes(id)) {
                 if (prev.length === 1) return prev;
@@ -1065,6 +1074,7 @@ function SchedulePostModal({
                                                 {SCHEDULE_PLATFORMS.map((p) => {
                                                     const inSlot = slot.platforms.includes(p.id);
                                                     const active = isSelected && selectedPlatforms.includes(p.id);
+                                                    const connected = connectedPlatformIds.includes(p.id);
                                                     return (
                                                         <button
                                                             key={p.id}
@@ -1074,13 +1084,15 @@ function SchedulePostModal({
                                                                 togglePlatform(p.id);
                                                             }}
                                                             className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
-                                                                isSelected
-                                                                    ? active
-                                                                        ? `${p.bg} text-white`
-                                                                        : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
-                                                                    : inSlot
-                                                                        ? `${p.bg} text-white`
-                                                                        : 'bg-gray-100 text-gray-300'
+                                                                !connected
+                                                                    ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
+                                                                    : isSelected
+                                                                        ? active
+                                                                            ? `${p.bg} text-white`
+                                                                            : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
+                                                                        : inSlot
+                                                                            ? `${p.bg} text-white`
+                                                                            : 'bg-gray-100 text-gray-300'
                                                             }`}
                                                         >
                                                             {p.icon}
@@ -1138,14 +1150,17 @@ function SchedulePostModal({
                                 <div className="flex items-center gap-2">
                                     {SCHEDULE_PLATFORMS.map((p) => {
                                         const active = selectedPlatforms.includes(p.id);
+                                        const connected = connectedPlatformIds.includes(p.id);
                                         return (
                                             <button
                                                 key={p.id}
                                                 onClick={() => togglePlatform(p.id)}
                                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                                    active
-                                                        ? `${p.bg} text-white`
-                                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                                                    !connected
+                                                        ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                        : active
+                                                            ? `${p.bg} text-white`
+                                                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
                                                 }`}
                                             >
                                                 {p.icon}
