@@ -23,15 +23,16 @@ import {
     ListOrdered,
     Loader2,
 } from 'lucide-react';
-import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill } from 'react-icons/ri';
+import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
 import { getPublishingSchedule, savePublishingSchedule } from '../../services/api';
+import { useProfile } from '../../context/ProfileContext';
 
 // ============================================
 // TYPES
 // ============================================
 
-type Platform = 'x' | 'linkedin' | 'threads';
+type Platform = 'x' | 'linkedin' | 'threads' | 'instagram' | 'facebook';
 type PostType = 'short' | 'thread';
 type PostStatus = 'scheduled' | 'published' | 'failed';
 type TabType = 'queue' | 'times';
@@ -79,6 +80,8 @@ const PLATFORMS: { id: Platform; name: string; icon: React.ReactNode; color: str
     { id: 'x', name: 'X', icon: <RiTwitterXFill size={14} />, color: 'text-black', bg: 'bg-black' },
     { id: 'linkedin', name: 'LinkedIn', icon: <RiLinkedinFill size={14} />, color: 'text-blue-700', bg: 'bg-blue-700' },
     { id: 'threads', name: 'Threads', icon: <RiThreadsFill size={14} />, color: 'text-gray-900', bg: 'bg-gray-900' },
+    { id: 'instagram', name: 'Instagram', icon: <RiInstagramFill size={14} />, color: 'text-pink-600', bg: 'bg-gradient-to-br from-purple-600 to-pink-500' },
+    { id: 'facebook', name: 'Facebook', icon: <RiFacebookFill size={14} />, color: 'text-blue-600', bg: 'bg-blue-600' },
 ];
 
 const POST_TYPES: { id: PostType; label: string; icon: React.ReactNode }[] = [
@@ -163,8 +166,8 @@ function getNextDayDate(daysFromNow: number, time: string): string {
 // ============================================
 
 // API uses "twitter", frontend uses "x"
-const API_TO_UI_PLATFORM: Record<string, Platform> = { twitter: 'x', linkedin: 'linkedin', threads: 'threads' };
-const UI_TO_API_PLATFORM: Record<Platform, string> = { x: 'twitter', linkedin: 'linkedin', threads: 'threads' };
+const API_TO_UI_PLATFORM: Record<string, Platform> = { twitter: 'x', linkedin: 'linkedin', threads: 'threads', instagram: 'instagram', facebook: 'facebook' };
+const UI_TO_API_PLATFORM: Record<Platform, string> = { x: 'twitter', linkedin: 'linkedin', threads: 'threads', instagram: 'instagram', facebook: 'facebook' };
 
 function mapScheduleFromApi(schedule: Record<string, any>): WeeklySchedule {
     const result = {} as WeeklySchedule;
@@ -370,11 +373,22 @@ function ScheduledPostCard({
 function PlatformToggle({
     platforms,
     onChange,
+    connectedPlatforms,
 }: {
     platforms: Platform[];
     onChange: (platforms: Platform[]) => void;
+    connectedPlatforms?: Platform[];
 }) {
     const toggle = (id: Platform) => {
+        // Check if platform is connected
+        if (connectedPlatforms && !connectedPlatforms.includes(id)) {
+            const name = PLATFORMS.find((p) => p.id === id)?.name || id;
+            toast.error(`Connect ${name} first`, {
+                description: 'Go to Settings → Connections to link your account.',
+            });
+            return;
+        }
+
         if (platforms.includes(id)) {
             if (platforms.length === 1) return; // Must have at least one
             onChange(platforms.filter((p) => p !== id));
@@ -387,16 +401,19 @@ function PlatformToggle({
         <div className="flex items-center gap-1">
             {PLATFORMS.map((p) => {
                 const active = platforms.includes(p.id);
+                const isConnected = !connectedPlatforms || connectedPlatforms.includes(p.id);
                 return (
                     <button
                         key={p.id}
                         onClick={() => toggle(p.id)}
                         className={`flex items-center justify-center w-7 h-7 rounded-md transition-all ${
-                            active
-                                ? `${p.bg} text-white`
-                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                            !isConnected
+                                ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                : active
+                                    ? `${p.bg} text-white`
+                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
                         }`}
-                        title={p.name}
+                        title={isConnected ? p.name : `${p.name} (not connected)`}
                     >
                         {p.icon}
                     </button>
@@ -411,11 +428,13 @@ function TimeSlotRow({
     onTimeChange,
     onPlatformsChange,
     onRemove,
+    connectedPlatforms,
 }: {
     slot: TimeSlot;
     onTimeChange: (time: string) => void;
     onPlatformsChange: (platforms: Platform[]) => void;
     onRemove: () => void;
+    connectedPlatforms?: Platform[];
 }) {
     return (
         <div className="group flex items-center gap-3 py-2">
@@ -430,7 +449,7 @@ function TimeSlotRow({
             />
 
             {/* Platform toggles */}
-            <PlatformToggle platforms={slot.platforms} onChange={onPlatformsChange} />
+            <PlatformToggle platforms={slot.platforms} onChange={onPlatformsChange} connectedPlatforms={connectedPlatforms} />
 
             {/* Platform labels (small screens hint) */}
             <span className="text-xs text-gray-400 flex-1">
@@ -453,11 +472,13 @@ function DayRow({
     schedule,
     onToggle,
     onUpdate,
+    connectedPlatforms,
 }: {
     day: { key: DayOfWeek; label: string; short: string };
     schedule: DaySchedule;
     onToggle: () => void;
     onUpdate: (schedule: DaySchedule) => void;
+    connectedPlatforms?: Platform[];
 }) {
     const addSlot = () => {
         onUpdate({
@@ -537,6 +558,7 @@ function DayRow({
                             onTimeChange={(time) => updateSlotTime(slot.id, time)}
                             onPlatformsChange={(platforms) => updateSlotPlatforms(slot.id, platforms)}
                             onRemove={() => removeSlot(slot.id)}
+                            connectedPlatforms={connectedPlatforms}
                         />
                     ))}
                 </div>
@@ -556,6 +578,7 @@ function DayRow({
 // ============================================
 
 export default function SchedulePage() {
+    const { socialConnections } = useProfile();
     const [activeTab, setActiveTab] = useState<TabType>('queue');
     const [posts, setPosts] = useState<ScheduledPost[]>(MOCK_POSTS);
     const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule | null>(null);
@@ -565,6 +588,11 @@ export default function SchedulePage() {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const filterRef = useRef<HTMLDivElement>(null);
+
+    // Map social connections to UI platform names
+    const connectedPlatforms: Platform[] = socialConnections
+        .map((c) => API_TO_UI_PLATFORM[c.platform])
+        .filter(Boolean) as Platform[];
 
     // Fetch publishing schedule from API on mount
     useEffect(() => {
@@ -927,6 +955,7 @@ export default function SchedulePage() {
                                     schedule={weeklySchedule[day.key]}
                                     onToggle={() => handleToggleDay(day.key)}
                                     onUpdate={(schedule) => handleUpdateDay(day.key, schedule)}
+                                    connectedPlatforms={connectedPlatforms}
                                 />
                             ))}
                         </div>
