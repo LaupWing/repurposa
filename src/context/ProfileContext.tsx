@@ -5,7 +5,7 @@
  * Fetches from Laravel API using Sanctum token.
  */
 
-import { createContext, useContext, useState, useEffect } from '@wordpress/element';
+import { createContext, useContext, useState, useEffect, useCallback } from '@wordpress/element';
 
 // ============================================
 // TYPES
@@ -18,6 +18,11 @@ export interface ProfileData {
     brand_voice: 'conversational' | 'professional' | 'bold';
 }
 
+export interface SocialConnection {
+    platform: string;
+    username: string;
+}
+
 export interface UserData {
     id: number;
     name: string;
@@ -27,11 +32,13 @@ export interface UserData {
 interface ProfileContextType {
     user: UserData | null;
     profile: ProfileData | null;
+    socialConnections: SocialConnection[];
     isLoading: boolean;
     isConnected: boolean;
     setProfile: (profile: ProfileData) => void;
     saveProfile: (profile: ProfileData) => Promise<void>;
     deleteProfile: () => Promise<void>;
+    refreshProfile: () => Promise<void>;
 }
 
 // ============================================
@@ -69,11 +76,31 @@ const ProfileContext = createContext<ProfileContextType | null>(null);
 // PROVIDER
 // ============================================
 
+interface ProfileResponse {
+    user: UserData;
+    profile: ProfileData | null;
+    social_connections?: SocialConnection[];
+}
+
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<UserData | null>(null);
     const [profile, setProfile] = useState<ProfileData | null>(null);
+    const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
+
+    const fetchProfile = useCallback(async () => {
+        const { token } = getConfig();
+        if (!token) return;
+
+        const response = await laravelFetch<ProfileResponse>('/profile');
+        setIsConnected(true);
+        setUser(response.user);
+        if (response.profile) {
+            setProfile(response.profile);
+        }
+        setSocialConnections(response.social_connections || []);
+    }, []);
 
     // Load user + profile from Laravel on mount
     useEffect(() => {
@@ -85,14 +112,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        laravelFetch<{ user: UserData; profile: ProfileData | null }>('/profile')
-            .then((response) => {
-                setIsConnected(true);
-                setUser(response.user);
-                if (response.profile) {
-                    setProfile(response.profile);
-                }
-            })
+        fetchProfile()
             .catch((error) => {
                 console.error('Failed to load profile:', error);
                 setIsConnected(false);
@@ -100,7 +120,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             .finally(() => {
                 setIsLoading(false);
             });
-    }, []);
+    }, [fetchProfile]);
 
     const saveProfile = async (data: ProfileData) => {
         await laravelFetch('/profile', {
@@ -115,8 +135,12 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
     };
 
+    const refreshProfile = useCallback(async () => {
+        await fetchProfile();
+    }, [fetchProfile]);
+
     return (
-        <ProfileContext.Provider value={{ user, profile, isLoading, isConnected, setProfile, saveProfile, deleteProfile }}>
+        <ProfileContext.Provider value={{ user, profile, socialConnections, isLoading, isConnected, setProfile, saveProfile, deleteProfile, refreshProfile }}>
             {children}
         </ProfileContext.Provider>
     );

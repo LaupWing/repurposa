@@ -5,12 +5,13 @@
  * Centered layout matching BlogWizard design.
  */
 
-import { useState } from "@wordpress/element";
+import { useState, useEffect, useRef } from "@wordpress/element";
 import { toast } from "sonner";
 import { Check, ExternalLink, Save, Loader2 } from "lucide-react";
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from "react-icons/ri";
 import { useProfile } from "../../context/ProfileContext";
 import type { ProfileData } from "../../context/ProfileContext";
+import { disconnectSocialAccount } from "../../services/api";
 
 // ============================================
 // TYPES
@@ -94,10 +95,13 @@ const platforms: SocialPlatform[] = [
 // ============================================
 
 export default function ConnectionsPage() {
-  const { profile: contextProfile, isLoading, saveProfile } = useProfile();
+  const { profile: contextProfile, socialConnections, isLoading, saveProfile, refreshProfile } = useProfile();
   const [localProfile, setLocalProfile] = useState<ProfileData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
+  const [disconnectingPlatform, setDisconnectingPlatform] = useState<string | null>(null);
+  const popupRef = useRef<Window | null>(null);
 
   // Sync context profile to local state for editing
   if (contextProfile && !initialized) {
@@ -107,6 +111,15 @@ export default function ConnectionsPage() {
 
   const profile = localProfile;
   const setProfile = setLocalProfile;
+
+  // Merge social connections into platforms
+  const mergedPlatforms = platforms.map((platform) => {
+    const connection = socialConnections.find((c) => c.platform === platform.id);
+    if (connection) {
+      return { ...platform, connected: true, username: connection.username };
+    }
+    return platform;
+  });
 
   const handleSaveProfile = async () => {
     if (!profile) return;
@@ -124,9 +137,68 @@ export default function ConnectionsPage() {
   };
 
   const handleConnect = (platformId: string) => {
-    console.log("Connecting to:", platformId);
-    toast.info(`Connect to ${platformId} - Coming soon!`);
+    const { apiUrl } = window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000' };
+    const origin = window.location.origin;
+
+    setConnectingPlatform(platformId);
+
+    const popup = window.open(
+      `${apiUrl}/social/${platformId}/connect?origin=${encodeURIComponent(origin)}`,
+      'wbrp-social-auth',
+      'width=600,height=700,scrollbars=yes'
+    );
+    popupRef.current = popup;
+
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.data?.type !== 'social-connected') return;
+
+      window.removeEventListener('message', handleMessage);
+      clearInterval(checkClosed);
+
+      try {
+        await refreshProfile();
+        toast.success(`Connected to ${event.data.platform || platformId}!`);
+      } catch (error) {
+        console.error('Failed to refresh profile after connect:', error);
+        toast.error('Connected but failed to refresh. Please reload the page.');
+      } finally {
+        setConnectingPlatform(null);
+        popupRef.current = null;
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    const checkClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkClosed);
+        window.removeEventListener('message', handleMessage);
+        setConnectingPlatform(null);
+        popupRef.current = null;
+      }
+    }, 500);
   };
+
+  const handleDisconnect = async (platformId: string) => {
+    setDisconnectingPlatform(platformId);
+    try {
+      await disconnectSocialAccount(platformId);
+      await refreshProfile();
+      toast.success(`Disconnected from ${platformId}`);
+    } catch (error) {
+      console.error('Failed to disconnect:', error);
+      toast.error('Failed to disconnect account');
+    } finally {
+      setDisconnectingPlatform(null);
+    }
+  };
+
+  // Cleanup popup ref on unmount
+  useEffect(() => {
+    return () => {
+      popupRef.current = null;
+    };
+  }, []);
 
   if (isLoading) {
     return (

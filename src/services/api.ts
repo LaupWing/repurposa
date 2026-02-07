@@ -259,3 +259,11 @@ export async function deleteBlog(id: number): Promise<void> {
     await apiRequest<{ success: boolean }>(`/blogs/${id}`, {}, 'DELETE');
 }
 
+// ============================================
+// SOCIAL CONNECTIONS API
+// ============================================
+
+export async function disconnectSocialAccount(platform: string): Promise<void> {
+    await apiRequest<{ success: boolean }>(`/social/${platform}/disconnect`, {}, 'DELETE');
+}
+
