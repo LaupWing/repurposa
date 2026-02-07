@@ -30,8 +30,8 @@ import {
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule } from '../../services/api';
-import type { ShortPost, Swipe } from '../../services/api';
+import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost } from '../../services/api';
+import type { ShortPost, Swipe, SocialAccount } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
 
@@ -789,7 +789,8 @@ const SCHEDULE_PLATFORMS: { id: SchedulePlatform; name: string; icon: React.Reac
     { id: 'facebook', name: 'Facebook', icon: <RiFacebookFill size={14} />, bg: 'bg-blue-600' },
 ];
 
-const API_TO_UI_PLATFORM: Record<string, SchedulePlatform> = { twitter: 'x', linkedin: 'linkedin', threads: 'threads' };
+const API_TO_UI_PLATFORM: Record<string, SchedulePlatform> = { twitter: 'x', linkedin: 'linkedin', threads: 'threads', instagram: 'instagram', facebook: 'facebook' };
+const UI_TO_API_PLATFORM: Record<SchedulePlatform, string> = { x: 'twitter', linkedin: 'linkedin', threads: 'threads', instagram: 'instagram', facebook: 'facebook' };
 
 const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 

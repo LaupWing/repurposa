@@ -263,8 +263,48 @@ export async function deleteBlog(id: number): Promise<void> {
 // SOCIAL CONNECTIONS API
 // ============================================
 
+export interface SocialAccount {
+    id: number;
+    platform: string;
+    platform_user_id: string;
+    platform_username: string;
+    profile_picture: string | null;
+    connected_at: string;
+}
+
+export async function getSocialAccounts(): Promise<SocialAccount[]> {
+    return apiRequest<SocialAccount[]>('/social/accounts', {}, 'GET');
+}
+
 export async function disconnectSocialAccount(platform: string): Promise<void> {
     await apiRequest<{ success: boolean }>(`/social/${platform}/disconnect`, {}, 'DELETE');
+}
+
+// ============================================
+// SCHEDULED POSTS API
+// ============================================
+
+export interface ScheduledPost {
+    id: number;
+    social_account_id: number;
+    post_id: number | null;
+    content: string;
+    media: string[] | null;
+    platform: string;
+    scheduled_at: string;
+    status: 'pending' | 'publishing' | 'published' | 'failed';
+    created_at: string;
+    updated_at: string;
+}
+
+export async function createScheduledPost(data: {
+    social_account_id: number;
+    content: string;
+    scheduled_at: string;
+    post_id?: number;
+    media?: string[];
+}): Promise<{ data: ScheduledPost }> {
+    return apiRequest<{ data: ScheduledPost }>('/scheduled-posts', data as Record<string, unknown>);
 }
 
 // ============================================
