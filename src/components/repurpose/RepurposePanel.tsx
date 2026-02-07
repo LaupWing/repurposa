@@ -166,6 +166,29 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                     {index + 1}
                 </div>
 
+                {/* Schedule status - top right (clickable) */}
+                {pattern.scheduled_post && (() => {
+                    const s = pattern.scheduled_post;
+                    const dt = new Date(s.scheduled_at);
+                    const timeStr = dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                    const statusConfig = {
+                        pending: { label: timeStr, cls: 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100' },
+                        publishing: { label: 'Publishing...', cls: 'text-blue-600 bg-blue-50 border-blue-200' },
+                        published: { label: 'Published', cls: 'text-green-600 bg-green-50 border-green-200' },
+                        failed: { label: 'Failed', cls: 'text-red-600 bg-red-50 border-red-200 hover:bg-red-100' },
+                    };
+                    const cfg = statusConfig[s.status] || statusConfig.pending;
+                    return (
+                        <button
+                            onClick={onSchedule}
+                            className={`absolute -top-2 right-2 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors ${cfg.cls}`}
+                        >
+                            <Calendar size={10} />
+                            {cfg.label}
+                        </button>
+                    );
+                })()}
+
                 {/* Emotions */}
                 <div className="mt-1 mb-3 flex flex-wrap items-center gap-1.5">
                     {pattern.emotions.map((emotion) => (
@@ -230,13 +253,6 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                             <span className={`font-mono text-[10px] ${pattern.content.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
                                 {pattern.content.length}/280
                             </span>
-                            {pattern.scheduled_post && (
-                                <span className="flex items-center gap-1 text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                                    <Clock size={10} />
-                                    {pattern.scheduled_post.status === 'published' ? 'Published' :
-                                     pattern.scheduled_post.status === 'failed' ? 'Failed' : 'Scheduled'}
-                                </span>
-                            )}
                             <Tooltip text={pattern.why_it_works} delay={0} placement="top">
                                 <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
                                     <Lightbulb size={14} />
@@ -1280,6 +1296,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             setIsLoading(true);
             try {
                 const shortPosts = await getShortPosts(blogId);
+                console.log('[RepurposePanel] Short posts from API:', shortPosts);
                 setShortPosts(shortPosts.map(shortPostToPattern));
             } catch (error) {
                 console.error('Failed to load short posts:', error);
@@ -1358,13 +1375,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     onAddCta={() => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: 'Read the full post here: ' } : p))}
                                     onEdit={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p))}
                                     onEditCta={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p))}
-                                    onSchedule={() => {
-                                        if (pattern.scheduled_post && pattern.scheduled_post.status === 'pending') {
-                                            toast.info('This post is already scheduled.');
-                                            return;
-                                        }
-                                        setSchedulingPost(pattern);
-                                    }}
+                                    onSchedule={() => setSchedulingPost(pattern)}
                                 />
                             ))}
                         </div>
