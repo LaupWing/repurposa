@@ -162,6 +162,38 @@ function getNextDayDate(daysFromNow: number, time: string): string {
 // HELPERS
 // ============================================
 
+// API uses "twitter", frontend uses "x"
+const API_TO_UI_PLATFORM: Record<string, Platform> = { twitter: 'x', linkedin: 'linkedin', threads: 'threads' };
+const UI_TO_API_PLATFORM: Record<Platform, string> = { x: 'twitter', linkedin: 'linkedin', threads: 'threads' };
+
+function mapScheduleFromApi(schedule: Record<string, any>): WeeklySchedule {
+    const result = {} as WeeklySchedule;
+    for (const [day, data] of Object.entries(schedule)) {
+        result[day as DayOfWeek] = {
+            enabled: data.enabled,
+            slots: data.slots.map((slot: any) => ({
+                ...slot,
+                platforms: slot.platforms.map((p: string) => API_TO_UI_PLATFORM[p] || p),
+            })),
+        };
+    }
+    return result;
+}
+
+function mapScheduleToApi(schedule: WeeklySchedule): Record<string, any> {
+    const result: Record<string, any> = {};
+    for (const [day, data] of Object.entries(schedule)) {
+        result[day] = {
+            enabled: data.enabled,
+            slots: data.slots.map((slot) => ({
+                ...slot,
+                platforms: slot.platforms.map((p) => UI_TO_API_PLATFORM[p] || p),
+            })),
+        };
+    }
+    return result;
+}
+
 function formatScheduleDate(dateString: string): string {
     const date = new Date(dateString);
     const today = new Date();
@@ -538,12 +570,17 @@ export default function SchedulePage() {
     useEffect(() => {
         getPublishingSchedule()
             .then((data) => {
+                console.log('[SchedulePage] Fetched publishing schedule:', data);
                 if (data.schedule) {
-                    setWeeklySchedule(data.schedule as unknown as WeeklySchedule);
+                    const mapped = mapScheduleFromApi(data.schedule);
+                    console.log('[SchedulePage] Setting weeklySchedule:', mapped);
+                    setWeeklySchedule(mapped);
+                } else {
+                    console.log('[SchedulePage] No schedule in response');
                 }
             })
             .catch((error) => {
-                console.error('Failed to load publishing schedule:', error);
+                console.error('[SchedulePage] Failed to load publishing schedule:', error);
             })
             .finally(() => {
                 setIsLoadingSchedule(false);
@@ -599,7 +636,7 @@ export default function SchedulePage() {
         if (!weeklySchedule) return;
         setIsSaving(true);
         try {
-            await savePublishingSchedule(weeklySchedule);
+            await savePublishingSchedule(mapScheduleToApi(weeklySchedule));
             toast.success('Schedule saved!');
         } catch (error) {
             console.error('Failed to save schedule:', error);
