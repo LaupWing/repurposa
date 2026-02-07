@@ -866,53 +866,59 @@ function getDefaultTime(): string {
 function SchedulePostModal({
     isOpen,
     post,
+    blogId,
     onClose,
-    onSchedule,
+    onScheduled,
 }: {
     isOpen: boolean;
     post: ShortPostPattern | null;
+    blogId?: number;
     onClose: () => void;
-    onSchedule: (post: ShortPostPattern, platforms: SchedulePlatform[], dateTime: string) => void;
+    onScheduled: () => void;
 }) {
-    const [selectedPlatforms, setSelectedPlatforms] = useState<SchedulePlatform[]>(['x']);
+    const [selectedPlatforms, setSelectedPlatforms] = useState<SchedulePlatform[]>([]);
     const [date, setDate] = useState(getDefaultDate);
     const [time, setTime] = useState(getDefaultTime);
     const [upcomingSlots, setUpcomingSlots] = useState<UpcomingSlot[]>([]);
+    const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
     const [useCustom, setUseCustom] = useState(false);
     const [slotPage, setSlotPage] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const slotsPerPage = 6;
 
-    // Fetch schedule & reset state when modal opens
+    // Fetch schedule + social accounts when modal opens
     useEffect(() => {
         if (!isOpen) return;
-        setSelectedPlatforms(['x']);
+        setSelectedPlatforms([]);
         setDate(getDefaultDate());
         setTime(getDefaultTime());
         setSelectedSlotIndex(null);
         setUseCustom(false);
         setSlotPage(0);
+        setIsSubmitting(false);
 
         setLoadingSlots(true);
-        getPublishingSchedule()
-            .then((data) => {
-                console.log('[ScheduleModal] API response:', data);
-                if (data.schedule) {
-                    const slots = getUpcomingSlots(data.schedule, 60);
-                    console.log('[ScheduleModal] Computed slots:', slots.length, slots);
+        Promise.all([getPublishingSchedule(), getSocialAccounts()])
+            .then(([scheduleData, accounts]) => {
+                setSocialAccounts(accounts);
+
+                if (scheduleData.schedule) {
+                    const slots = getUpcomingSlots(scheduleData.schedule, 60);
                     setUpcomingSlots(slots);
                     if (slots.length > 0) {
                         setSelectedSlotIndex(0);
                         setSelectedPlatforms(slots[0].platforms);
+                    } else {
+                        setSelectedPlatforms(['x']);
                     }
                 } else {
-                    console.log('[ScheduleModal] No schedule in response');
                     setUpcomingSlots([]);
+                    setSelectedPlatforms(['x']);
                 }
             })
-            .catch((err) => {
-                console.error('[ScheduleModal] API error:', err);
+            .catch(() => {
                 setUpcomingSlots([]);
             })
             .finally(() => setLoadingSlots(false));
@@ -945,13 +951,51 @@ function SchedulePostModal({
         setSelectedSlotIndex(null);
     };
 
-    const handleSchedule = () => {
-        if (selectedSlotIndex !== null && !useCustom) {
-            const slot = upcomingSlots[selectedSlotIndex];
-            onSchedule(post, selectedPlatforms, slot.date.toISOString());
-        } else {
-            const dateTime = `${date}T${time}`;
-            onSchedule(post, selectedPlatforms, dateTime);
+    const handleSchedule = async () => {
+        if (selectedPlatforms.length === 0) return;
+
+        const scheduledAt = selectedSlotIndex !== null && !useCustom
+            ? upcomingSlots[selectedSlotIndex].date.toISOString()
+            : new Date(`${date}T${time}`).toISOString();
+
+        setIsSubmitting(true);
+        try {
+            // Create a scheduled post for each selected platform
+            const promises = selectedPlatforms.map((platformId) => {
+                const apiPlatform = UI_TO_API_PLATFORM[platformId];
+                const account = socialAccounts.find((a) => a.platform === apiPlatform);
+                if (!account) return Promise.resolve(null);
+                return createScheduledPost({
+                    social_account_id: account.id,
+                    content: post.content,
+                    scheduled_at: scheduledAt,
+                    ...(blogId && { post_id: blogId }),
+                });
+            });
+
+            await Promise.all(promises);
+
+            const platformNames = selectedPlatforms
+                .map((id) => SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name)
+                .filter(Boolean)
+                .join(', ');
+            const dt = new Date(scheduledAt);
+            const formattedTime = dt.toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+            });
+            toast.success('Post scheduled!', {
+                description: `${platformNames} · ${formattedTime}`,
+            });
+            onScheduled();
+        } catch (error) {
+            toast.error('Failed to schedule post', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -1159,10 +1203,11 @@ function SchedulePostModal({
                     </button>
                     <button
                         onClick={handleSchedule}
-                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                        disabled={isSubmitting || selectedPlatforms.length === 0}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
                     >
                         <Calendar size={14} />
-                        Schedule
+                        {isSubmitting ? 'Scheduling...' : 'Schedule'}
                     </button>
                 </div>
             </div>
@@ -1249,21 +1294,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         }
     };
 
-    const handleSchedulePost = (post: ShortPostPattern, platforms: SchedulePlatform[], dateTime: string) => {
-        const platformNames = platforms
-            .map((id) => SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name)
-            .filter(Boolean)
-            .join(', ');
-        const date = new Date(dateTime);
-        const formattedTime = date.toLocaleString(undefined, {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-        });
-        toast.success('Post scheduled!', {
-            description: `${platformNames} · ${formattedTime}`,
-        });
+    const handleScheduled = () => {
         setSchedulingPost(null);
     };
 
@@ -1358,8 +1389,9 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             <SchedulePostModal
                 isOpen={!!schedulingPost}
                 post={schedulingPost}
+                blogId={blogId}
                 onClose={() => setSchedulingPost(null)}
-                onSchedule={handleSchedulePost}
+                onScheduled={handleScheduled}
             />
             {/* Content - No internal tabs, parent controls which content to show */}
             <div className="flex-1 overflow-y-auto p-6">
