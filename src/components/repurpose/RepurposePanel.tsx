@@ -30,8 +30,8 @@ import {
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost } from '../../services/api';
-import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount } from '../../services/api';
+import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts } from '../../services/api';
+import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
 
@@ -906,6 +906,7 @@ function SchedulePostModal({
     const [time, setTime] = useState(getDefaultTime);
     const [upcomingSlots, setUpcomingSlots] = useState<UpcomingSlot[]>([]);
     const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
+    const [existingScheduled, setExistingScheduled] = useState<ScheduledPostType[]>([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
     const [useCustom, setUseCustom] = useState(false);
@@ -925,15 +926,23 @@ function SchedulePostModal({
         setIsSubmitting(false);
 
         setLoadingSlots(true);
-        Promise.all([getPublishingSchedule(), getSocialAccounts()])
-            .then(([scheduleData, accounts]) => {
+        Promise.all([getPublishingSchedule(), getSocialAccounts(), getScheduledPosts({ status: 'pending' })])
+            .then(([scheduleData, accounts, scheduled]) => {
                 setSocialAccounts(accounts);
+                setExistingScheduled(scheduled);
 
                 if (scheduleData.schedule) {
                     const slots = getUpcomingSlots(scheduleData.schedule, 60);
                     setUpcomingSlots(slots);
-                    if (slots.length > 0) {
-                        setSelectedSlotIndex(0);
+                    // Auto-select the first available (non-taken) slot
+                    const firstAvailable = slots.findIndex((slot) => {
+                        const slotTime = slot.date.getTime();
+                        return !scheduled.some((sp) => Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000);
+                    });
+                    if (firstAvailable !== -1) {
+                        setSelectedSlotIndex(firstAvailable);
+                        setSelectedPlatforms(slots[firstAvailable].platforms);
+                    } else if (slots.length > 0) {
                         setSelectedPlatforms(slots[0].platforms);
                     } else {
                         setSelectedPlatforms(['x']);
@@ -952,6 +961,16 @@ function SchedulePostModal({
     if (!isOpen || !post) return null;
 
     const connectedPlatformIds = socialAccounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
+
+    // Check if a slot time is already taken by an existing scheduled post
+    const getSlotOccupant = (slot: UpcomingSlot): ScheduledPostType | null => {
+        const slotTime = slot.date.getTime();
+        return existingScheduled.find((sp) => {
+            const spTime = new Date(sp.scheduled_at).getTime();
+            // Match within 1 minute window
+            return Math.abs(spTime - slotTime) < 60000;
+        }) || null;
+    };
 
     const togglePlatform = (id: SchedulePlatform) => {
         if (!connectedPlatformIds.includes(id)) {
@@ -1075,59 +1094,80 @@ function SchedulePostModal({
                                 {pageSlots.map((slot, idx) => {
                                     const absoluteIdx = pageStart + idx;
                                     const isSelected = selectedSlotIndex === absoluteIdx && !useCustom;
+                                    const occupant = getSlotOccupant(slot);
+                                    const isTaken = !!occupant;
                                     return (
-                                        <div
+                                        <Tooltip
                                             key={absoluteIdx}
-                                            onClick={() => handleSelectSlot(absoluteIdx)}
-                                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                                                isSelected
-                                                    ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400'
-                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                            }`}
+                                            text={isTaken ? `Already taken: "${occupant.content.slice(0, 80)}${occupant.content.length > 80 ? '...' : ''}"` : ''}
+                                            delay={0}
+                                            placement="top"
                                         >
-                                            {/* Radio check */}
-                                            <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
-                                                isSelected
-                                                    ? 'border-blue-600 bg-blue-600'
-                                                    : 'border-gray-300 bg-white'
-                                            }`}>
-                                                {isSelected && <Check size={12} className="text-white" />}
+                                            <div
+                                                onClick={() => !isTaken && handleSelectSlot(absoluteIdx)}
+                                                className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                                                    isTaken
+                                                        ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-50'
+                                                        : isSelected
+                                                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 cursor-pointer'
+                                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
+                                                }`}
+                                            >
+                                                {/* Radio check */}
+                                                <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
+                                                    isTaken
+                                                        ? 'border-gray-200 bg-gray-100'
+                                                        : isSelected
+                                                            ? 'border-blue-600 bg-blue-600'
+                                                            : 'border-gray-300 bg-white'
+                                                }`}>
+                                                    {isSelected && !isTaken && <Check size={12} className="text-white" />}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className={`text-sm font-medium ${isTaken ? 'text-gray-400' : 'text-gray-900'}`}>{slot.dateLabel}</div>
+                                                    <div className={`text-xs mt-0.5 ${isTaken ? 'text-gray-300' : 'text-gray-500'}`}>{slot.timeLabel}</div>
+                                                    {isTaken && (
+                                                        <div className="text-[10px] text-gray-400 mt-1 line-clamp-1">
+                                                            Taken by: {occupant.content.slice(0, 40)}{occupant.content.length > 40 ? '...' : ''}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    {SCHEDULE_PLATFORMS.map((p) => {
+                                                        const inSlot = slot.platforms.includes(p.id);
+                                                        const active = isSelected && selectedPlatforms.includes(p.id);
+                                                        const connected = connectedPlatformIds.includes(p.id);
+                                                        return (
+                                                            <button
+                                                                key={p.id}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (isTaken) return;
+                                                                    if (!isSelected) handleSelectSlot(absoluteIdx);
+                                                                    togglePlatform(p.id);
+                                                                }}
+                                                                disabled={isTaken}
+                                                                className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
+                                                                    isTaken
+                                                                        ? 'bg-gray-100 text-gray-200 cursor-not-allowed'
+                                                                        : !connected
+                                                                            ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
+                                                                            : isSelected
+                                                                                ? active
+                                                                                    ? `${p.bg} text-white`
+                                                                                    : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
+                                                                                : inSlot
+                                                                                    ? `${p.bg} text-white`
+                                                                                    : 'bg-gray-100 text-gray-300'
+                                                                }`}
+                                                            >
+                                                                {p.icon}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-medium text-gray-900">{slot.dateLabel}</div>
-                                                <div className="text-xs text-gray-500 mt-0.5">{slot.timeLabel}</div>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                {SCHEDULE_PLATFORMS.map((p) => {
-                                                    const inSlot = slot.platforms.includes(p.id);
-                                                    const active = isSelected && selectedPlatforms.includes(p.id);
-                                                    const connected = connectedPlatformIds.includes(p.id);
-                                                    return (
-                                                        <button
-                                                            key={p.id}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                if (!isSelected) handleSelectSlot(absoluteIdx);
-                                                                togglePlatform(p.id);
-                                                            }}
-                                                            className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
-                                                                !connected
-                                                                    ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
-                                                                    : isSelected
-                                                                        ? active
-                                                                            ? `${p.bg} text-white`
-                                                                            : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
-                                                                        : inSlot
-                                                                            ? `${p.bg} text-white`
-                                                                            : 'bg-gray-100 text-gray-300'
-                                                            }`}
-                                                        >
-                                                            {p.icon}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
+                                        </Tooltip>
                                     );
                                 })}
                             </div>
