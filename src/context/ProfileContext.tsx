@@ -16,6 +16,7 @@ export interface ProfileData {
     niche: string;
     target_audience: string;
     brand_voice: 'conversational' | 'professional' | 'bold';
+    lang: 'en' | 'nl';
     has_seen_connect_modal?: boolean;
 }
 

@@ -315,6 +315,25 @@ export default function ConnectionsPage() {
               ))}
             </div>
           </div>
+
+          {/* Language */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Content language
+            </label>
+            <select
+              value={profile?.lang || "en"}
+              onChange={(e) =>
+                setProfile((prev) =>
+                  prev ? { ...prev, lang: e.target.value as 'en' | 'nl' } : null
+                )
+              }
+              className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            >
+              <option value="en">English</option>
+              <option value="nl">Nederlands</option>
+            </select>
+          </div>
         </div>
 
         {/* Footer */}

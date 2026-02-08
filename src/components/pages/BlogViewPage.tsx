@@ -359,6 +359,7 @@ function RegenerateModal({
         try {
             const response = await generateTopics(topic, {
                 target_audience: targetAudience || undefined,
+                lang: profile?.lang,
             });
             setTopicSuggestions(response.suggestions);
             setShowTopicPopover(true);
@@ -389,6 +390,7 @@ function RegenerateModal({
         try {
             const response = await generateOutline(topic, roughOutline, {
                 target_audience: targetAudience || undefined,
+                lang: profile?.lang,
             });
             setOutline(
                 response.sections.map((s, i) => ({
@@ -422,6 +424,7 @@ function RegenerateModal({
 
             const response = await generateBlog(topic, outlineForApi, {
                 target_audience: targetAudience || undefined,
+                lang: profile?.lang,
             });
 
             await updateBlog(post.id, {
