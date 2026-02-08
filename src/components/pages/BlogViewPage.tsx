@@ -23,6 +23,7 @@ import {
     Loader2,
     Settings,
     AlertCircle,
+    RefreshCw,
 } from 'lucide-react';
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
@@ -203,7 +204,6 @@ function BlogEditor({
     const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
-
     const isDirty = title !== savedTitle || content !== savedContent || thumbnail !== savedThumbnail;
 
     const handleAIRequest = (selectedText: string, action: string) => {
@@ -306,6 +306,14 @@ function BlogEditor({
                     >
                         {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                         {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                        disabled
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Coming soon"
+                    >
+                        <RefreshCw size={16} />
+                        Regenerate
                     </button>
                 </div>
                 <div className="flex items-center gap-3">
