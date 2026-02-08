@@ -22,6 +22,7 @@ import {
     Trash2,
     Loader2,
     Settings,
+    AlertCircle,
 } from 'lucide-react';
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
@@ -129,6 +130,30 @@ function PublishModal({
                     </button>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function DisabledTabsOverlay() {
+    const [showTooltip, setShowTooltip] = useState(false);
+
+    return (
+        <div
+            className="absolute inset-0 z-10 flex items-center justify-center rounded-lg cursor-not-allowed bg-gray-200/60 backdrop-blur-[1px]"
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+        >
+            <div className="flex items-center gap-1.5 text-amber-600">
+                <AlertCircle size={14} />
+                <span className="text-xs font-medium">Content required</span>
+            </div>
+
+            {showTooltip && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-52 px-3 py-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 text-center leading-relaxed">
+                    Write your blog content first before you can use these features.
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+                </div>
+            )}
         </div>
     );
 }
@@ -589,14 +614,6 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
         }
     };
 
-    const tabs = [
-        { id: 'blog' as const, label: 'Blog Post', icon: PenTool },
-        { id: 'short' as const, label: 'Short Posts', icon: Share2 },
-        { id: 'threads' as const, label: 'Threads', icon: FileText },
-        { id: 'visuals' as const, label: 'Visuals', icon: Image },
-        { id: 'video' as const, label: 'Video', icon: Video },
-    ];
-
     // Loading state
     if (isLoading) {
         return (
@@ -624,6 +641,17 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
         );
     }
 
+    // Blog needs a title or content before repurpose tabs are usable
+    const hasContent = !!(post.title?.trim() || post.content?.replace(/<[^>]*>/g, '').trim());
+
+    const tabs = [
+        { id: 'blog' as const, label: 'Blog Post', icon: PenTool },
+        { id: 'short' as const, label: 'Short Posts', icon: Share2 },
+        { id: 'threads' as const, label: 'Threads', icon: FileText },
+        { id: 'visuals' as const, label: 'Visuals', icon: Image },
+        { id: 'video' as const, label: 'Video', icon: Video },
+    ];
+
     return (
         <div className="h-[calc(100vh-100px)] flex flex-col overflow-hidden p-4">
             {/* Card container - tabs and content connected */}
@@ -643,15 +671,27 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
 
                     {/* Tabs */}
                     <div className="flex items-center gap-1 ml-2 p-1 bg-gray-100 rounded-lg">
-                        {tabs.map((tab) => (
-                            <TabButton
-                                key={tab.id}
-                                active={activeTab === tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                icon={tab.icon}
-                                label={tab.label}
-                            />
-                        ))}
+                        {/* Blog Post tab — always enabled */}
+                        <TabButton
+                            active={activeTab === 'blog'}
+                            onClick={() => setActiveTab('blog')}
+                            icon={PenTool}
+                            label="Blog Post"
+                        />
+
+                        {/* Repurpose tabs — wrapped with overlay when no content */}
+                        <div className="relative flex items-center gap-1">
+                            {!hasContent && <DisabledTabsOverlay />}
+                            {tabs.filter(t => t.id !== 'blog').map((tab) => (
+                                <TabButton
+                                    key={tab.id}
+                                    active={activeTab === tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    icon={tab.icon}
+                                    label={tab.label}
+                                />
+                            ))}
+                        </div>
                     </div>
 
                     {/* Settings gear icon */}
@@ -670,6 +710,26 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
 
                 {/* Content Area - Connected to tabs above */}
                 <div className="flex-1 min-h-0 overflow-hidden">
+                    {/* Empty blog guard for repurpose tabs */}
+                    {!hasContent && activeTab !== 'blog' && activeTab !== 'settings' && (
+                        <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                            <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                <PenTool size={24} className="text-gray-400" />
+                            </div>
+                            <h3 className="text-base font-semibold text-gray-900 mb-1">Write your blog first</h3>
+                            <p className="text-sm text-gray-500 max-w-xs mb-4">
+                                Add a title and some content to your blog post before repurposing it into short posts, threads, or other formats.
+                            </p>
+                            <button
+                                onClick={() => setActiveTab('blog')}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                <PenTool size={16} />
+                                Go to Editor
+                            </button>
+                        </div>
+                    )}
+
                     {activeTab === 'blog' && (
                         <BlogEditor
                             post={post}
