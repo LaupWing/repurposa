@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useRef } from "@wordpress/element";
-import { ArrowRight, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Sparkles, Loader2, SkipForward } from "lucide-react";
 import { toast } from "sonner";
 
 // Steps
@@ -21,6 +21,7 @@ import { GeneratingOverlay } from "./GeneratingOverlay";
 import {
   generateOutline,
   generateBlog,
+  createEmptyBlog,
   getWizard,
   createWizard,
   updateWizard,
@@ -235,6 +236,23 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     }
   };
 
+  // Skip all steps — create an empty blog and go to the editor
+  const handleSkipAll = async (): Promise<void> => {
+    setIsGeneratingBlog(true);
+    try {
+      const blog = await createEmptyBlog();
+      window.location.href = `admin.php?page=blog-repurpose-blogs&post_id=${blog.id}`;
+    } catch (error) {
+      console.error("Failed to create blog:", error);
+      toast.error("Failed to create blog", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsGeneratingBlog(false);
+    }
+  };
+
   // Generate full blog from outline
   const handleGenerateBlog = async (): Promise<void> => {
     setIsGeneratingBlog(true);
@@ -302,9 +320,19 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
           <h2 className="text-lg font-semibold text-gray-900">
             Create <em className="font-serif font-normal italic">New Blog</em>
           </h2>
-          <span className="bg-gray-100 px-3 py-1 rounded-full text-xs text-gray-600">
-            Step {currentStep} of 3
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="bg-gray-100 px-3 py-1 rounded-full text-xs text-gray-600">
+              Step {currentStep} of 3
+            </span>
+            <button
+              onClick={handleSkipAll}
+              disabled={isGeneratingOutline || isGeneratingBlog}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+            >
+              <SkipForward size={12} />
+              Skip All
+            </button>
+          </div>
         </div>
 
         {/* Progress Bar */}
