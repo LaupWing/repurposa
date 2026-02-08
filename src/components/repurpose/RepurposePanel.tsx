@@ -35,7 +35,6 @@ import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, ge
 import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
-import { useProfile } from '../../context/ProfileContext';
 
 // ============================================
 // TYPES
@@ -1336,7 +1335,6 @@ interface RepurposePanelProps {
 }
 
 export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId }: RepurposePanelProps) {
-    const { profile } = useProfile();
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>([]);
@@ -1390,7 +1388,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
 
         try {
             const ctaLink = includeCta && publishedPostUrl ? publishedPostUrl : undefined;
-            const response = await generateShortPosts(blogId, blogContent, ctaLink, profile?.lang);
+            const response = await generateShortPosts(blogId, blogContent, ctaLink);
 
             setShortPosts(response.short_posts.map(shortPostToPattern));
             toast.success(`${response.short_posts.length} short posts generated`);

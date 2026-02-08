@@ -212,7 +212,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     try {
       const response = await generateOutline(data.topic, data.roughOutline, {
         target_audience: data.targetAudience || profile?.target_audience,
-        lang: profile?.lang,
       });
 
       // Convert API response to our format (add IDs)
@@ -267,7 +266,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
 
       const response = await generateBlog(data.topic, outlineForApi, {
         target_audience: data.targetAudience || profile?.target_audience,
-        lang: profile?.lang,
       });
 
       onComplete({

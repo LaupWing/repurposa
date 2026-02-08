@@ -99,38 +99,35 @@ async function apiRequest<T>(
 
 export async function generateTopics(
     roughIdea: string,
-    options?: { target_audience?: string; lang?: string }
+    options?: { target_audience?: string }
 ): Promise<GenerateTopicsResponse> {
     return apiRequest<GenerateTopicsResponse>('/blog/generate-topics', {
         rough_idea: roughIdea,
         target_audience: options?.target_audience,
-        lang: options?.lang,
     });
 }
 
 export async function generateOutline(
     topic: string,
     roughOutline?: string[],
-    options?: { target_audience?: string; lang?: string }
+    options?: { target_audience?: string }
 ): Promise<GenerateOutlineResponse> {
     return apiRequest<GenerateOutlineResponse>('/blog/generate-outline', {
         topic,
         rough_outline: roughOutline || [],
         target_audience: options?.target_audience,
-        lang: options?.lang,
     });
 }
 
 export async function generateBlog(
     topic: string,
     outline: OutlineSection[],
-    options?: { target_audience?: string; lang?: string }
+    options?: { target_audience?: string }
 ): Promise<GenerateBlogResponse> {
     return apiRequest<GenerateBlogResponse>('/blog/generate-blog', {
         topic,
         outline,
         target_audience: options?.target_audience,
-        lang: options?.lang,
     });
 }
 
@@ -183,14 +180,12 @@ export interface GenerateShortPostsResponse {
 export async function generateShortPosts(
     postId: number,
     blogContent: string,
-    ctaLink?: string,
-    lang?: string
+    ctaLink?: string
 ): Promise<GenerateShortPostsResponse> {
     return apiRequest<GenerateShortPostsResponse>('/repurpose/generate-short-posts', {
         post_id: postId,
         blog_content: blogContent,
         ...(ctaLink && { cta_link: ctaLink }),
-        lang,
     });
 }
 
