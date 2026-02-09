@@ -31,10 +31,15 @@ import {
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
+import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts } from '../../services/api';
 import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
+import ImagePickerModal from '../ImagePickerModal';
 
 // ============================================
 // TYPES
@@ -50,6 +55,7 @@ interface ShortPostPattern {
     why_it_works: string;
     cta_content?: string;
     scheduled_post?: ShortPostSchedule | null;
+    images: string[];
 }
 
 interface Thread {
@@ -66,6 +72,7 @@ function shortPostToPattern(sp: ShortPost): ShortPostPattern {
         why_it_works: sp.metadata?.why_it_works || '',
         cta_content: sp.cta_content || undefined,
         scheduled_post: sp.scheduled_post || null,
+        images: (sp.metadata?.media || []).filter((m): m is string => typeof m === 'string'),
     };
 }
 
@@ -90,7 +97,118 @@ const emotionColors: Record<string, string> = {
 // SUB-COMPONENTS
 // ============================================
 
-function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, autoEdit }: {
+function SortableImage({ id, src, onRemove }: { id: string; src: string; onRemove: () => void }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className="relative group/img cursor-grab active:cursor-grabbing w-full h-full"
+            {...attributes}
+            {...listeners}
+        >
+            <img src={src} alt="" className="w-full h-full object-cover" />
+            <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={onRemove}
+                className="absolute top-1.5 right-1.5 h-6 w-6 flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover/img:opacity-100 transition-opacity hover:bg-black/80"
+            >
+                <X size={12} />
+            </button>
+        </div>
+    );
+}
+
+function ImageGrid({
+    images,
+    onRemove,
+    onReorder,
+    onAddClick,
+}: {
+    images: string[];
+    onRemove: (index: number) => void;
+    onReorder: (from: number, to: number) => void;
+    onAddClick: () => void;
+}) {
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    );
+
+    const ids = images.map((_, i) => `img-${i}`);
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            const oldIndex = ids.indexOf(active.id as string);
+            const newIndex = ids.indexOf(over.id as string);
+            onReorder(oldIndex, newIndex);
+        }
+    };
+
+    if (images.length === 0) return null;
+
+    const gridClass =
+        images.length === 1
+            ? ''
+            : images.length === 2
+                ? 'grid grid-cols-2 gap-0.5'
+                : 'grid grid-cols-2 grid-rows-2 gap-0.5';
+
+    const aspectClass = images.length <= 2 ? 'aspect-video' : '';
+
+    return (
+        <div className="mb-3">
+            <div className={`rounded-xl overflow-hidden border border-gray-200 max-w-lg ${aspectClass}`}>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={ids} strategy={rectSortingStrategy}>
+                        <div className={`${gridClass} w-full h-full`}>
+                            {images.map((src, i) => (
+                                <div
+                                    key={ids[i]}
+                                    className={
+                                        images.length === 3 && i === 0 ? 'row-span-2' : ''
+                                    }
+                                >
+                                    <SortableImage
+                                        id={ids[i]}
+                                        src={src}
+                                        onRemove={() => onRemove(i)}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </SortableContext>
+                </DndContext>
+            </div>
+            {images.length < 4 && (
+                <button
+                    onClick={onAddClick}
+                    className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                    <ImagePlus size={14} />
+                    Add image ({images.length}/4)
+                </button>
+            )}
+        </div>
+    );
+}
+
+function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, autoEdit }: {
     pattern: ShortPostPattern;
     index: number;
     onDelete: () => void;
@@ -99,6 +217,9 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     onEdit: (content: string) => void;
     onEditCta: (content: string) => void;
     onSchedule: () => void;
+    onAddImage: (imageUrl: string) => void;
+    onRemoveImage: (imageIndex: number) => void;
+    onReorderImages: (from: number, to: number) => void;
     autoEdit?: boolean;
 }) {
     const [copied, setCopied] = useState(false);
@@ -116,6 +237,7 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     const [editContent, setEditContent] = useState(pattern.content);
     const [editCtaContent, setEditCtaContent] = useState(pattern.cta_content || '');
     const [menuOpen, setMenuOpen] = useState(false);
+    const [showImagePicker, setShowImagePicker] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
     const editCtaTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -255,6 +377,16 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                     )}
                 </div>
 
+                {/* Image Grid */}
+                {!isEditing && pattern.images.length > 0 && (
+                    <ImageGrid
+                        images={pattern.images}
+                        onRemove={onRemoveImage}
+                        onReorder={onReorderImages}
+                        onAddClick={() => setShowImagePicker(true)}
+                    />
+                )}
+
                 {/* Footer */}
                 {!isEditing && (
                     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
@@ -311,11 +443,12 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                                             {copied ? 'Copied!' : 'Copy'}
                                         </button>
                                         <button
-                                            onClick={() => { setMenuOpen(false); }}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            onClick={() => { setShowImagePicker(true); setMenuOpen(false); }}
+                                            disabled={pattern.images.length >= 4}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                         >
                                             <ImagePlus size={14} />
-                                            Add Image
+                                            Add Image{pattern.images.length > 0 ? ` (${pattern.images.length}/4)` : ''}
                                         </button>
                                         <button
                                             onClick={() => { setMenuOpen(false); }}
@@ -444,6 +577,16 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                     </div>
                 </div>
             )}
+
+            {/* Image Picker Modal */}
+            <ImagePickerModal
+                isOpen={showImagePicker}
+                onClose={() => setShowImagePicker(false)}
+                onSelect={(imageUrl) => {
+                    onAddImage(imageUrl);
+                    setShowImagePicker(false);
+                }}
+            />
         </div>
     );
 }
@@ -1049,6 +1192,7 @@ function SchedulePostModal({
                     schedulable_type: 'short_post',
                     schedulable_id: post.id,
                     ...(blogId && { post_id: blogId }),
+                    ...(post.images.length > 0 && { media: post.images }),
                 });
             });
 
@@ -1349,6 +1493,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             emotions: [],
             structure: 'Custom',
             why_it_works: 'Manually created post',
+            images: [],
         };
         setShortPosts(prev => [...prev, newPost]);
         toast.success('Short post added');
@@ -1441,6 +1586,9 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     onEdit={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p))}
                                     onEditCta={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p))}
                                     onSchedule={() => setSchedulingPost(pattern)}
+                                    onAddImage={(imageUrl) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: [...p.images, imageUrl].slice(0, 4) } : p))}
+                                    onRemoveImage={(imageIndex) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: p.images.filter((_, i) => i !== imageIndex) } : p))}
+                                    onReorderImages={(from, to) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: arrayMove(p.images, from, to) } : p))}
                                     autoEdit={pattern.id === editShortPostId}
                                 />
                             ))}
