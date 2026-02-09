@@ -231,22 +231,49 @@ export default function ConnectionsPage() {
               What do you sell?{" "}
               <span className="font-normal text-gray-500">(Business type)</span>
             </label>
-            <select
-              value={profile?.business_type || ""}
-              onChange={(e) =>
-                setProfile((prev) =>
-                  prev ? { ...prev, business_type: e.target.value } : null
-                )
-              }
-              className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-            >
-              <option value="">Select...</option>
-              {BUSINESS_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
+            {(() => {
+              const knownValues = BUSINESS_TYPES.map((t) => t.value);
+              const raw = profile?.business_type || "";
+              const isCustom = raw !== "" && !knownValues.includes(raw);
+              const selectValue = isCustom ? "other" : raw;
+
+              return (
+                <>
+                  <select
+                    value={selectValue}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setProfile((prev) =>
+                        prev
+                          ? { ...prev, business_type: val === "other" ? "" : val }
+                          : null
+                      );
+                    }}
+                    className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  >
+                    <option value="">Select...</option>
+                    {BUSINESS_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                  {(selectValue === "other") && (
+                    <input
+                      type="text"
+                      placeholder="e.g., service, photography, real estate"
+                      value={isCustom ? raw : ""}
+                      onChange={(e) =>
+                        setProfile((prev) =>
+                          prev ? { ...prev, business_type: e.target.value } : null
+                        )
+                      }
+                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Niche */}
