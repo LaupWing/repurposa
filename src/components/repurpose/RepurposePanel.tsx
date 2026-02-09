@@ -56,6 +56,7 @@ interface ShortPostPattern {
     cta_content?: string;
     scheduled_post?: ShortPostSchedule | null;
     images: string[];
+    cta_images: string[];
 }
 
 interface Thread {
@@ -73,6 +74,7 @@ function shortPostToPattern(sp: ShortPost): ShortPostPattern {
         cta_content: sp.cta_content || undefined,
         scheduled_post: sp.scheduled_post || null,
         images: (sp.metadata?.media || []).filter((m): m is string => typeof m === 'string'),
+        cta_images: [],
     };
 }
 
@@ -208,7 +210,7 @@ function ImageGrid({
     );
 }
 
-function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, autoEdit }: {
+function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, autoEdit }: {
     pattern: ShortPostPattern;
     index: number;
     onDelete: () => void;
@@ -220,6 +222,9 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     onAddImage: (imageUrl: string) => void;
     onRemoveImage: (imageIndex: number) => void;
     onReorderImages: (from: number, to: number) => void;
+    onAddCtaImage: (imageUrl: string) => void;
+    onRemoveCtaImage: (imageIndex: number) => void;
+    onReorderCtaImages: (from: number, to: number) => void;
     autoEdit?: boolean;
 }) {
     const [copied, setCopied] = useState(false);
@@ -238,6 +243,7 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     const [editCtaContent, setEditCtaContent] = useState(pattern.cta_content || '');
     const [menuOpen, setMenuOpen] = useState(false);
     const [showImagePicker, setShowImagePicker] = useState(false);
+    const [showCtaImagePicker, setShowCtaImagePicker] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
     const editCtaTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -544,6 +550,16 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                             )}
                         </div>
 
+                        {/* CTA Image Grid */}
+                        {!isEditingCta && pattern.cta_images.length > 0 && (
+                            <ImageGrid
+                                images={pattern.cta_images}
+                                onRemove={onRemoveCtaImage}
+                                onReorder={onReorderCtaImages}
+                                onAddClick={() => setShowCtaImagePicker(true)}
+                            />
+                        )}
+
                         {/* Footer */}
                         {!isEditingCta && (
                             <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
@@ -558,6 +574,13 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                                         }`}
                                     >
                                         {copiedCta ? <Check size={14} /> : <Copy size={14} />}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowCtaImagePicker(true)}
+                                        disabled={pattern.cta_images.length >= 4}
+                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <ImagePlus size={14} />
                                     </button>
                                     <button
                                         onClick={() => setIsEditingCta(true)}
@@ -578,13 +601,21 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                 </div>
             )}
 
-            {/* Image Picker Modal */}
+            {/* Image Picker Modals */}
             <ImagePickerModal
                 isOpen={showImagePicker}
                 onClose={() => setShowImagePicker(false)}
                 onSelect={(imageUrl) => {
                     onAddImage(imageUrl);
                     setShowImagePicker(false);
+                }}
+            />
+            <ImagePickerModal
+                isOpen={showCtaImagePicker}
+                onClose={() => setShowCtaImagePicker(false)}
+                onSelect={(imageUrl) => {
+                    onAddCtaImage(imageUrl);
+                    setShowCtaImagePicker(false);
                 }}
             />
         </div>
@@ -1494,6 +1525,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             structure: 'Custom',
             why_it_works: 'Manually created post',
             images: [],
+            cta_images: [],
         };
         setShortPosts(prev => [...prev, newPost]);
         toast.success('Short post added');
@@ -1589,6 +1621,9 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     onAddImage={(imageUrl) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: [...p.images, imageUrl].slice(0, 4) } : p))}
                                     onRemoveImage={(imageIndex) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: p.images.filter((_, i) => i !== imageIndex) } : p))}
                                     onReorderImages={(from, to) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: arrayMove(p.images, from, to) } : p))}
+                                    onAddCtaImage={(imageUrl) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: [...p.cta_images, imageUrl].slice(0, 4) } : p))}
+                                    onRemoveCtaImage={(imageIndex) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: p.cta_images.filter((_, i) => i !== imageIndex) } : p))}
+                                    onReorderCtaImages={(from, to) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: arrayMove(p.cta_images, from, to) } : p))}
                                     autoEdit={pattern.id === editShortPostId}
                                 />
                             ))}
