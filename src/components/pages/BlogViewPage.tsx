@@ -803,7 +803,7 @@ function BlogEditor({
             });
 
             // Update wp_status on Laravel
-            await updateBlog(post.id, { wp_status: 'published' });
+            await updateBlog(post.id, { wp_status: 'published', published_post_id: response.post_id, published_post_url: response.post_url });
 
             onPublished(response.post_id, response.post_url);
 
@@ -1156,6 +1156,7 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
         const fetchBlog = async () => {
             try {
                 const blog = await getBlog(postId);
+                console.log('[BlogViewPage] Blog data from API:', blog);
                 setPost(blog);
             } catch (error) {
                 console.error('Failed to fetch blog:', error);
