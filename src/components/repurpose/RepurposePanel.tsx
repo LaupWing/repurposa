@@ -40,6 +40,7 @@ import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost 
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
 import ImagePickerModal from '../ImagePickerModal';
+import TweetPreviewModal from './TweetPreviewModal';
 
 // ============================================
 // TYPES
@@ -244,6 +245,7 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     const [menuOpen, setMenuOpen] = useState(false);
     const [showImagePicker, setShowImagePicker] = useState(false);
     const [showCtaImagePicker, setShowCtaImagePicker] = useState(false);
+    const [showVisualModal, setShowVisualModal] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
     const editCtaTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -464,7 +466,7 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                                             Publish Now
                                         </button>
                                         <button
-                                            onClick={() => { setMenuOpen(false); }}
+                                            onClick={() => { setShowVisualModal(true); setMenuOpen(false); }}
                                             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                                         >
                                             <Image size={14} />
@@ -617,6 +619,11 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                     onAddCtaImage(imageUrl);
                     setShowCtaImagePicker(false);
                 }}
+            />
+            <TweetPreviewModal
+                isOpen={showVisualModal}
+                onClose={() => setShowVisualModal(false)}
+                content={pattern.content}
             />
         </div>
     );
