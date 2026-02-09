@@ -761,7 +761,7 @@ function BlogEditor({
     const isDirty = title !== savedTitle || content !== savedContent || thumbnail !== savedThumbnail;
 
     const handleAIRequest = (selectedText: string, action: string) => {
-        console.log(`AI Action: ${action}`, selectedText);
+        // AI action handler placeholder
         alert(`AI ${action} request for: "${selectedText.substring(0, 50)}..."\n\nThis will be connected to your AI backend.`);
     };
 
@@ -1156,7 +1156,6 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
         const fetchBlog = async () => {
             try {
                 const blog = await getBlog(postId);
-                console.log('[BlogViewPage] Blog data from API:', blog);
                 setPost(blog);
             } catch (error) {
                 console.error('Failed to fetch blog:', error);

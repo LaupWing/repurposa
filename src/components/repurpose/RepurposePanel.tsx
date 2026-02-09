@@ -1553,7 +1553,6 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             setIsLoading(true);
             try {
                 const shortPosts = await getShortPosts(blogId);
-                console.log('[RepurposePanel] Short posts from API:', shortPosts);
                 setShortPosts(shortPosts.map(shortPostToPattern));
             } catch (error) {
                 console.error('Failed to load short posts:', error);
