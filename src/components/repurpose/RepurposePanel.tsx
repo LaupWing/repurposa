@@ -71,10 +71,10 @@ function shortPostToPattern(sp: ShortPost): ShortPostPattern {
         emotions: sp.metadata?.emotions || [],
         structure: sp.metadata?.structure || '',
         why_it_works: sp.metadata?.why_it_works || '',
-        cta_content: sp.cta_content || undefined,
+        cta_content: sp.cta_content?.content || undefined,
         scheduled_post: sp.scheduled_post || null,
         images: (sp.metadata?.media || []).filter((m): m is string => typeof m === 'string'),
-        cta_images: [],
+        cta_images: sp.cta_content?.media?.filter((m): m is string => typeof m === 'string') || [],
     };
 }
 

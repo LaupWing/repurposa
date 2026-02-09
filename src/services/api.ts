@@ -165,10 +165,15 @@ export interface ShortPostSchedule {
     scheduled_at: string;
 }
 
+export interface ShortPostCta {
+    content: string;
+    media: string[] | null;
+}
+
 export interface ShortPost {
     id: number;
     content: string;
-    cta_content?: string | null;
+    cta_content?: ShortPostCta | null;
     metadata: ShortPostMetadata;
     scheduled_post?: ShortPostSchedule | null;
 }
