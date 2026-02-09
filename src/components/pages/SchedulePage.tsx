@@ -657,13 +657,9 @@ export default function SchedulePage() {
     useEffect(() => {
         getPublishingSchedule()
             .then((data) => {
-                console.log('[SchedulePage] Fetched publishing schedule:', data);
                 if (data.schedule) {
                     const mapped = mapScheduleFromApi(data.schedule);
-                    console.log('[SchedulePage] Setting weeklySchedule:', mapped);
                     setWeeklySchedule(mapped);
-                } else {
-                    console.log('[SchedulePage] No schedule in response');
                 }
             })
             .catch((error) => {
