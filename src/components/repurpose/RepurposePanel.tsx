@@ -169,7 +169,7 @@ function ImageGrid({
                 ? 'grid grid-cols-2 gap-0.5'
                 : 'grid grid-cols-2 grid-rows-2 gap-0.5';
 
-    const aspectClass = images.length <= 2 ? 'aspect-video' : '';
+    const aspectClass = 'aspect-video';
 
     return (
         <div className="mb-3">
