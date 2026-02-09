@@ -55,8 +55,8 @@ interface ShortPostPattern {
     why_it_works: string;
     cta_content?: string;
     scheduled_post?: ShortPostSchedule | null;
-    images: string[];
-    cta_images: string[];
+    media: string[];
+    cta_media: string[];
 }
 
 interface Thread {
@@ -73,8 +73,8 @@ function shortPostToPattern(sp: ShortPost): ShortPostPattern {
         why_it_works: sp.metadata?.why_it_works || '',
         cta_content: sp.cta_content?.content || undefined,
         scheduled_post: sp.scheduled_post || null,
-        images: (sp.metadata?.media || []).filter((m): m is string => typeof m === 'string'),
-        cta_images: sp.cta_content?.media?.filter((m): m is string => typeof m === 'string') || [],
+        media: (sp.media || []).filter((m): m is string => typeof m === 'string'),
+        cta_media: sp.cta_content?.media?.filter((m): m is string => typeof m === 'string') || [],
     };
 }
 
@@ -136,12 +136,12 @@ function SortableImage({ id, src, onRemove }: { id: string; src: string; onRemov
 }
 
 function ImageGrid({
-    images,
+    media,
     onRemove,
     onReorder,
     onAddClick,
 }: {
-    images: string[];
+    media: string[];
     onRemove: (index: number) => void;
     onReorder: (from: number, to: number) => void;
     onAddClick: () => void;
@@ -151,7 +151,7 @@ function ImageGrid({
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     );
 
-    const ids = images.map((_, i) => `img-${i}`);
+    const ids = media.map((_, i) => `img-${i}`);
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
@@ -162,12 +162,12 @@ function ImageGrid({
         }
     };
 
-    if (images.length === 0) return null;
+    if (media.length === 0) return null;
 
     const gridClass =
-        images.length === 1
+        media.length === 1
             ? ''
-            : images.length === 2
+            : media.length === 2
                 ? 'grid grid-cols-2 gap-0.5'
                 : 'grid grid-cols-2 grid-rows-2 gap-0.5';
 
@@ -179,11 +179,11 @@ function ImageGrid({
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <SortableContext items={ids} strategy={rectSortingStrategy}>
                         <div className={`${gridClass} w-full h-full`}>
-                            {images.map((src, i) => (
+                            {media.map((src, i) => (
                                 <div
                                     key={ids[i]}
                                     className={
-                                        images.length === 3 && i === 0 ? 'row-span-2' : ''
+                                        media.length === 3 && i === 0 ? 'row-span-2' : ''
                                     }
                                 >
                                     <SortableImage
@@ -197,13 +197,13 @@ function ImageGrid({
                     </SortableContext>
                 </DndContext>
             </div>
-            {images.length < 4 && (
+            {media.length < 4 && (
                 <button
                     onClick={onAddClick}
                     className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                 >
                     <ImagePlus size={14} />
-                    Add image ({images.length}/4)
+                    Add media ({media.length}/4)
                 </button>
             )}
         </div>
@@ -384,9 +384,9 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                 </div>
 
                 {/* Image Grid */}
-                {!isEditing && pattern.images.length > 0 && (
+                {!isEditing && pattern.media.length > 0 && (
                     <ImageGrid
-                        images={pattern.images}
+                        media={pattern.media}
                         onRemove={onRemoveImage}
                         onReorder={onReorderImages}
                         onAddClick={() => setShowImagePicker(true)}
@@ -450,11 +450,11 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                                         </button>
                                         <button
                                             onClick={() => { setShowImagePicker(true); setMenuOpen(false); }}
-                                            disabled={pattern.images.length >= 4}
+                                            disabled={pattern.media.length >= 4}
                                             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                         >
                                             <ImagePlus size={14} />
-                                            Add Image{pattern.images.length > 0 ? ` (${pattern.images.length}/4)` : ''}
+                                            Add Image{pattern.media.length > 0 ? ` (${pattern.media.length}/4)` : ''}
                                         </button>
                                         <button
                                             onClick={() => { setMenuOpen(false); }}
@@ -551,9 +551,9 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                         </div>
 
                         {/* CTA Image Grid */}
-                        {!isEditingCta && pattern.cta_images.length > 0 && (
+                        {!isEditingCta && pattern.cta_media.length > 0 && (
                             <ImageGrid
-                                images={pattern.cta_images}
+                                media={pattern.cta_media}
                                 onRemove={onRemoveCtaImage}
                                 onReorder={onReorderCtaImages}
                                 onAddClick={() => setShowCtaImagePicker(true)}
@@ -577,7 +577,7 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                                     </button>
                                     <button
                                         onClick={() => setShowCtaImagePicker(true)}
-                                        disabled={pattern.cta_images.length >= 4}
+                                        disabled={pattern.cta_media.length >= 4}
                                         className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
                                         <ImagePlus size={14} />
@@ -1223,7 +1223,7 @@ function SchedulePostModal({
                     schedulable_type: 'short_post',
                     schedulable_id: post.id,
                     ...(blogId && { post_id: blogId }),
-                    ...(post.images.length > 0 && { media: post.images }),
+                    ...(post.media.length > 0 && { media: post.media }),
                 });
             });
 
@@ -1518,12 +1518,12 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [schedulingPost, setSchedulingPost] = useState<ShortPostPattern | null>(null);
 
     // Persist media changes to the API
-    const syncShortPostMedia = (postId: number, images: string[], ctaContent?: string, ctaImages?: string[]) => {
+    const syncShortPostMedia = (postId: number, media: string[], ctaContent?: string, ctaMedia?: string[]) => {
         updateShortPost(postId, {
-            media: images,
+            media,
             ...(ctaContent !== undefined && {
                 cta_content: ctaContent
-                    ? { content: ctaContent, media: ctaImages && ctaImages.length > 0 ? ctaImages : null }
+                    ? { content: ctaContent, media: ctaMedia && ctaMedia.length > 0 ? ctaMedia : null }
                     : null,
             }),
         }).catch((err) => {
@@ -1539,8 +1539,8 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             emotions: [],
             structure: 'Custom',
             why_it_works: 'Manually created post',
-            images: [],
-            cta_images: [],
+            media: [],
+            cta_media: [],
         };
         setShortPosts(prev => [...prev, newPost]);
         toast.success('Short post added');
@@ -1628,40 +1628,53 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     pattern={pattern}
                                     index={index}
                                     onDelete={() => setShortPosts(prev => prev.filter(p => p.id !== pattern.id))}
-                                    onDeleteCta={() => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: undefined } : p))}
-                                    onAddCta={() => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: 'Read the full post here: ' } : p))}
-                                    onEdit={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p))}
-                                    onEditCta={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p))}
+                                    onDeleteCta={() => {
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: undefined, cta_media: [] } : p));
+                                        updateShortPost(pattern.id, { cta_content: null }).catch(() => toast.error('Failed to save'));
+                                    }}
+                                    onAddCta={() => {
+                                        const ctaText = 'Read the full post here: ';
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: ctaText } : p));
+                                        updateShortPost(pattern.id, { cta_content: { content: ctaText, media: null } }).catch(() => toast.error('Failed to save'));
+                                    }}
+                                    onEdit={(content) => {
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p));
+                                        updateShortPost(pattern.id, { content }).catch(() => toast.error('Failed to save'));
+                                    }}
+                                    onEditCta={(content) => {
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p));
+                                        updateShortPost(pattern.id, { cta_content: { content, media: pattern.cta_media.length > 0 ? pattern.cta_media : null } }).catch(() => toast.error('Failed to save'));
+                                    }}
                                     onSchedule={() => setSchedulingPost(pattern)}
                                     onAddImage={(imageUrl) => {
-                                        const newImages = [...pattern.images, imageUrl].slice(0, 4);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: newImages } : p));
-                                        syncShortPostMedia(pattern.id, newImages);
+                                        const newMedia = [...pattern.media, imageUrl].slice(0, 4);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, media: newMedia } : p));
+                                        syncShortPostMedia(pattern.id, newMedia);
                                     }}
                                     onRemoveImage={(imageIndex) => {
-                                        const newImages = pattern.images.filter((_, i) => i !== imageIndex);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: newImages } : p));
-                                        syncShortPostMedia(pattern.id, newImages);
+                                        const newMedia = pattern.media.filter((_, i) => i !== imageIndex);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, media: newMedia } : p));
+                                        syncShortPostMedia(pattern.id, newMedia);
                                     }}
                                     onReorderImages={(from, to) => {
-                                        const newImages = arrayMove(pattern.images, from, to);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: newImages } : p));
-                                        syncShortPostMedia(pattern.id, newImages);
+                                        const newMedia = arrayMove(pattern.media, from, to);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, media: newMedia } : p));
+                                        syncShortPostMedia(pattern.id, newMedia);
                                     }}
                                     onAddCtaImage={(imageUrl) => {
-                                        const newCtaImages = [...pattern.cta_images, imageUrl].slice(0, 4);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: newCtaImages } : p));
-                                        syncShortPostMedia(pattern.id, pattern.images, pattern.cta_content, newCtaImages);
+                                        const newCtaImages = [...pattern.cta_media, imageUrl].slice(0, 4);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_media: newCtaImages } : p));
+                                        syncShortPostMedia(pattern.id, pattern.media, pattern.cta_content, newCtaImages);
                                     }}
                                     onRemoveCtaImage={(imageIndex) => {
-                                        const newCtaImages = pattern.cta_images.filter((_, i) => i !== imageIndex);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: newCtaImages } : p));
-                                        syncShortPostMedia(pattern.id, pattern.images, pattern.cta_content, newCtaImages);
+                                        const newCtaImages = pattern.cta_media.filter((_, i) => i !== imageIndex);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_media: newCtaImages } : p));
+                                        syncShortPostMedia(pattern.id, pattern.media, pattern.cta_content, newCtaImages);
                                     }}
                                     onReorderCtaImages={(from, to) => {
-                                        const newCtaImages = arrayMove(pattern.cta_images, from, to);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: newCtaImages } : p));
-                                        syncShortPostMedia(pattern.id, pattern.images, pattern.cta_content, newCtaImages);
+                                        const newCtaImages = arrayMove(pattern.cta_media, from, to);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_media: newCtaImages } : p));
+                                        syncShortPostMedia(pattern.id, pattern.media, pattern.cta_content, newCtaImages);
                                     }}
                                     autoEdit={pattern.id === editShortPostId}
                                 />

@@ -174,6 +174,7 @@ export interface ShortPost {
     id: number;
     content: string;
     cta_content?: ShortPostCta | null;
+    media: string[] | null;
     metadata: ShortPostMetadata;
     scheduled_post?: ShortPostSchedule | null;
 }
