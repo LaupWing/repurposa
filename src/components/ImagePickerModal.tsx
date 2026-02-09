@@ -5,9 +5,9 @@
  * or generating new images with AI.
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { X, Search, Check, Loader2, Image as ImageIcon, Sparkles, Wand2, MoveHorizontal, Sun, Palette, PenTool, Eraser, Focus, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Search, Check, Loader2, Image as ImageIcon, Sparkles, Wand2, MoveHorizontal, Sun, Palette, PenTool, Eraser, Focus, Maximize2, Minimize2, Upload } from 'lucide-react';
 
 interface MediaItem {
     id: number;
@@ -51,6 +51,11 @@ export default function ImagePickerModal({
     const [generatePrompt, setGeneratePrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
 
+    // Upload state
+    const [isUploading, setIsUploading] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     // Modify with AI state
     const [showModifyInput, setShowModifyInput] = useState(false);
     const [modifyPrompt, setModifyPrompt] = useState('');
@@ -79,6 +84,52 @@ export default function ImagePickerModal({
 
         fetchImages();
     }, [isOpen]);
+
+    // Upload file to WordPress media library
+    const handleUploadFiles = useCallback(async (files: FileList | File[]) => {
+        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+        if (imageFiles.length === 0) return;
+
+        setIsUploading(true);
+        try {
+            for (const file of imageFiles) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const uploaded = await apiFetch<MediaItem>({
+                    path: '/wp/v2/media',
+                    method: 'POST',
+                    body: formData,
+                });
+
+                setImages(prev => [uploaded, ...prev]);
+                setSelectedImage(uploaded.source_url);
+            }
+        } catch (error) {
+            console.error('Failed to upload image:', error);
+        } finally {
+            setIsUploading(false);
+            setIsDragging(false);
+        }
+    }, []);
+
+    const handleDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files.length > 0) {
+            handleUploadFiles(e.dataTransfer.files);
+        }
+    }, [handleUploadFiles]);
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    }, []);
 
     // Reset state when modal closes
     useEffect(() => {
@@ -277,9 +328,48 @@ export default function ImagePickerModal({
                 {/* Content */}
                 <div className={`flex-1 overflow-y-auto ${isModifyExpanded ? 'hidden' : ''}`}>
                     {activeTab === 'library' ? (
-                        <div className="p-6">
-                            {/* Search */}
-                            <div className="relative mb-4">
+                        <div
+                            className="p-6 relative"
+                            onDrop={handleDrop}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                        >
+                            {/* Drag overlay */}
+                            {isDragging && (
+                                <div className="absolute inset-0 z-10 flex items-center justify-center bg-blue-50/90 border-2 border-dashed border-blue-400 rounded-lg m-2">
+                                    <div className="text-center">
+                                        <Upload size={32} className="text-blue-500 mx-auto mb-2" />
+                                        <p className="text-sm font-medium text-blue-700">Drop images here</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Hidden file input */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                className="hidden"
+                                onChange={(e) => {
+                                    if (e.target.files && e.target.files.length > 0) {
+                                        handleUploadFiles(e.target.files);
+                                        e.target.value = '';
+                                    }
+                                }}
+                            />
+
+                            {/* Upload button + Search row */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isUploading}
+                                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors shrink-0 disabled:opacity-50"
+                                >
+                                    {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                                    {isUploading ? 'Uploading...' : 'Upload'}
+                                </button>
+                                <div className="relative flex-1">
                                 <input
                                     type="text"
                                     placeholder="Search images..."
@@ -288,6 +378,7 @@ export default function ImagePickerModal({
                                     className="w-full h-10 pl-10 pr-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 />
                                 <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                </div>
                             </div>
 
                             {/* Image Grid */}
