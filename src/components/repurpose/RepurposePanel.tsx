@@ -35,7 +35,7 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts } from '../../services/api';
+import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost } from '../../services/api';
 import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
@@ -1517,6 +1517,21 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [showAddModal, setShowAddModal] = useState(false);
     const [schedulingPost, setSchedulingPost] = useState<ShortPostPattern | null>(null);
 
+    // Persist media changes to the API
+    const syncShortPostMedia = (postId: number, images: string[], ctaContent?: string, ctaImages?: string[]) => {
+        updateShortPost(postId, {
+            media: images,
+            ...(ctaContent !== undefined && {
+                cta_content: ctaContent
+                    ? { content: ctaContent, media: ctaImages && ctaImages.length > 0 ? ctaImages : null }
+                    : null,
+            }),
+        }).catch((err) => {
+            console.error('Failed to sync short post media:', err);
+            toast.error('Failed to save image changes');
+        });
+    };
+
     const handleAddShortPost = (content: string) => {
         const newPost: ShortPostPattern = {
             id: Date.now(),
@@ -1618,12 +1633,36 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     onEdit={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p))}
                                     onEditCta={(content) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p))}
                                     onSchedule={() => setSchedulingPost(pattern)}
-                                    onAddImage={(imageUrl) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: [...p.images, imageUrl].slice(0, 4) } : p))}
-                                    onRemoveImage={(imageIndex) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: p.images.filter((_, i) => i !== imageIndex) } : p))}
-                                    onReorderImages={(from, to) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: arrayMove(p.images, from, to) } : p))}
-                                    onAddCtaImage={(imageUrl) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: [...p.cta_images, imageUrl].slice(0, 4) } : p))}
-                                    onRemoveCtaImage={(imageIndex) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: p.cta_images.filter((_, i) => i !== imageIndex) } : p))}
-                                    onReorderCtaImages={(from, to) => setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: arrayMove(p.cta_images, from, to) } : p))}
+                                    onAddImage={(imageUrl) => {
+                                        const newImages = [...pattern.images, imageUrl].slice(0, 4);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: newImages } : p));
+                                        syncShortPostMedia(pattern.id, newImages);
+                                    }}
+                                    onRemoveImage={(imageIndex) => {
+                                        const newImages = pattern.images.filter((_, i) => i !== imageIndex);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: newImages } : p));
+                                        syncShortPostMedia(pattern.id, newImages);
+                                    }}
+                                    onReorderImages={(from, to) => {
+                                        const newImages = arrayMove(pattern.images, from, to);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, images: newImages } : p));
+                                        syncShortPostMedia(pattern.id, newImages);
+                                    }}
+                                    onAddCtaImage={(imageUrl) => {
+                                        const newCtaImages = [...pattern.cta_images, imageUrl].slice(0, 4);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: newCtaImages } : p));
+                                        syncShortPostMedia(pattern.id, pattern.images, pattern.cta_content, newCtaImages);
+                                    }}
+                                    onRemoveCtaImage={(imageIndex) => {
+                                        const newCtaImages = pattern.cta_images.filter((_, i) => i !== imageIndex);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: newCtaImages } : p));
+                                        syncShortPostMedia(pattern.id, pattern.images, pattern.cta_content, newCtaImages);
+                                    }}
+                                    onReorderCtaImages={(from, to) => {
+                                        const newCtaImages = arrayMove(pattern.cta_images, from, to);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_images: newCtaImages } : p));
+                                        syncShortPostMedia(pattern.id, pattern.images, pattern.cta_content, newCtaImages);
+                                    }}
                                     autoEdit={pattern.id === editShortPostId}
                                 />
                             ))}

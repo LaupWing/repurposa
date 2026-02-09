@@ -199,6 +199,14 @@ export async function getShortPosts(postId: number): Promise<ShortPost[]> {
     return response.data;
 }
 
+export async function updateShortPost(shortPostId: number, data: {
+    content?: string;
+    media?: string[];
+    cta_content?: { content: string; media: string[] | null } | null;
+}): Promise<ShortPost> {
+    return apiRequest<ShortPost>(`/repurpose/short-posts/${shortPostId}`, data as Record<string, unknown>, 'PATCH');
+}
+
 export interface Swipe {
     id: number;
     user_id: number | null;
