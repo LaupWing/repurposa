@@ -331,7 +331,8 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
   };
 
   // Generate full blog from outline
-  const handleGenerateBlog = async (): Promise<void> => {
+  const handleGenerateBlog = async (includeInternalLinks: boolean): Promise<void> => {
+    setShowConfirmModal(false);
     setIsGeneratingBlog(true);
 
     try {
@@ -343,6 +344,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
 
       const response = await generateBlog(data.topic, outlineForApi, {
         target_audience: data.targetAudience || profile?.target_audience,
+        include_internal_links: includeInternalLinks,
       });
 
       onComplete({
@@ -534,7 +536,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
 
           {currentStep === 3 && (
             <button
-              onClick={handleGenerateBlog}
+              onClick={() => setShowConfirmModal(true)}
               disabled={isGeneratingBlog || data.outline.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
@@ -553,6 +555,12 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
           )}
         </div>
       </div>
+
+      <ConfirmGenerateBlogModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleGenerateBlog}
+      />
     </div>
   );
 }
