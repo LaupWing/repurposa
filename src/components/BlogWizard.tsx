@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useRef } from "@wordpress/element";
-import { ArrowRight, ArrowLeft, Sparkles, Loader2, SkipForward } from "lucide-react";
+import { ArrowRight, ArrowLeft, Sparkles, Loader2, SkipForward, X, Check } from "lucide-react";
 import { toast } from "sonner";
 
 // Steps
@@ -58,6 +58,82 @@ interface BlogWizardProps {
 }
 
 // ============================================
+// CONFIRM GENERATE BLOG MODAL
+// ============================================
+
+function ConfirmGenerateBlogModal({
+  isOpen,
+  onClose,
+  onConfirm,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (includeInternalLinks: boolean) => void;
+}) {
+  const [includeInternalLinks, setIncludeInternalLinks] = useState(false);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+          <h2 className="text-base font-semibold text-gray-900">Generate Blog</h2>
+          <button
+            onClick={onClose}
+            className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="px-5 py-4 space-y-4">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer transition-colors">
+            <div className="relative flex items-center justify-center mt-0.5">
+              <input
+                type="checkbox"
+                checked={includeInternalLinks}
+                onChange={(e) => setIncludeInternalLinks(e.target.checked)}
+                className="sr-only"
+              />
+              <div
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                  includeInternalLinks
+                    ? 'bg-blue-600 border-blue-600'
+                    : 'border-gray-300 bg-white'
+                }`}
+              >
+                {includeInternalLinks && <Check size={14} className="text-white" />}
+              </div>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-900">Include internal links</span>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Add links to your other published blog posts within the generated content.
+              </p>
+            </div>
+          </label>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-gray-200 bg-gray-50">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(includeInternalLinks)}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            Generate Blog
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // COMPONENT
 // ============================================
 
@@ -67,6 +143,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [data, setData] = useState<WizardData>({
     topic: "",
     targetAudience: profile?.target_audience || "",
