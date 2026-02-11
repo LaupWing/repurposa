@@ -68,9 +68,9 @@ function ConfirmGenerateBlogModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (includeInternalLinks: boolean) => void;
+  onConfirm: (includeCitations: boolean) => void;
 }) {
-  const [includeInternalLinks, setIncludeInternalLinks] = useState(false);
+  const [includeCitations, setIncludeInternalLinks] = useState(false);
 
   if (!isOpen) return null;
 
@@ -92,24 +92,24 @@ function ConfirmGenerateBlogModal({
             <div className="relative flex items-center justify-center mt-0.5">
               <input
                 type="checkbox"
-                checked={includeInternalLinks}
+                checked={includeCitations}
                 onChange={(e) => setIncludeInternalLinks(e.target.checked)}
                 className="sr-only"
               />
               <div
                 className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                  includeInternalLinks
+                  includeCitations
                     ? 'bg-blue-600 border-blue-600'
                     : 'border-gray-300 bg-white'
                 }`}
               >
-                {includeInternalLinks && <Check size={14} className="text-white" />}
+                {includeCitations && <Check size={14} className="text-white" />}
               </div>
             </div>
             <div>
-              <span className="text-sm font-medium text-gray-900">Include internal links</span>
+              <span className="text-sm font-medium text-gray-900">Include citations</span>
               <p className="text-xs text-gray-500 mt-0.5">
-                Add links to your other published blog posts within the generated content.
+                Add citations and references to support the generated content.
               </p>
             </div>
           </label>
@@ -122,7 +122,7 @@ function ConfirmGenerateBlogModal({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(includeInternalLinks)}
+            onClick={() => onConfirm(includeCitations)}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
           >
             Generate Blog
@@ -331,7 +331,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
   };
 
   // Generate full blog from outline
-  const handleGenerateBlog = async (includeInternalLinks: boolean): Promise<void> => {
+  const handleGenerateBlog = async (includeCitations: boolean): Promise<void> => {
     setShowConfirmModal(false);
     setIsGeneratingBlog(true);
 
@@ -344,7 +344,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
 
       const response = await generateBlog(data.topic, outlineForApi, {
         target_audience: data.targetAudience || profile?.target_audience,
-        include_internal_links: includeInternalLinks,
+        include_citations: includeCitations,
       });
 
       onComplete({

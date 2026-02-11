@@ -122,13 +122,13 @@ export async function generateOutline(
 export async function generateBlog(
     topic: string,
     outline: OutlineSection[],
-    options?: { target_audience?: string; include_internal_links?: boolean }
+    options?: { target_audience?: string; include_citations?: boolean }
 ): Promise<GenerateBlogResponse> {
     return apiRequest<GenerateBlogResponse>('/blog/generate-blog', {
         topic,
         outline,
         target_audience: options?.target_audience,
-        include_internal_links: options?.include_internal_links,
+        include_citations: options?.include_citations,
     });
 }
 
