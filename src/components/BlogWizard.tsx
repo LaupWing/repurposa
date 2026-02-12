@@ -403,14 +403,16 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
             <span className="bg-gray-100 px-3 py-1 rounded-full text-xs text-gray-600">
               Step {currentStep} of 3
             </span>
-            <button
-              onClick={handleSkipAll}
-              disabled={isGeneratingOutline || isGeneratingBlog}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
-            >
-              <SkipForward size={12} />
-              Skip All
-            </button>
+            {currentStep < 3 && (
+              <button
+                onClick={handleSkipAll}
+                disabled={isGeneratingOutline || isGeneratingBlog}
+                className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+              >
+                <SkipForward size={12} />
+                Skip All
+              </button>
+            )}
           </div>
         </div>
 
