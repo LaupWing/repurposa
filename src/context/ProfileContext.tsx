@@ -18,6 +18,7 @@ export interface ProfileData {
     brand_voice: 'conversational' | 'professional' | 'bold';
     lang: 'en' | 'nl';
     has_seen_connect_modal?: boolean;
+    onboarding_completed?: boolean;
 }
 
 export interface SocialConnection {
@@ -30,6 +31,7 @@ export interface UserData {
     id: number;
     name: string;
     email: string;
+    signup_provider?: string;
 }
 
 interface ProfileContextType {
@@ -38,6 +40,7 @@ interface ProfileContextType {
     socialConnections: SocialConnection[];
     isLoading: boolean;
     isConnected: boolean;
+    needsOnboarding: boolean;
     setProfile: (profile: ProfileData) => void;
     saveProfile: (profile: ProfileData) => Promise<void>;
     deleteProfile: () => Promise<void>;
@@ -100,6 +103,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
+    const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
     const fetchProfile = useCallback(async () => {
         const { token } = getConfig();
@@ -110,6 +114,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         setUser(response.user);
         if (response.profile) {
             setProfile(response.profile);
+            setNeedsOnboarding(!response.profile.onboarding_completed);
+        } else {
+            setNeedsOnboarding(true);
         }
         setSocialConnections((response.social_accounts || []).map(account => ({
             platform: account.platform,
@@ -156,7 +163,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     }, [fetchProfile]);
 
     return (
-        <ProfileContext.Provider value={{ user, profile, socialConnections, isLoading, isConnected, setProfile, saveProfile, deleteProfile, refreshProfile }}>
+        <ProfileContext.Provider value={{ user, profile, socialConnections, isLoading, isConnected, needsOnboarding, setProfile, saveProfile, deleteProfile, refreshProfile }}>
             {children}
         </ProfileContext.Provider>
     );

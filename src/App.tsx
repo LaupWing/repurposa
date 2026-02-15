@@ -5,7 +5,6 @@
  * No custom sidebar - uses WordPress native navigation.
  */
 
-import { useState } from '@wordpress/element';
 import { Toaster, toast } from 'sonner';
 import { ProfileProvider, useProfile } from './context/ProfileContext';
 import BlogWizard from './components/BlogWizard';
@@ -13,8 +12,8 @@ import BlogsPage from './components/pages/BlogsPage';
 import BlogViewPage from './components/pages/BlogViewPage';
 import SchedulePage from './components/pages/SchedulePage';
 import ConnectionsPage from './components/pages/ConnectionsPage';
-import ConnectAccount from './components/ConnectAccount';
-import { ConnectAccountsModal } from './components/ConnectAccountsModal';
+import LoginModal from './components/LoginModal';
+import OnboardingModal from './components/OnboardingModal';
 import type { WizardData } from './components/BlogWizard';
 
 // ============================================
@@ -33,8 +32,7 @@ interface AppProps {
 // ============================================
 
 function AppContent({ initialPage, postId }: AppProps) {
-    const { isLoading, isConnected } = useProfile();
-    const [justConnected, setJustConnected] = useState(false);
+    const { isLoading, isConnected, needsOnboarding } = useProfile();
 
     const handleWizardComplete = (data: WizardData) => {
         toast.success('Blog created!', {
@@ -49,17 +47,22 @@ function AppContent({ initialPage, postId }: AppProps) {
         return null;
     }
 
-    // Not connected — show connect screen
-    if (!isConnected && !justConnected) {
+    // Not connected — show login modal
+    if (!isConnected) {
         return (
             <>
                 <Toaster position="bottom-right" richColors />
-                <ConnectAccount onConnected={() => {
-                    setJustConnected(true);
-                    toast.success('Account connected!');
-                    // Reload to fetch profile with new token
-                    window.location.reload();
-                }} />
+                <LoginModal onConnected={() => window.location.reload()} />
+            </>
+        );
+    }
+
+    // Connected but needs onboarding
+    if (needsOnboarding) {
+        return (
+            <>
+                <Toaster position="bottom-right" richColors />
+                <OnboardingModal onComplete={() => window.location.reload()} />
             </>
         );
     }
@@ -84,7 +87,6 @@ function AppContent({ initialPage, postId }: AppProps) {
     return (
         <>
             <Toaster position="bottom-right" richColors />
-            <ConnectAccountsModal />
             {renderPage()}
         </>
     );
