@@ -244,6 +244,33 @@ export async function updateWizard(
 }
 
 // ============================================
+// POST VERSIONS API
+// ============================================
+
+export interface PostVersion {
+    id: number;
+    version_number: number;
+    title: string;
+    content: string;
+    change_type: string;
+    restored_from_version_id: number | null;
+    created_at: string;
+}
+
+export async function getVersions(postId: number): Promise<PostVersion[]> {
+    const response = await apiRequest<{ data: PostVersion[] }>(`/blogs/${postId}/versions`, {}, 'GET');
+    return response.data;
+}
+
+export async function createVersion(postId: number): Promise<PostVersion> {
+    return apiRequest<PostVersion>(`/blogs/${postId}/versions`, {});
+}
+
+export async function restoreVersion(postId: number, versionId: number): Promise<PostVersion> {
+    return apiRequest<PostVersion>(`/blogs/${postId}/versions/${versionId}/restore`, {});
+}
+
+// ============================================
 // BLOG API
 // ============================================
 

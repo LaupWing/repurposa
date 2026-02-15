@@ -32,22 +32,6 @@ interface SocialPlatform {
 // CONSTANTS
 // ============================================
 
-const BUSINESS_TYPES = [
-  { value: "coaching", label: "Coaching" },
-  { value: "consulting", label: "Consulting" },
-  { value: "course", label: "Course" },
-  { value: "digital-products", label: "Digital Products" },
-  { value: "saas", label: "SaaS" },
-  { value: "agency", label: "Agency" },
-  { value: "freelance", label: "Freelance Services" },
-  { value: "ecommerce", label: "eCommerce" },
-  { value: "newsletter", label: "Newsletter" },
-  { value: "membership", label: "Membership / Community" },
-  { value: "content-creator", label: "Content Creator" },
-  { value: "local-business", label: "Local Business" },
-  { value: "other", label: "Other" },
-];
-
 const BRAND_VOICES = ["conversational", "professional", "bold"] as const;
 
 const platforms: SocialPlatform[] = [
@@ -225,57 +209,6 @@ export default function ConnectionsPage() {
 
         {/* Content */}
         <div className="px-6 py-6 space-y-5">
-          {/* Business Type */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              What do you sell?{" "}
-              <span className="font-normal text-gray-500">(Business type)</span>
-            </label>
-            {(() => {
-              const knownValues = BUSINESS_TYPES.map((t) => t.value);
-              const raw = profile?.business_type || "";
-              const isCustom = raw !== "" && !knownValues.includes(raw);
-              const selectValue = isCustom ? "other" : raw;
-
-              return (
-                <>
-                  <select
-                    value={selectValue}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setProfile((prev) =>
-                        prev
-                          ? { ...prev, business_type: val === "other" ? "" : val }
-                          : null
-                      );
-                    }}
-                    className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                  >
-                    <option value="">Select...</option>
-                    {BUSINESS_TYPES.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                  {(selectValue === "other") && (
-                    <input
-                      type="text"
-                      placeholder="e.g., service, photography, real estate"
-                      value={isCustom ? raw : ""}
-                      onChange={(e) =>
-                        setProfile((prev) =>
-                          prev ? { ...prev, business_type: e.target.value } : null
-                        )
-                      }
-                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  )}
-                </>
-              );
-            })()}
-          </div>
-
           {/* Niche */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
