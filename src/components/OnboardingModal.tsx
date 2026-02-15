@@ -54,6 +54,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     const provider = user?.signup_provider;
     const steps = getStepsForProvider(provider);
 
+
     const getInitialStep = (): Step => {
         try {
             const saved = localStorage.getItem(STORAGE_KEY) as Step | null;
@@ -90,6 +91,23 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
           ? 'setup-profile'
           : 'setup-business';
 
+    const saveStepData = async (data: Record<string, unknown>) => {
+        const { apiUrl, token } = getConfig();
+        try {
+            await fetch(`${apiUrl}/api/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(data),
+            });
+        } catch {
+            // silent — incremental save is best-effort
+        }
+    };
+
     const goTo = (next: Step) => {
         setStep(next);
     };
@@ -125,28 +143,25 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     };
 
     const handleComplete = async () => {
-        const { apiUrl, token } = getConfig();
         setSending(true);
         setErrors({});
 
+        const payload = {
+            brand_voice: formData.brand_voice,
+            content_lang: formData.content_lang,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            onboarding_completed: true,
+        };
+        const { apiUrl, token } = getConfig();
         try {
-            const response = await fetch(`${apiUrl}/api/profile/complete`, {
-                method: 'POST',
+            const response = await fetch(`${apiUrl}/api/profile`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({
-                    name: name || undefined,
-                    email: email || undefined,
-                    niche: formData.niche,
-                    target_audience: formData.target_audience,
-                    brand_voice: formData.brand_voice,
-                    content_lang: formData.content_lang,
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                    onboarding_completed: true,
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (!response.ok) {
@@ -219,6 +234,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' && name.trim()) {
                                                 e.preventDefault();
+                                                saveStepData({ name });
                                                 goTo('setup-connect');
                                             }
                                         }}
@@ -228,7 +244,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                                 </div>
 
                                 <button
-                                    onClick={() => goTo('setup-connect')}
+                                    onClick={() => { saveStepData({ name }); goTo('setup-connect'); }}
                                     disabled={!name.trim()}
                                     className="w-full h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
@@ -260,6 +276,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' && email.trim()) {
                                                 e.preventDefault();
+                                                saveStepData({ email });
                                                 goTo('setup-business');
                                             }
                                         }}
@@ -274,7 +291,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                                 </p>
 
                                 <button
-                                    onClick={() => goTo('setup-business')}
+                                    onClick={() => { saveStepData({ email }); goTo('setup-business'); }}
                                     disabled={!email.trim()}
                                     className="w-full h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
@@ -377,7 +394,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                                 </div>
 
                                 <button
-                                    onClick={() => goTo('setup-preferences')}
+                                    onClick={() => { saveStepData({ niche: formData.niche, target_audience: formData.target_audience }); goTo('setup-preferences'); }}
                                     disabled={!formData.niche.trim() || !formData.target_audience.trim()}
                                     className="w-full h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >

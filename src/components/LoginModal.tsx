@@ -48,6 +48,9 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
 
     const saveTokenAndConnect = async (token: string) => {
         try {
+            // Clear stale onboarding step from any previous session
+            try { localStorage.removeItem('onboarding-step'); } catch { /* ignore */ }
+
             await apiFetch({
                 path: '/wbrp/v1/auth/token',
                 method: 'POST',
@@ -64,39 +67,27 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
         const { apiUrl } = getConfig();
         const origin = window.location.origin;
         const popupUrl = `${apiUrl}/social/${platform}/login?origin=${encodeURIComponent(origin)}&source=wordpress`;
-
-        console.log('[LoginModal] openSocialLogin called', { platform, apiUrl, origin, popupUrl });
         setLoadingPlatform(platform);
 
         const popup = window.open(popupUrl, 'wbrp-auth', 'width=600,height=700,scrollbars=yes');
-        console.log('[LoginModal] Popup opened:', popup ? 'success' : 'BLOCKED');
 
         const handleMessage = async (event: MessageEvent) => {
-            console.log('[LoginModal] postMessage received:', { origin: event.origin, data: event.data });
+            if (event.data?.type !== 'wbrp-auth') return;
 
-            if (event.data?.type !== 'wbrp-auth') {
-                console.log('[LoginModal] Ignoring message — type is not "wbrp-auth", got:', event.data?.type);
-                return;
-            }
-
-            console.log('[LoginModal] wbrp-auth message matched!', event.data);
             window.removeEventListener('message', handleMessage);
             clearInterval(checkClosed);
             setLoadingPlatform(null);
 
             const { token } = event.data;
-            console.log('[LoginModal] Token received:', token ? `${token.substring(0, 10)}...` : 'NONE');
             if (token) {
                 await saveTokenAndConnect(token);
             }
         };
 
         window.addEventListener('message', handleMessage);
-        console.log('[LoginModal] Listening for postMessage events...');
 
         const checkClosed = setInterval(() => {
             if (popup?.closed) {
-                console.log('[LoginModal] Popup was closed without completing auth');
                 clearInterval(checkClosed);
                 window.removeEventListener('message', handleMessage);
                 setLoadingPlatform(null);
