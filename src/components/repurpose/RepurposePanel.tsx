@@ -731,15 +731,19 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete }: { post: ThreadI
     );
 }
 
-function ThreadCard({ thread, index, onEditPost, onDeletePost, onSchedule, onDelete }: {
+function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSchedule, onDelete }: {
     thread: ThreadItem;
     index: number;
     onEditPost: (postIndex: number, content: string) => void;
     onDeletePost: (postIndex: number) => void;
+    onEditHook: (content: string) => void;
     onSchedule: () => void;
     onDelete: () => void;
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isEditingHook, setIsEditingHook] = useState(false);
+    const [editHookContent, setEditHookContent] = useState(thread.hook);
+    const editHookRef = useRef<HTMLTextAreaElement>(null);
     const [copied, setCopied] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -794,9 +798,42 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onSchedule, onDel
                             {totalChars} chars
                         </span>
                     </div>
-                    <p className="text-sm text-gray-800 font-medium py-2 whitespace-pre-wrap">
-                        {thread.hook}
-                    </p>
+                    {isEditingHook ? (
+                        <div className="py-2" onClick={(e) => e.stopPropagation()}>
+                            <AITextPopup textareaRef={editHookRef} value={editHookContent} onChange={setEditHookContent} />
+                            <textarea
+                                ref={editHookRef}
+                                value={editHookContent}
+                                onChange={(e) => setEditHookContent(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                rows={4}
+                                style={{ fieldSizing: 'content' } as React.CSSProperties}
+                            />
+                            <div className="mt-2 flex items-center justify-between">
+                                <span className={`text-xs font-mono ${editHookContent.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                    {editHookContent.length}/280
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => { setEditHookContent(thread.hook); setIsEditingHook(false); }}
+                                        className="px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => { onEditHook(editHookContent); setIsEditingHook(false); }}
+                                        className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                                    >
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-800 font-medium py-2 whitespace-pre-wrap">
+                            {thread.hook}
+                        </p>
+                    )}
                 </div>
             </button>
 
@@ -823,6 +860,12 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onSchedule, onDel
 
                 {/* Right - Actions */}
                 <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setIsEditingHook(true)}
+                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
+                        <Pencil size={14} />
+                    </button>
                     <button
                         onClick={onSchedule}
                         className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
@@ -852,8 +895,22 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onSchedule, onDel
                                     onClick={() => { setMenuOpen(false); }}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                                 >
+                                    <ImagePlus size={14} />
+                                    Add Image
+                                </button>
+                                <button
+                                    onClick={() => { setMenuOpen(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
                                     <Send size={14} />
                                     Publish Now
+                                </button>
+                                <button
+                                    onClick={() => { setMenuOpen(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    <Image size={14} />
+                                    Turn into Visual
                                 </button>
                                 <div className="border-t border-gray-100 my-1" />
                                 <button
@@ -1937,7 +1994,22 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                             : t
                                     ));
                                 }}
-                                onSchedule={() => {}}
+                                onEditHook={(content) => {
+                                    setThreads(prev => prev.map(t =>
+                                        t.id === thread.id ? { ...t, hook: content } : t
+                                    ));
+                                }}
+                                onSchedule={() => {
+                                    setSchedulingPost({
+                                        id: thread.id,
+                                        content: thread.posts.map(p => p.content).join('\n\n---\n\n'),
+                                        emotions: thread.metadata.emotions,
+                                        structure: thread.metadata.structure,
+                                        why_it_works: thread.metadata.why_it_works,
+                                        media: [],
+                                        cta_media: [],
+                                    });
+                                }}
                                 onDelete={() => setThreads(prev => prev.filter(t => t.id !== thread.id))}
                             />
                         ))}
