@@ -35,8 +35,8 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost } from '../../services/api';
-import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType } from '../../services/api';
+import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost, generateThreads } from '../../services/api';
+import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType, ThreadItem } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
 import ImagePickerModal from '../ImagePickerModal';
@@ -60,11 +60,6 @@ interface ShortPostPattern {
     cta_media: string[];
 }
 
-interface Thread {
-    id: string;
-    tweets: { id: string; content: string; characterCount: number }[];
-}
-
 function shortPostToPattern(sp: ShortPost): ShortPostPattern {
     return {
         id: sp.id,
@@ -78,29 +73,6 @@ function shortPostToPattern(sp: ShortPost): ShortPostPattern {
         cta_media: sp.cta_content?.media?.filter((m): m is string => typeof m === 'string') || [],
     };
 }
-
-const sampleThreads: Thread[] = [
-    {
-        id: '1',
-        tweets: [
-            {
-                id: 't1',
-                content: "I've lost 30 pounds in 6 months without giving up pizza.\n\nHere's exactly how I did it:\n\n(A thread) 🧵",
-                characterCount: 112,
-            },
-            {
-                id: 't2',
-                content: "1/ First, I stopped treating food as the enemy.\n\nDiets fail because they're built on restriction.\n\nI built mine on addition.",
-                characterCount: 128,
-            },
-            {
-                id: 't3',
-                content: "2/ I added:\n- More protein at breakfast\n- A 10-min walk after meals\n- One glass of water before eating\n\nSmall additions. Big results.",
-                characterCount: 146,
-            },
-        ],
-    },
-];
 
 // ============================================
 // EMOTION COLORS
@@ -650,18 +622,18 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     );
 }
 
-function ThreadCard({ thread, index }: { thread: Thread; index: number }) {
+function ThreadCard({ thread, index }: { thread: ThreadItem; index: number }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [copied, setCopied] = useState(false);
 
     const handleCopyAll = () => {
-        const fullThread = thread.tweets.map((t) => t.content).join('\n\n---\n\n');
+        const fullThread = thread.posts.map((p) => p.content).join('\n\n---\n\n');
         navigator.clipboard.writeText(fullThread);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const totalChars = thread.tweets.reduce((sum, t) => sum + t.characterCount, 0);
+    const totalChars = thread.posts.reduce((sum, p) => sum + p.content.length, 0);
 
     return (
         <div className="mb-3 rounded-xl border border-gray-200 bg-white overflow-hidden">
@@ -676,14 +648,14 @@ function ThreadCard({ thread, index }: { thread: Thread; index: number }) {
                 <div className="min-w-0 flex-1">
                     <div className="mb-1.5 flex items-center gap-2">
                         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                            {thread.tweets.length} posts
+                            {thread.posts.length} posts
                         </span>
                         <span className="text-[10px] text-gray-400">
                             {totalChars} chars
                         </span>
                     </div>
-                    <p className="line-clamp-2 text-sm text-gray-800 whitespace-pre-wrap">
-                        {thread.tweets[0]?.content}
+                    <p className="line-clamp-2 text-sm text-gray-800 font-medium">
+                        {thread.hook}
                     </p>
                 </div>
             </button>
@@ -705,10 +677,10 @@ function ThreadCard({ thread, index }: { thread: Thread; index: number }) {
                     </div>
 
                     <div className="relative mt-2">
-                        {thread.tweets.map((tweet, idx) => (
-                            <div key={tweet.id} className="relative pb-4 pl-8 last:pb-0">
+                        {thread.posts.map((post, idx) => (
+                            <div key={idx} className="relative pb-4 pl-8 last:pb-0">
                                 {/* Thread line */}
-                                {idx < thread.tweets.length - 1 && (
+                                {idx < thread.posts.length - 1 && (
                                     <div className="absolute top-6 left-[11px] h-[calc(100%-12px)] w-[2px] bg-gray-200" />
                                 )}
                                 {/* Number dot */}
@@ -718,15 +690,15 @@ function ThreadCard({ thread, index }: { thread: Thread; index: number }) {
                                 {/* Content */}
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
                                     <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
-                                        {tweet.content}
+                                        {post.content}
                                     </p>
                                     <div className="mt-2 border-t border-gray-100 pt-2">
                                         <span
                                             className={`font-mono text-[10px] ${
-                                                tweet.characterCount > 280 ? 'text-red-500' : 'text-gray-400'
+                                                post.content.length > 280 ? 'text-red-500' : 'text-gray-400'
                                             }`}
                                         >
-                                            {tweet.characterCount}/280
+                                            {post.content.length}/280
                                         </span>
                                     </div>
                                 </div>
@@ -1544,6 +1516,8 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [schedulingPost, setSchedulingPost] = useState<ShortPostPattern | null>(null);
+    const [threads, setThreads] = useState<ThreadItem[]>([]);
+    const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
 
     // Persist media changes to the API
     const syncShortPostMedia = (postId: number, media: string[], ctaContent?: string, ctaMedia?: string[]) => {
@@ -1623,6 +1597,28 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
 
     const handleScheduled = () => {
         setSchedulingPost(null);
+    };
+
+    const handleGenerateThreads = async () => {
+        if (!blogContent || !blogId) {
+            toast.error('No blog content available to repurpose.');
+            return;
+        }
+
+        setIsGeneratingThreads(true);
+
+        try {
+            const response = await generateThreads(blogId, blogContent);
+            setThreads(response.threads);
+            toast.success(`${response.threads.length} threads generated`);
+        } catch (error) {
+            console.error('Failed to generate threads:', error);
+            toast.error('Failed to generate threads', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsGeneratingThreads(false);
+        }
     };
 
     // Show content based on initialTab (parent controls the tab)
@@ -1711,17 +1707,17 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 );
 
             case 'threads':
-                return sampleThreads.length === 0 ? (
-                    <EmptyState type="threads" onGenerate={() => {}} isGenerating={false} />
+                return threads.length === 0 ? (
+                    <EmptyState type="threads" onGenerate={handleGenerateThreads} isGenerating={isGeneratingThreads} />
                 ) : (
                     <div>
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-sm font-medium text-gray-500">Thread Variations</h3>
                             <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                {sampleThreads.length} generated
+                                {threads.length} generated
                             </span>
                         </div>
-                        {sampleThreads.map((thread, index) => (
+                        {threads.map((thread, index) => (
                             <ThreadCard key={thread.id} thread={thread} index={index} />
                         ))}
                     </div>
@@ -1744,6 +1740,12 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 <GeneratingOverlay
                     title="Generating Short Posts"
                     description="Analyzing your blog content and crafting engaging short posts..."
+                />
+            )}
+            {isGeneratingThreads && (
+                <GeneratingOverlay
+                    title="Generating Threads"
+                    description="Analyzing your blog content and crafting engaging threads..."
                 />
             )}
             <ConfirmGenerateModal

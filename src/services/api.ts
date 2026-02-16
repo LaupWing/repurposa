@@ -209,6 +209,44 @@ export async function updateShortPost(shortPostId: number, data: {
     return apiRequest<ShortPost>(`/repurpose/short-posts/${shortPostId}`, data as Record<string, unknown>, 'PATCH');
 }
 
+// ============================================
+// THREADS API
+// ============================================
+
+export interface ThreadPost {
+    content: string;
+    media: { style: string; format: string; description: string } | null;
+}
+
+export interface ThreadMetadata {
+    inspiration_id: number;
+    hook_techniques: string[];
+    structure: string;
+    emotions: string[];
+    why_it_works: string;
+}
+
+export interface ThreadItem {
+    id: number;
+    hook: string;
+    posts: ThreadPost[];
+    metadata: ThreadMetadata;
+}
+
+export interface GenerateThreadsResponse {
+    threads: ThreadItem[];
+}
+
+export async function generateThreads(
+    postId: number,
+    blogContent: string
+): Promise<GenerateThreadsResponse> {
+    return apiRequest<GenerateThreadsResponse>('/repurpose/generate-threads', {
+        post_id: postId,
+        blog_content: blogContent,
+    });
+}
+
 export interface Swipe {
     id: number;
     user_id: number | null;
