@@ -237,6 +237,11 @@ export interface GenerateThreadsResponse {
     threads: ThreadItem[];
 }
 
+export async function getThreads(postId: number): Promise<ThreadItem[]> {
+    const response = await apiRequest<{ data: ThreadItem[] }>(`/blogs/${postId}/threads`, {}, 'GET');
+    return response.data;
+}
+
 export async function generateThreads(
     postId: number,
     blogContent: string

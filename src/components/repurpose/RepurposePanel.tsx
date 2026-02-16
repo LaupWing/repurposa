@@ -35,7 +35,7 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost, generateThreads } from '../../services/api';
+import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost, generateThreads, getThreads } from '../../services/api';
 import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType, ThreadItem } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
@@ -1548,7 +1548,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         toast.success('Short post added');
     };
 
-    // Load saved short posts on mount
+    // Load saved short posts and threads on mount
     useEffect(() => {
         if (!blogId) return;
         const loadShortPosts = async () => {
@@ -1562,7 +1562,16 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 setIsLoading(false);
             }
         };
+        const loadThreads = async () => {
+            try {
+                const threads = await getThreads(blogId);
+                setThreads(threads);
+            } catch (error) {
+                console.error('Failed to load threads:', error);
+            }
+        };
         loadShortPosts();
+        loadThreads();
     }, [blogId]);
 
     const onGenerateClick = () => {
