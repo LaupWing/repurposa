@@ -622,10 +622,17 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     );
 }
 
-function ThreadPostItem({ post, idx, isLast, onEdit }: { post: ThreadItem['posts'][number]; idx: number; isLast: boolean; onEdit: (content: string) => void }) {
+function ThreadPostItem({ post, idx, isLast, onEdit, onDelete }: { post: ThreadItem['posts'][number]; idx: number; isLast: boolean; onEdit: (content: string) => void; onDelete: () => void }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(post.content);
+    const [copied, setCopied] = useState(false);
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(post.content);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     const handleSave = () => {
         onEdit(editContent);
@@ -698,10 +705,22 @@ function ThreadPostItem({ post, idx, isLast, onEdit }: { post: ThreadItem['posts
                             </div>
                             <div className="flex items-center gap-1">
                                 <button
+                                    onClick={handleCopy}
+                                    className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                >
+                                    {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                                </button>
+                                <button
                                     onClick={() => setIsEditing(true)}
                                     className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                                 >
                                     <Pencil size={14} />
+                                </button>
+                                <button
+                                    onClick={onDelete}
+                                    className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                >
+                                    <Trash2 size={14} />
                                 </button>
                             </div>
                         </div>
@@ -712,9 +731,29 @@ function ThreadPostItem({ post, idx, isLast, onEdit }: { post: ThreadItem['posts
     );
 }
 
-function ThreadCard({ thread, index, onEditPost }: { thread: ThreadItem; index: number; onEditPost: (postIndex: number, content: string) => void }) {
+function ThreadCard({ thread, index, onEditPost, onDeletePost, onSchedule, onDelete }: {
+    thread: ThreadItem;
+    index: number;
+    onEditPost: (postIndex: number, content: string) => void;
+    onDeletePost: (postIndex: number) => void;
+    onSchedule: () => void;
+    onDelete: () => void;
+}) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!menuOpen) return;
+        const handleClick = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [menuOpen]);
 
     const handleCopyAll = () => {
         const fullThread = thread.posts.map((p) => p.content).join('\n\n---\n\n');
@@ -726,7 +765,7 @@ function ThreadCard({ thread, index, onEditPost }: { thread: ThreadItem; index: 
     const totalChars = thread.posts.reduce((sum, p) => sum + p.content.length, 0);
 
     return (
-        <div className="mb-4 rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
+        <div className="mb-4 rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
             {/* Header */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -755,29 +794,79 @@ function ThreadCard({ thread, index, onEditPost }: { thread: ThreadItem; index: 
                             {totalChars} chars
                         </span>
                     </div>
-                    <p className="line-clamp-2 text-sm text-gray-800 font-medium py-2">
+                    <p className="text-sm text-gray-800 font-medium py-2 whitespace-pre-wrap">
                         {thread.hook}
                     </p>
                 </div>
             </button>
 
             {/* Metadata - always visible */}
-            <div className="flex items-center gap-3 px-4 pb-3 pt-3 mx-4 border-t border-gray-100 -mt-1">
-                <span className={`font-mono text-[10px] ${thread.hook.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
-                    {thread.hook.length}/280
-                </span>
-                <Tooltip text={thread.metadata.why_it_works} delay={0} placement="top">
-                    <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
-                        <Lightbulb size={14} />
-                        Why it works
+            <div className="flex items-center justify-between px-4 pb-3 pt-3 mx-4 border-t border-gray-100 -mt-1">
+                {/* Left - Char count + Info tooltips */}
+                <div className="flex items-center gap-3">
+                    <span className={`font-mono text-[10px] ${thread.hook.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                        {thread.hook.length}/280
+                    </span>
+                    <Tooltip text={thread.metadata.why_it_works} delay={0} placement="top">
+                        <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
+                            <Lightbulb size={14} />
+                            Why it works
+                        </button>
+                    </Tooltip>
+                    <Tooltip text={thread.metadata.structure} delay={0} placement="top">
+                        <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
+                            <Layout size={14} />
+                            Structure
+                        </button>
+                    </Tooltip>
+                </div>
+
+                {/* Right - Actions */}
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={onSchedule}
+                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
+                        <Calendar size={14} />
                     </button>
-                </Tooltip>
-                <Tooltip text={thread.metadata.structure} delay={0} placement="top">
-                    <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
-                        <Layout size={14} />
-                        Structure
-                    </button>
-                </Tooltip>
+                    {/* More menu */}
+                    <div className="relative" ref={menuRef}>
+                        <button
+                            onClick={() => setMenuOpen(!menuOpen)}
+                            className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${
+                                menuOpen ? 'bg-gray-100 text-gray-600' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                            }`}
+                        >
+                            <MoreHorizontal size={14} />
+                        </button>
+                        {menuOpen && (
+                            <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-10">
+                                <button
+                                    onClick={() => { handleCopyAll(); setMenuOpen(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                                    {copied ? 'Copied!' : 'Copy All'}
+                                </button>
+                                <button
+                                    onClick={() => { setMenuOpen(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    <Send size={14} />
+                                    Publish Now
+                                </button>
+                                <div className="border-t border-gray-100 my-1" />
+                                <button
+                                    onClick={() => { onDelete(); setMenuOpen(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                    <Trash2 size={14} />
+                                    Delete
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Expanded content */}
@@ -804,6 +893,7 @@ function ThreadCard({ thread, index, onEditPost }: { thread: ThreadItem; index: 
                                 idx={idx}
                                 isLast={idx === thread.posts.length - 1}
                                 onEdit={(content) => onEditPost(idx, content)}
+                                onDelete={() => onDeletePost(idx)}
                             />
                         ))}
                     </div>
@@ -1840,6 +1930,15 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                             : t
                                     ));
                                 }}
+                                onDeletePost={(postIndex) => {
+                                    setThreads(prev => prev.map(t =>
+                                        t.id === thread.id
+                                            ? { ...t, posts: t.posts.filter((_, i) => i !== postIndex) }
+                                            : t
+                                    ));
+                                }}
+                                onSchedule={() => {}}
+                                onDelete={() => setThreads(prev => prev.filter(t => t.id !== thread.id))}
                             />
                         ))}
                     </div>
