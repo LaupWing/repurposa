@@ -79,7 +79,28 @@ function shortPostToPattern(sp: ShortPost): ShortPostPattern {
     };
 }
 
-const sampleThreads: Thread[] = [];
+const sampleThreads: Thread[] = [
+    {
+        id: '1',
+        tweets: [
+            {
+                id: 't1',
+                content: "I've lost 30 pounds in 6 months without giving up pizza.\n\nHere's exactly how I did it:\n\n(A thread) 🧵",
+                characterCount: 112,
+            },
+            {
+                id: 't2',
+                content: "1/ First, I stopped treating food as the enemy.\n\nDiets fail because they're built on restriction.\n\nI built mine on addition.",
+                characterCount: 128,
+            },
+            {
+                id: 't3',
+                content: "2/ I added:\n- More protein at breakfast\n- A 10-min walk after meals\n- One glass of water before eating\n\nSmall additions. Big results.",
+                characterCount: 146,
+            },
+        ],
+    },
+];
 
 // ============================================
 // EMOTION COLORS
