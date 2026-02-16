@@ -730,7 +730,7 @@ function ThreadCard({ thread, index, onEditPost }: { thread: ThreadItem; index: 
             {/* Header */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full px-4 py-3 flex items-start gap-3 text-left hover:bg-gray-50"
+                className="w-full px-4 pt-4 pb-4 flex items-start gap-3 text-left hover:bg-gray-50"
             >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600">
                     {index + 1}
@@ -755,14 +755,14 @@ function ThreadCard({ thread, index, onEditPost }: { thread: ThreadItem; index: 
                             {totalChars} chars
                         </span>
                     </div>
-                    <p className="line-clamp-2 text-sm text-gray-800 font-medium">
+                    <p className="line-clamp-2 text-sm text-gray-800 font-medium py-2">
                         {thread.hook}
                     </p>
                 </div>
             </button>
 
             {/* Metadata - always visible */}
-            <div className="flex items-center gap-3 px-4 pb-3 -mt-1">
+            <div className="flex items-center gap-3 px-4 pb-3 pt-3 mx-4 border-t border-gray-100 -mt-1">
                 <span className={`font-mono text-[10px] ${thread.hook.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
                     {thread.hook.length}/280
                 </span>
