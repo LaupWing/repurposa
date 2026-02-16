@@ -622,7 +622,97 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
     );
 }
 
-function ThreadCard({ thread, index }: { thread: ThreadItem; index: number }) {
+function ThreadPostItem({ post, idx, isLast, onEdit }: { post: ThreadItem['posts'][number]; idx: number; isLast: boolean; onEdit: (content: string) => void }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editContent, setEditContent] = useState(post.content);
+    const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const handleSave = () => {
+        onEdit(editContent);
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        setEditContent(post.content);
+        setIsEditing(false);
+    };
+
+    return (
+        <div className="relative pb-4 pl-8 last:pb-0">
+            {/* Thread line */}
+            {!isLast && (
+                <div className="absolute top-6 left-[11px] h-[calc(100%-12px)] w-[2px] bg-gray-200" />
+            )}
+            {/* Number dot */}
+            <div className="absolute top-0 left-0 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-[10px] font-medium text-gray-500">
+                {idx + 1}
+            </div>
+            {/* Content */}
+            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                {isEditing ? (
+                    <div>
+                        <AITextPopup textareaRef={editTextareaRef} value={editContent} onChange={setEditContent} />
+                        <textarea
+                            ref={editTextareaRef}
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                            rows={4}
+                            style={{ fieldSizing: 'content' } as React.CSSProperties}
+                        />
+                        <div className="mt-2 flex items-center justify-between">
+                            <span className={`text-xs font-mono ${editContent.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                {editContent.length}/280
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleCancel}
+                                    className="px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
+                            {post.content}
+                        </p>
+                        {/* Footer */}
+                        <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                            <div className="flex items-center gap-3">
+                                <span
+                                    className={`font-mono text-[10px] ${
+                                        post.content.length > 280 ? 'text-red-500' : 'text-gray-400'
+                                    }`}
+                                >
+                                    {post.content.length}/280
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                >
+                                    <Pencil size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function ThreadCard({ thread, index, onEditPost }: { thread: ThreadItem; index: number; onEditPost: (postIndex: number, content: string) => void }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [copied, setCopied] = useState(false);
 
@@ -636,7 +726,7 @@ function ThreadCard({ thread, index }: { thread: ThreadItem; index: number }) {
     const totalChars = thread.posts.reduce((sum, p) => sum + p.content.length, 0);
 
     return (
-        <div className="mb-3 rounded-xl border border-gray-200 bg-white overflow-hidden">
+        <div className="mb-4 rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
             {/* Header */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -646,7 +736,18 @@ function ThreadCard({ thread, index }: { thread: ThreadItem; index: number }) {
                     {index + 1}
                 </div>
                 <div className="min-w-0 flex-1">
-                    <div className="mb-1.5 flex items-center gap-2">
+                    {/* Emotions */}
+                    <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                        {thread.metadata.emotions.map((emotion) => (
+                            <span
+                                key={emotion}
+                                className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                                    emotionColors[emotion] || 'border-gray-200 bg-gray-100 text-gray-600'
+                                }`}
+                            >
+                                {emotion}
+                            </span>
+                        ))}
                         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
                             {thread.posts.length} posts
                         </span>
@@ -659,6 +760,25 @@ function ThreadCard({ thread, index }: { thread: ThreadItem; index: number }) {
                     </p>
                 </div>
             </button>
+
+            {/* Metadata - always visible */}
+            <div className="flex items-center gap-3 px-4 pb-3 -mt-1">
+                <span className={`font-mono text-[10px] ${thread.hook.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {thread.hook.length}/280
+                </span>
+                <Tooltip text={thread.metadata.why_it_works} delay={0} placement="top">
+                    <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
+                        <Lightbulb size={14} />
+                        Why it works
+                    </button>
+                </Tooltip>
+                <Tooltip text={thread.metadata.structure} delay={0} placement="top">
+                    <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
+                        <Layout size={14} />
+                        Structure
+                    </button>
+                </Tooltip>
+            </div>
 
             {/* Expanded content */}
             {isExpanded && (
@@ -678,31 +798,13 @@ function ThreadCard({ thread, index }: { thread: ThreadItem; index: number }) {
 
                     <div className="relative mt-2">
                         {thread.posts.map((post, idx) => (
-                            <div key={idx} className="relative pb-4 pl-8 last:pb-0">
-                                {/* Thread line */}
-                                {idx < thread.posts.length - 1 && (
-                                    <div className="absolute top-6 left-[11px] h-[calc(100%-12px)] w-[2px] bg-gray-200" />
-                                )}
-                                {/* Number dot */}
-                                <div className="absolute top-0 left-0 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-[10px] font-medium text-gray-500">
-                                    {idx + 1}
-                                </div>
-                                {/* Content */}
-                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
-                                        {post.content}
-                                    </p>
-                                    <div className="mt-2 border-t border-gray-100 pt-2">
-                                        <span
-                                            className={`font-mono text-[10px] ${
-                                                post.content.length > 280 ? 'text-red-500' : 'text-gray-400'
-                                            }`}
-                                        >
-                                            {post.content.length}/280
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                            <ThreadPostItem
+                                key={idx}
+                                post={post}
+                                idx={idx}
+                                isLast={idx === thread.posts.length - 1}
+                                onEdit={(content) => onEditPost(idx, content)}
+                            />
                         ))}
                     </div>
                 </div>
@@ -1727,7 +1829,18 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                             </span>
                         </div>
                         {threads.map((thread, index) => (
-                            <ThreadCard key={thread.id} thread={thread} index={index} />
+                            <ThreadCard
+                                key={thread.id}
+                                thread={thread}
+                                index={index}
+                                onEditPost={(postIndex, content) => {
+                                    setThreads(prev => prev.map(t =>
+                                        t.id === thread.id
+                                            ? { ...t, posts: t.posts.map((p, i) => i === postIndex ? { ...p, content } : p) }
+                                            : t
+                                    ));
+                                }}
+                            />
                         ))}
                     </div>
                 );
