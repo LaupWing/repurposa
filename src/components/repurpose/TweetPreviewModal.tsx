@@ -28,6 +28,25 @@ type Theme = 'light' | 'dark';
 type Style = 'minimal' | 'detailed';
 type Corners = 'rounded' | 'square';
 
+interface GradientPreset {
+    id: string;
+    label: string;
+    light: string;
+    dark: string;
+    swatch: string; // for the picker circle
+}
+
+const GRADIENT_PRESETS: GradientPreset[] = [
+    { id: 'purple',  label: 'Purple',  light: 'from-violet-400 via-purple-400 to-violet-500',   dark: 'from-violet-600 via-purple-600 to-violet-700',   swatch: 'from-violet-500 to-purple-600' },
+    { id: 'blue',    label: 'Blue',    light: 'from-blue-400 via-sky-400 to-blue-500',          dark: 'from-blue-600 via-sky-600 to-blue-700',          swatch: 'from-blue-500 to-sky-600' },
+    { id: 'ocean',   label: 'Ocean',   light: 'from-cyan-400 via-teal-400 to-emerald-400',      dark: 'from-cyan-600 via-teal-600 to-emerald-600',      swatch: 'from-cyan-500 to-emerald-500' },
+    { id: 'green',   label: 'Green',   light: 'from-emerald-400 via-green-400 to-teal-400',     dark: 'from-emerald-600 via-green-600 to-teal-600',     swatch: 'from-emerald-500 to-teal-500' },
+    { id: 'sunset',  label: 'Sunset',  light: 'from-orange-400 via-rose-400 to-pink-400',       dark: 'from-orange-600 via-rose-600 to-pink-600',       swatch: 'from-orange-500 to-pink-500' },
+    { id: 'rose',    label: 'Rose',    light: 'from-pink-400 via-rose-400 to-red-400',          dark: 'from-pink-600 via-rose-600 to-red-600',          swatch: 'from-pink-500 to-red-500' },
+    { id: 'amber',   label: 'Amber',   light: 'from-amber-400 via-yellow-400 to-orange-400',    dark: 'from-amber-600 via-yellow-600 to-orange-600',    swatch: 'from-amber-500 to-orange-500' },
+    { id: 'slate',   label: 'Slate',   light: 'from-slate-300 via-gray-300 to-zinc-400',        dark: 'from-slate-600 via-gray-600 to-zinc-700',        swatch: 'from-slate-500 to-zinc-600' },
+];
+
 interface EngagementStats {
     views: number;
     reposts: number;
@@ -55,6 +74,7 @@ function TweetPreview({
     style,
     stats,
     roundedCorners,
+    gradient,
 }: {
     content: string;
     displayName: string;
@@ -64,6 +84,7 @@ function TweetPreview({
     style: Style;
     stats: EngagementStats;
     roundedCorners: boolean;
+    gradient: GradientPreset;
 }) {
     const isDark = theme === 'dark';
     const isMinimal = style === 'minimal';
@@ -81,9 +102,7 @@ function TweetPreview({
         year: 'numeric',
     });
 
-    const gradientBg = isDark
-        ? 'bg-gradient-to-br from-violet-600 via-purple-600 to-violet-700'
-        : 'bg-gradient-to-br from-violet-400 via-purple-400 to-violet-500';
+    const gradientBg = `bg-gradient-to-br ${isDark ? gradient.dark : gradient.light}`;
 
     const getTextSize = () => {
         const len = content.length;
@@ -215,6 +234,58 @@ function ToggleGroup<T extends string>({
 }
 
 // ============================================
+// CUSTOM SELECT DROPDOWN
+// ============================================
+
+function SelectDropdown<T extends string>({
+    label,
+    options,
+    value,
+    onChange,
+}: {
+    label: string;
+    options: { label: string; value: T }[];
+    value: T;
+    onChange: (v: T) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const selected = options.find((o) => o.value === value);
+
+    return (
+        <div className="relative">
+            <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+            <button
+                onClick={() => setOpen(!open)}
+                className="flex items-center justify-between gap-2 w-full min-w-[120px] rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-900 hover:border-gray-300 transition-colors"
+            >
+                <span>{selected?.label}</span>
+                <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && (
+                <>
+                    <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+                    <div className="absolute left-0 top-full mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-lg z-20 py-1 overflow-hidden">
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                onClick={() => { onChange(opt.value); setOpen(false); }}
+                                className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
+                                    opt.value === value
+                                        ? 'bg-blue-50 text-blue-700 font-medium'
+                                        : 'text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
+// ============================================
 // STATS EDITOR
 // ============================================
 
@@ -294,7 +365,8 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
     const previewRef = useRef<HTMLDivElement>(null);
     const [theme, setTheme] = useState<Theme>('light');
     const [style, setStyle] = useState<Style>('detailed');
-    const [corners, setCorners] = useState<Corners>('rounded');
+    const [corners, setCorners] = useState<Corners>('square');
+    const [gradient, setGradient] = useState<GradientPreset>(GRADIENT_PRESETS[0]);
     const [displayName, setDisplayName] = useState(user?.name || 'Your Name');
     const [handle, setHandle] = useState(xConnection?.username || 'yourhandle');
     const [stats, setStats] = useState<EngagementStats>(generateRandomStats);
@@ -402,8 +474,9 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
                     </div>
 
                     {/* Controls */}
-                    <div className="flex flex-wrap items-center gap-3 mb-6">
-                        <ToggleGroup
+                    <div className="flex flex-wrap items-end gap-3 mb-6">
+                        <SelectDropdown
+                            label="Style"
                             options={[
                                 { label: 'Detailed', value: 'detailed' as Style },
                                 { label: 'Minimal', value: 'minimal' as Style },
@@ -430,6 +503,25 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
                         {style === 'detailed' && <StatsEditor stats={stats} onChange={setStats} />}
                     </div>
 
+                    {/* Gradient presets */}
+                    <div className="mb-6">
+                        <label className="block text-xs font-medium text-gray-500 mb-2">Background</label>
+                        <div className="flex items-center gap-2">
+                            {GRADIENT_PRESETS.map((preset) => (
+                                <button
+                                    key={preset.id}
+                                    onClick={() => setGradient(preset)}
+                                    title={preset.label}
+                                    className={`h-7 w-7 rounded-full bg-gradient-to-br ${preset.swatch} transition-all ${
+                                        gradient.id === preset.id
+                                            ? 'ring-2 ring-blue-500 ring-offset-2 scale-110'
+                                            : 'hover:scale-110'
+                                    }`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Preview */}
                     <div className="flex justify-center">
                         <div ref={previewRef}>
@@ -442,6 +534,7 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
                                 style={style}
                                 stats={stats}
                                 roundedCorners={corners === 'rounded'}
+                                gradient={gradient}
                             />
                         </div>
                     </div>
