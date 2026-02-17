@@ -461,8 +461,32 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
                         duration: [200, 150],
                         onCreate: (instance: any) => { tippyRef.current = instance; },
                         onHide: () => {
-                            // Prevent Tippy from hiding during AI operations
                             if (aiStateRef.current.status !== 'idle') return false;
+                        },
+                        popperOptions: {
+                            modifiers: [
+                                {
+                                    name: 'centerOnEditor',
+                                    enabled: true,
+                                    phase: 'afterMain' as const,
+                                    requires: ['popperOffsets'],
+                                    fn({ state }: any) {
+                                        const editorEl = editor.view.dom;
+                                        if (!state.modifiersData.popperOffsets) return;
+                                        const editorRect = editorEl.getBoundingClientRect();
+                                        const popperWidth = state.rects.popper.width;
+                                        const offsetParent = state.elements.popper.offsetParent || document.body;
+                                        const parentRect = offsetParent.getBoundingClientRect();
+                                        // Center on editor, but in offset-parent coordinate space
+                                        let x = editorRect.left + editorRect.width / 2 - popperWidth / 2 - parentRect.left;
+                                        // Clamp so it doesn't overflow the viewport
+                                        const minX = 8 - parentRect.left;
+                                        const maxX = window.innerWidth - popperWidth - 8 - parentRect.left;
+                                        x = Math.max(minX, Math.min(x, maxX));
+                                        state.modifiersData.popperOffsets.x = x;
+                                    },
+                                },
+                            ],
                         },
                     }}
                 >
