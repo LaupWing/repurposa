@@ -740,7 +740,7 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete }: { post: ThreadI
     );
 }
 
-function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSchedule, onDelete }: {
+function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSchedule, onDelete, blogId, onVisualSaved }: {
     thread: ThreadItem;
     index: number;
     onEditPost: (postIndex: number, content: string) => void;
@@ -748,6 +748,8 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSch
     onEditHook: (content: string) => void;
     onSchedule: () => void;
     onDelete: () => void;
+    blogId?: number;
+    onVisualSaved?: (visual: Visual) => void;
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditingHook, setIsEditingHook] = useState(false);
@@ -756,6 +758,7 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSch
     const [copied, setCopied] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const [showVisualModal, setShowVisualModal] = useState(false);
 
     useEffect(() => {
         if (!menuOpen) return;
@@ -915,7 +918,7 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSch
                                     Publish Now
                                 </button>
                                 <button
-                                    onClick={() => { setMenuOpen(false); }}
+                                    onClick={() => { setShowVisualModal(true); setMenuOpen(false); }}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                                 >
                                     <Image size={14} />
@@ -965,6 +968,19 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSch
                     </div>
                 </div>
             )}
+
+            <TweetPreviewModal
+                isOpen={showVisualModal}
+                onClose={() => setShowVisualModal(false)}
+                content={thread.posts.map(p => p.content)}
+                blogId={blogId}
+                sourceType="thread"
+                sourceId={thread.id}
+                onSaved={(visual) => {
+                    onVisualSaved?.(visual);
+                    toast.success('Saved to visuals');
+                }}
+            />
         </div>
     );
 }
@@ -2045,6 +2061,8 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     });
                                 }}
                                 onDelete={() => setThreads(prev => prev.filter(t => t.id !== thread.id))}
+                                blogId={blogId}
+                                onVisualSaved={(visual) => setVisuals(prev => [...prev, visual])}
                             />
                         ))}
                     </div>

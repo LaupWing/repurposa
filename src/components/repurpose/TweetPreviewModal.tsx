@@ -17,6 +17,8 @@ import {
     Repeat2,
     BadgeCheck,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfile } from '../../context/ProfileContext';
@@ -61,7 +63,7 @@ interface EngagementStats {
 interface TweetPreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
-    content: string;
+    content: string | string[];
     blogId?: number;
     sourceType?: 'short_post' | 'thread';
     sourceId?: number;
@@ -454,6 +456,9 @@ export default function TweetPreviewModal({ isOpen, onClose, content, blogId, so
     const { user, socialConnections } = useProfile();
     const xConnection = socialConnections.find((c) => c.platform === 'twitter');
 
+    const posts = Array.isArray(content) ? content : [content];
+    const [currentPostIndex, setCurrentPostIndex] = useState(0);
+
     const previewRef = useRef<HTMLDivElement>(null);
     const [theme, setTheme] = useState<Theme>('light');
     const [style, setStyle] = useState<Style>('detailed');
@@ -636,7 +641,7 @@ export default function TweetPreviewModal({ isOpen, onClose, content, blogId, so
                     <div className="flex justify-center">
                         <div ref={previewRef}>
                             <TweetPreview
-                                content={content}
+                                content={posts[currentPostIndex]}
                                 displayName={displayName}
                                 handle={handle}
                                 avatarUrl={avatarUrl}
@@ -648,6 +653,29 @@ export default function TweetPreviewModal({ isOpen, onClose, content, blogId, so
                             />
                         </div>
                     </div>
+
+                    {/* Post navigation for threads */}
+                    {posts.length > 1 && (
+                        <div className="flex items-center justify-center gap-3 mt-4">
+                            <button
+                                onClick={() => setCurrentPostIndex((i) => Math.max(0, i - 1))}
+                                disabled={currentPostIndex === 0}
+                                className="h-8 w-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <span className="text-sm text-gray-600 font-medium">
+                                Post {currentPostIndex + 1} of {posts.length}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPostIndex((i) => Math.min(posts.length - 1, i + 1))}
+                                disabled={currentPostIndex === posts.length - 1}
+                                className="h-8 w-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
