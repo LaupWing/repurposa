@@ -2162,6 +2162,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     content={viewingVisual.content}
                                     blogId={blogId}
                                     sourceId={viewingVisual.source_id}
+                                    initialSettings={viewingVisual.settings}
                                 />
                             ) : (
                                 <VisualShortPostPreviewModal
@@ -2170,6 +2171,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     content={Array.isArray(viewingVisual.content) ? viewingVisual.content[0] : viewingVisual.content}
                                     blogId={blogId}
                                     sourceId={viewingVisual.source_id}
+                                    initialSettings={viewingVisual.settings}
                                 />
                             )
                         )}

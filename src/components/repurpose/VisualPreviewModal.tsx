@@ -5,7 +5,7 @@
  * with customization controls and PNG download.
  */
 
-import { useState, useRef, useCallback } from '@wordpress/element';
+import { useState, useRef, useCallback, useEffect } from '@wordpress/element';
 import { toPng } from 'html-to-image';
 import {
     X,
@@ -67,6 +67,7 @@ interface BaseVisualPreviewModalProps {
     blogId?: number;
     sourceType?: 'short_post' | 'thread';
     sourceId?: number;
+    initialSettings?: VisualSettings;
     onSaved?: (visual: import('../../services/api').Visual) => void;
 }
 
@@ -452,7 +453,7 @@ function generateRandomStats(): EngagementStats {
     };
 }
 
-function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, onSaved }: BaseVisualPreviewModalProps) {
+function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, initialSettings, onSaved }: BaseVisualPreviewModalProps) {
     const { user, socialConnections } = useProfile();
     const xConnection = socialConnections.find((c) => c.platform === 'twitter');
 
@@ -471,6 +472,24 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const [saving, setSaving] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string | undefined>(xConnection?.profilePicture || undefined);
     const avatarInputRef = useRef<HTMLInputElement>(null);
+
+    // Reset all state when the modal opens
+    useEffect(() => {
+        if (!isOpen) return;
+        setCurrentPostIndex(0);
+        setTheme(initialSettings?.theme ?? 'light');
+        setStyle(initialSettings?.style ?? 'detailed');
+        setCorners(initialSettings?.corners ?? 'square');
+        setGradient(GRADIENT_PRESETS.find(g => g.id === initialSettings?.gradient_id) || GRADIENT_PRESETS[0]);
+        setDisplayName(initialSettings?.display_name ?? user?.name ?? 'Your Name');
+        setHandle(initialSettings?.handle ?? xConnection?.username ?? 'yourhandle');
+        setAvatarUrl(initialSettings?.avatar_url ?? xConnection?.profilePicture ?? undefined);
+        if (initialSettings?.stats) {
+            setStats(initialSettings.stats);
+        } else {
+            setStats(generateRandomStats());
+        }
+    }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
