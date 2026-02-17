@@ -35,7 +35,7 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { generateShortPosts, getShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost, generateThreads, getThreads } from '../../services/api';
+import { generateShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost, generateThreads } from '../../services/api';
 import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType, ThreadItem } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
@@ -1801,16 +1801,20 @@ interface RepurposePanelProps {
     publishedPostUrl?: string | null;
     editShortPostId?: number;
     onSwitchTab?: (tab: TabType) => void;
+    initialShortPosts?: ShortPost[];
+    initialThreads?: ThreadItem[];
 }
 
-export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab }: RepurposePanelProps) {
+export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab, initialShortPosts, initialThreads }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>([]);
+    const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>(() =>
+        (initialShortPosts || []).map(shortPostToPattern)
+    );
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [schedulingPost, setSchedulingPost] = useState<ShortPostPattern | null>(null);
-    const [threads, setThreads] = useState<ThreadItem[]>([]);
+    const [threads, setThreads] = useState<ThreadItem[]>(initialThreads || []);
     const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
 
     // Persist media changes to the API
@@ -1842,31 +1846,6 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         toast.success('Short post added');
     };
 
-    // Load saved short posts and threads on mount
-    useEffect(() => {
-        if (!blogId) return;
-        const loadShortPosts = async () => {
-            setIsLoading(true);
-            try {
-                const shortPosts = await getShortPosts(blogId);
-                setShortPosts(shortPosts.map(shortPostToPattern));
-            } catch (error) {
-                console.error('Failed to load short posts:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        const loadThreads = async () => {
-            try {
-                const threads = await getThreads(blogId);
-                setThreads(threads);
-            } catch (error) {
-                console.error('Failed to load threads:', error);
-            }
-        };
-        loadShortPosts();
-        loadThreads();
-    }, [blogId]);
 
     const onGenerateClick = () => {
         setShowConfirmModal(true);

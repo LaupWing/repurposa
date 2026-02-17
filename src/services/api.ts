@@ -385,6 +385,9 @@ export interface BlogPost {
     published_post_url?: string | null;
     topic?: string;
     outline?: OutlineSection[];
+    short_posts?: ShortPost[];
+    threads?: ThreadItem[];
+    visuals?: Visual[];
     created_at?: string;
     updated_at?: string;
 }
