@@ -1603,19 +1603,19 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                     )}
 
                     {activeTab === 'short' && (
-                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} publishedPostUrl={post.published_post_url} editShortPostId={shortPostId} initialShortPosts={post.short_posts} initialThreads={post.threads} />
+                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} publishedPostUrl={post.published_post_url} editShortPostId={shortPostId} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
                     )}
 
                     {activeTab === 'threads' && (
-                        <RepurposePanel initialTab="threads" blogContent={post.content} blogId={post.id} initialShortPosts={post.short_posts} initialThreads={post.threads} />
+                        <RepurposePanel initialTab="threads" blogContent={post.content} blogId={post.id} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
                     )}
 
                     {activeTab === 'visuals' && (
-                        <RepurposePanel initialTab="visuals" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} initialShortPosts={post.short_posts} initialThreads={post.threads} />
+                        <RepurposePanel initialTab="visuals" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
                     )}
 
                     {activeTab === 'video' && (
-                        <RepurposePanel initialTab="video" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} initialShortPosts={post.short_posts} initialThreads={post.threads} />
+                        <RepurposePanel initialTab="video" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
                     )}
 
                     {activeTab === 'settings' && (

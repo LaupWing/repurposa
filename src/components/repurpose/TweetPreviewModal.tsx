@@ -39,7 +39,7 @@ interface GradientPreset {
     swatch: string; // for the picker circle
 }
 
-const GRADIENT_PRESETS: GradientPreset[] = [
+export const GRADIENT_PRESETS: GradientPreset[] = [
     { id: 'purple',   label: 'Purple',   light: 'from-violet-500 via-purple-500 to-fuchsia-500',  dark: 'from-violet-700 via-purple-700 to-fuchsia-700',  swatch: 'from-violet-500 to-fuchsia-500' },
     { id: 'indigo',   label: 'Indigo',   light: 'from-indigo-500 via-blue-500 to-violet-500',     dark: 'from-indigo-700 via-blue-700 to-violet-700',     swatch: 'from-indigo-500 to-violet-500' },
     { id: 'ocean',    label: 'Ocean',    light: 'from-blue-500 via-cyan-400 to-teal-400',         dark: 'from-blue-700 via-cyan-600 to-teal-600',         swatch: 'from-blue-500 to-teal-400' },
@@ -65,14 +65,14 @@ interface TweetPreviewModalProps {
     blogId?: number;
     sourceType?: 'short_post' | 'thread';
     sourceId?: number;
-    onSaved?: () => void;
+    onSaved?: (visual: import('../../services/api').Visual) => void;
 }
 
 // ============================================
 // TWEET PREVIEW (inline sub-component)
 // ============================================
 
-function TweetPreview({
+export function TweetPreview({
     content,
     displayName,
     handle,
@@ -510,14 +510,14 @@ export default function TweetPreviewModal({ isOpen, onClose, content, blogId, so
                 avatar_url: avatarUrl,
                 ...(style === 'detailed' && { stats }),
             };
-            await createVisual(blogId, {
+            const visual = await createVisual(blogId, {
                 source_type: sourceType,
                 source_id: sourceId,
                 content,
                 settings,
             });
             toast.success('Visual saved!');
-            onSaved?.();
+            onSaved?.(visual);
         } catch (err) {
             console.error('Failed to save visual:', err);
             toast.error('Failed to save visual');

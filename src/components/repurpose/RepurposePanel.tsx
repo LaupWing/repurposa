@@ -35,12 +35,12 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { generateShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost, generateThreads } from '../../services/api';
-import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType, ThreadItem } from '../../services/api';
+import { generateShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost, generateThreads, deleteVisual } from '../../services/api';
+import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType, ThreadItem, Visual } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
 import ImagePickerModal from '../ImagePickerModal';
-import TweetPreviewModal from './TweetPreviewModal';
+import TweetPreviewModal, { TweetPreview, GRADIENT_PRESETS } from './TweetPreviewModal';
 
 // ============================================
 // TYPES
@@ -204,7 +204,7 @@ function ImageGrid({
     );
 }
 
-function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, autoEdit }: {
+function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, autoEdit }: {
     pattern: ShortPostPattern;
     index: number;
     blogId?: number;
@@ -220,6 +220,7 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
     onAddCtaImage: (imageUrl: string) => void;
     onRemoveCtaImage: (imageIndex: number) => void;
     onReorderCtaImages: (from: number, to: number) => void;
+    onVisualSaved?: (visual: Visual) => void;
     autoEdit?: boolean;
 }) {
     const [copied, setCopied] = useState(false);
@@ -1803,9 +1804,10 @@ interface RepurposePanelProps {
     onSwitchTab?: (tab: TabType) => void;
     initialShortPosts?: ShortPost[];
     initialThreads?: ThreadItem[];
+    initialVisuals?: Visual[];
 }
 
-export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab, initialShortPosts, initialThreads }: RepurposePanelProps) {
+export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab, initialShortPosts, initialThreads, initialVisuals }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>(() =>
@@ -1816,6 +1818,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [schedulingPost, setSchedulingPost] = useState<ShortPostPattern | null>(null);
     const [threads, setThreads] = useState<ThreadItem[]>(initialThreads || []);
     const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
+    const [visuals, setVisuals] = useState<Visual[]>(initialVisuals || []);
 
     // Persist media changes to the API
     const syncShortPostMedia = (postId: number, media: string[], ctaContent?: string, ctaMedia?: string[]) => {
@@ -2045,7 +2048,61 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 if (shortPosts.length === 0 && threads.length === 0) {
                     return <DependencyGate type="visuals" onSwitchTab={onSwitchTab} />;
                 }
-                return <EmptyState type="visuals" onGenerate={() => {}} isGenerating={false} />;
+                if (visuals.length === 0) {
+                    return <EmptyState type="visuals" onGenerate={() => {}} isGenerating={false} />;
+                }
+                return (
+                    <div className="grid grid-cols-2 gap-4">
+                        {visuals.map((visual) => {
+                            const gradientPreset = GRADIENT_PRESETS.find(g => g.id === visual.settings.gradient_id) || GRADIENT_PRESETS[0];
+                            const contentText = Array.isArray(visual.content) ? visual.content[0] : visual.content;
+                            return (
+                                <div key={visual.id} className="group relative rounded-xl border border-gray-200 overflow-hidden bg-white hover:shadow-md transition-shadow">
+                                    {/* Scaled-down preview */}
+                                    <div className="w-full overflow-hidden" style={{ aspectRatio: '1' }}>
+                                        <div style={{ transform: 'scale(0.44)', transformOrigin: 'top left', width: '500px', height: '500px' }}>
+                                            <TweetPreview
+                                                content={contentText}
+                                                displayName={visual.settings.display_name}
+                                                handle={visual.settings.handle}
+                                                avatarUrl={visual.settings.avatar_url}
+                                                theme={visual.settings.theme}
+                                                style={visual.settings.style}
+                                                stats={visual.settings.stats || { views: 0, reposts: 0, quotes: 0, likes: 0, bookmarks: 0 }}
+                                                roundedCorners={visual.settings.corners === 'rounded'}
+                                                gradient={gradientPreset}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Hover overlay with actions */}
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                        <button
+                                            onClick={() => {
+                                                setVisuals(prev => prev.filter(v => v.id !== visual.id));
+                                                deleteVisual(visual.id).catch(() => toast.error('Failed to delete visual'));
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                        >
+                                            <Trash2 size={14} />
+                                            Delete
+                                        </button>
+                                    </div>
+
+                                    {/* Meta */}
+                                    <div className="px-3 py-2 border-t border-gray-100">
+                                        <p className="text-xs text-gray-500 truncate">{contentText}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{visual.settings.style}</span>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{visual.settings.theme}</span>
+                                            <span className={`h-3 w-3 rounded-full bg-gradient-to-br ${gradientPreset.swatch}`} />
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
 
             case 'video':
                 if (shortPosts.length === 0 && threads.length === 0) {
