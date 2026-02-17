@@ -18,6 +18,7 @@ import {
     ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useProfile } from '../../context/ProfileContext';
 
 // ============================================
 // TYPES
@@ -49,6 +50,7 @@ function TweetPreview({
     content,
     displayName,
     handle,
+    avatarUrl,
     theme,
     style,
     stats,
@@ -57,6 +59,7 @@ function TweetPreview({
     content: string;
     displayName: string;
     handle: string;
+    avatarUrl?: string;
     theme: Theme;
     style: Style;
     stats: EngagementStats;
@@ -107,9 +110,13 @@ function TweetPreview({
                 {/* Header */}
                 <div className="flex gap-3">
                     <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-violet-600">
-                        <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-white">
-                            {initial}
-                        </div>
+                        {avatarUrl ? (
+                            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-white">
+                                {initial}
+                            </div>
+                        )}
                     </div>
                     <div className="flex flex-col justify-center">
                         <div className="flex items-center gap-1">
@@ -281,14 +288,27 @@ function generateRandomStats(): EngagementStats {
 }
 
 export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPreviewModalProps) {
+    const { user, socialConnections } = useProfile();
+    const xConnection = socialConnections.find((c) => c.platform === 'twitter');
+
     const previewRef = useRef<HTMLDivElement>(null);
     const [theme, setTheme] = useState<Theme>('light');
     const [style, setStyle] = useState<Style>('detailed');
     const [corners, setCorners] = useState<Corners>('rounded');
-    const [displayName, setDisplayName] = useState('Your Name');
-    const [handle, setHandle] = useState('yourhandle');
+    const [displayName, setDisplayName] = useState(user?.name || 'Your Name');
+    const [handle, setHandle] = useState(xConnection?.username || 'yourhandle');
     const [stats, setStats] = useState<EngagementStats>(generateRandomStats);
     const [downloading, setDownloading] = useState(false);
+    const [avatarUrl, setAvatarUrl] = useState<string | undefined>(xConnection?.profilePicture || undefined);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+
+    const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => setAvatarUrl(reader.result as string);
+        reader.readAsDataURL(file);
+    }, []);
 
     const handleDownload = useCallback(async () => {
         if (!previewRef.current || downloading) return;
@@ -335,6 +355,29 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
                 <div className="flex-1 overflow-y-auto p-6">
                     {/* Profile inputs */}
                     <div className="flex items-center gap-3 mb-4">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Avatar</label>
+                            <button
+                                onClick={() => avatarInputRef.current?.click()}
+                                className="h-[34px] w-[34px] rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-violet-600 hover:ring-2 hover:ring-blue-400 transition-all flex-shrink-0"
+                                title="Change avatar"
+                            >
+                                {avatarUrl ? (
+                                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                    <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-white">
+                                        {(displayName?.charAt(0) || '?').toUpperCase()}
+                                    </span>
+                                )}
+                            </button>
+                            <input
+                                ref={avatarInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAvatarChange}
+                                className="hidden"
+                            />
+                        </div>
                         <div className="flex-1">
                             <label className="block text-xs font-medium text-gray-500 mb-1">Display Name</label>
                             <input
@@ -394,6 +437,7 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
                                 content={content}
                                 displayName={displayName}
                                 handle={handle}
+                                avatarUrl={avatarUrl}
                                 theme={theme}
                                 style={style}
                                 stats={stats}
