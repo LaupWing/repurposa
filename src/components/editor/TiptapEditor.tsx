@@ -141,6 +141,12 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
 
     useEffect(() => {
         aiStateRef.current = aiState;
+        // Force Tippy/Popper to reposition when content changes size
+        if (aiState.status !== 'idle') {
+            requestAnimationFrame(() => {
+                tippyRef.current?.popperInstance?.update();
+            });
+        }
     }, [aiState]);
 
     const editor = useEditor({
@@ -474,16 +480,11 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
                                         const editorEl = editor.view.dom;
                                         if (!state.modifiersData.popperOffsets) return;
                                         const editorRect = editorEl.getBoundingClientRect();
-                                        const popperWidth = state.rects.popper.width;
                                         const offsetParent = state.elements.popper.offsetParent || document.body;
                                         const parentRect = offsetParent.getBoundingClientRect();
-                                        // Center on editor, but in offset-parent coordinate space
-                                        let x = editorRect.left + editorRect.width / 2 - popperWidth / 2 - parentRect.left;
-                                        // Clamp so it doesn't overflow the viewport
-                                        const minX = 8 - parentRect.left;
-                                        const maxX = window.innerWidth - popperWidth - 8 - parentRect.left;
-                                        x = Math.max(minX, Math.min(x, maxX));
-                                        state.modifiersData.popperOffsets.x = x;
+                                        // Full width of editor, left-aligned
+                                        state.elements.popper.style.width = editorRect.width + 'px';
+                                        state.modifiersData.popperOffsets.x = editorRect.left - parentRect.left;
                                     },
                                 },
                             ],
@@ -492,7 +493,7 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
                 >
                     {/* Idle: formatting + AI buttons */}
                     {aiState.status === 'idle' && (
-                        <div className="flex items-center gap-0.5 p-1 bg-white border border-gray-200 rounded-lg shadow-lg">
+                        <div className="flex items-center justify-center gap-0.5 p-1 bg-white border border-gray-200 rounded-lg shadow-lg">
                             <button
                                 onClick={() => editor.chain().focus().toggleBold().run()}
                                 className={`h-7 w-7 flex items-center justify-center rounded ${
@@ -568,7 +569,7 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
 
                     {/* Loading */}
                     {aiState.status === 'loading' && (
-                        <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg shadow-lg">
+                        <div className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg shadow-lg">
                             <Loader2 size={14} className="animate-spin text-blue-600" />
                             <span className="text-sm text-gray-700">
                                 {ACTION_LABELS[aiState.action] || 'Processing'}...
@@ -578,7 +579,7 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
 
                     {/* Diff preview */}
                     {aiState.status === 'preview' && (
-                        <div className="w-[480px] bg-white border border-gray-200 rounded-xl shadow-xl">
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-xl">
                             {/* Inline diff */}
                             <div className="px-4 py-3 max-h-60 overflow-y-auto">
                                 <p className="text-sm leading-relaxed">
