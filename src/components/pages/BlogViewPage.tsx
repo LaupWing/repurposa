@@ -36,7 +36,7 @@ import {
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
 import ImagePickerModal from '../ImagePickerModal';
-import { getBlog, updateBlog, deleteBlog, generateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion } from '../../services/api';
+import { getBlog, updateBlog, deleteBlog, generateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion, refineText, getShortPosts, getThreads } from '../../services/api';
 import type { TopicSuggestion } from '../../services/api';
 import type { BlogPost, OutlineSection, PostVersion } from '../../services/api';
 import { useProfile } from '../../context/ProfileContext';
@@ -154,23 +154,23 @@ function PublishModal({
     );
 }
 
-function DisabledTabsOverlay() {
+function DisabledTabsOverlay({ message = 'Content required', tooltip = 'Write your blog content first before you can use these features.' }: { message?: string; tooltip?: string }) {
     const [showTooltip, setShowTooltip] = useState(false);
 
     return (
         <div
-            className="absolute inset-0 z-10 flex items-center justify-center rounded-lg cursor-not-allowed bg-gray-200/60 backdrop-blur-[1px]"
+            className="absolute inset-0 z-10 flex items-center justify-center rounded-md cursor-not-allowed bg-gray-200/60 backdrop-blur-[1px]"
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
         >
             <div className="flex items-center gap-1.5 text-amber-600">
                 <AlertCircle size={14} />
-                <span className="text-xs font-medium">Content required</span>
+                <span className="text-xs font-medium">{message}</span>
             </div>
 
             {showTooltip && (
                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-52 px-3 py-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 text-center leading-relaxed">
-                    Write your blog content first before you can use these features.
+                    {tooltip}
                     <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
                 </div>
             )}
@@ -863,9 +863,17 @@ function BlogEditor({
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
-    const handleAIRequest = (selectedText: string, action: string) => {
-        // AI action handler placeholder
-        alert(`AI ${action} request for: "${selectedText.substring(0, 50)}..."\n\nThis will be connected to your AI backend.`);
+    const handleAIRequest = async (selectedText: string, action: string): Promise<string> => {
+        const instructions: Record<string, string> = {
+            improve: 'Improve the clarity and quality of this text while keeping the same meaning.',
+            rewrite: 'Rewrite this text in a different way while preserving the core message.',
+            shorter: 'Make this text more concise without losing the key points.',
+            longer: 'Expand this text with more detail and explanation.',
+            fix: 'Fix any grammar, spelling, or punctuation errors in this text.',
+        };
+        const instruction = instructions[action] || `${action} this text.`;
+        const result = await refineText(selectedText, instruction);
+        return result.text;
     };
 
     const handleSave = async () => {
@@ -1416,6 +1424,8 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false);
     const [editorKey, setEditorKey] = useState(0);
+    const [hasShortPosts, setHasShortPosts] = useState(false);
+    const [hasThreads, setHasThreads] = useState(false);
 
     // Fetch blog from API
     useEffect(() => {

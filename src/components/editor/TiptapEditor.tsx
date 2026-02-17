@@ -10,7 +10,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import Link from '@tiptap/extension-link';
 import { common, createLowlight } from 'lowlight';
-import { useState, useEffect, useRef } from '@wordpress/element';
+import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import {
     Bold,
     Italic,
@@ -31,21 +31,59 @@ import {
     RefreshCw,
     Link2,
     Unlink,
+    Loader2,
+    Check,
+    X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const lowlight = createLowlight(common);
+
+const ACTION_LABELS: Record<string, string> = {
+    improve: 'Improving',
+    rewrite: 'Rewriting',
+    shorter: 'Shortening',
+    longer: 'Expanding',
+    fix: 'Fixing',
+};
+
+interface AIState {
+    status: 'idle' | 'loading' | 'preview';
+    action: string;
+    originalText: string;
+    refinedText: string;
+    selectionFrom: number;
+    selectionTo: number;
+}
+
+const IDLE_AI_STATE: AIState = {
+    status: 'idle',
+    action: '',
+    originalText: '',
+    refinedText: '',
+    selectionFrom: 0,
+    selectionTo: 0,
+};
 
 interface TiptapEditorProps {
     content?: string;
     onUpdate?: (content: string) => void;
-    onAIRequest?: (selectedText: string, action: string) => void;
+    onAIRequest?: (selectedText: string, action: string) => Promise<string>;
 }
 
 export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEditorProps) {
     const [showBubbleMenu, setShowBubbleMenu] = useState(false);
     const [bubbleMenuPosition, setBubbleMenuPosition] = useState({ top: 0, left: 0 });
+    const [aiState, setAiState] = useState<AIState>(IDLE_AI_STATE);
+    const aiStateRef = useRef<AIState>(IDLE_AI_STATE);
     const bubbleMenuRef = useRef<HTMLDivElement>(null);
+    const diffPanelRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // Keep ref in sync
+    useEffect(() => {
+        aiStateRef.current = aiState;
+    }, [aiState]);
 
     const editor = useEditor({
         extensions: [
@@ -75,6 +113,9 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
             onUpdate?.(editor.getHTML());
         },
         onSelectionUpdate: ({ editor }) => {
+            // Don't show bubble menu during AI operations
+            if (aiStateRef.current.status !== 'idle') return;
+
             const { from, to } = editor.state.selection;
             const hasSelection = from !== to;
 
@@ -98,7 +139,17 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
     // Close bubble menu on click outside
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
-            if (bubbleMenuRef.current && !bubbleMenuRef.current.contains(e.target as Node)) {
+            if (
+                bubbleMenuRef.current && !bubbleMenuRef.current.contains(e.target as Node) &&
+                diffPanelRef.current && !diffPanelRef.current.contains(e.target as Node)
+            ) {
+                if (editor?.view.dom.contains(e.target as Node)) return;
+                setShowBubbleMenu(false);
+            }
+            if (
+                bubbleMenuRef.current && !bubbleMenuRef.current.contains(e.target as Node) &&
+                !diffPanelRef.current
+            ) {
                 if (editor?.view.dom.contains(e.target as Node)) return;
                 setShowBubbleMenu(false);
             }
@@ -107,15 +158,84 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [editor]);
 
+    // Escape key to reject preview
+    useEffect(() => {
+        if (aiState.status !== 'preview') return;
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                handleReject();
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [aiState.status]);
+
+    const handleReject = useCallback(() => {
+        if (!editor) return;
+        editor.setEditable(true);
+        editor.chain().focus().setTextSelection({
+            from: aiStateRef.current.selectionFrom,
+            to: aiStateRef.current.selectionTo,
+        }).run();
+        setAiState(IDLE_AI_STATE);
+    }, [editor]);
+
+    const handleAccept = useCallback(() => {
+        if (!editor) return;
+        const { selectionFrom, selectionTo, refinedText } = aiStateRef.current;
+        editor.setEditable(true);
+        editor.chain()
+            .focus()
+            .setTextSelection({ from: selectionFrom, to: selectionTo })
+            .insertContent(refinedText)
+            .run();
+        setAiState(IDLE_AI_STATE);
+    }, [editor]);
+
     if (!editor) {
         return null;
     }
 
-    const handleAIAction = (action: string) => {
+    const handleAIAction = async (action: string) => {
         const { from, to } = editor.state.selection;
         const selectedText = editor.state.doc.textBetween(from, to, ' ');
-        onAIRequest?.(selectedText, action);
+
+        if (!onAIRequest) return;
+
+        // Set loading state
+        const loadingState: AIState = {
+            status: 'loading',
+            action,
+            originalText: selectedText,
+            refinedText: '',
+            selectionFrom: from,
+            selectionTo: to,
+        };
+        setAiState(loadingState);
+        aiStateRef.current = loadingState;
         setShowBubbleMenu(false);
+        editor.setEditable(false);
+
+        try {
+            const refined = await onAIRequest(selectedText, action);
+            const previewState: AIState = {
+                status: 'preview',
+                action,
+                originalText: selectedText,
+                refinedText: refined,
+                selectionFrom: from,
+                selectionTo: to,
+            };
+            setAiState(previewState);
+            aiStateRef.current = previewState;
+        } catch {
+            editor.setEditable(true);
+            setAiState(IDLE_AI_STATE);
+            aiStateRef.current = IDLE_AI_STATE;
+            toast.error('AI request failed', {
+                description: 'Something went wrong. Please try again.',
+            });
+        }
     };
 
     const handleSetLink = () => {
@@ -261,7 +381,7 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
             {/* Editor Content with Bubble Menu */}
             <div ref={containerRef} className="relative">
                 {/* Bubble Menu */}
-                {showBubbleMenu && (
+                {showBubbleMenu && aiState.status === 'idle' && (
                     <div
                         ref={bubbleMenuRef}
                         className="absolute z-50 flex items-center gap-0.5 p-1 bg-white border border-gray-200 rounded-lg shadow-lg"
@@ -343,6 +463,79 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
                             <RefreshCw size={12} />
                             Fix
                         </button>
+                    </div>
+                )}
+
+                {/* Loading indicator */}
+                {aiState.status === 'loading' && (
+                    <div
+                        className="absolute z-50 flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg shadow-lg"
+                        style={{
+                            top: bubbleMenuPosition.top,
+                            left: bubbleMenuPosition.left,
+                            transform: 'translateX(-50%)',
+                        }}
+                    >
+                        <Loader2 size={14} className="animate-spin text-blue-600" />
+                        <span className="text-sm text-gray-700">
+                            {ACTION_LABELS[aiState.action] || 'Processing'}...
+                        </span>
+                    </div>
+                )}
+
+                {/* Diff preview panel */}
+                {aiState.status === 'preview' && (
+                    <div
+                        ref={diffPanelRef}
+                        className="absolute z-50 w-96 bg-white border border-gray-200 rounded-xl shadow-xl"
+                        style={{
+                            top: bubbleMenuPosition.top,
+                            left: bubbleMenuPosition.left,
+                            transform: 'translateX(-50%)',
+                        }}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
+                            <div className="flex items-center gap-2">
+                                <Sparkles size={14} className="text-blue-600" />
+                                <span className="text-sm font-medium text-gray-900">AI Suggestion</span>
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 capitalize">
+                                    {aiState.action}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Diff content */}
+                        <div className="px-4 py-3 space-y-2 max-h-60 overflow-y-auto">
+                            <div className="rounded-md bg-red-50 border border-red-100 px-3 py-2">
+                                <p className="text-sm text-red-800 line-through leading-relaxed">
+                                    {aiState.originalText}
+                                </p>
+                            </div>
+                            <div className="rounded-md bg-green-50 border border-green-100 px-3 py-2">
+                                <p className="text-sm text-green-800 leading-relaxed">
+                                    {aiState.refinedText}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-100">
+                            <button
+                                onClick={handleReject}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <X size={14} />
+                                Reject
+                            </button>
+                            <button
+                                onClick={handleAccept}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                            >
+                                <Check size={14} />
+                                Accept
+                            </button>
+                        </div>
                     </div>
                 )}
 
