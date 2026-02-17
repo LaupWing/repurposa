@@ -9,6 +9,8 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import Link from '@tiptap/extension-link';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { common, createLowlight } from 'lowlight';
 import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import {
@@ -133,21 +135,14 @@ interface TiptapEditorProps {
     onAIRequest?: (selectedText: string, action: string) => Promise<string>;
 }
 
+const aiHighlightKey = new PluginKey('aiHighlight');
+
 export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEditorProps) {
     const [aiState, setAiState] = useState<AIState>(IDLE_AI_STATE);
     const [refineInput, setRefineInput] = useState('');
     const aiStateRef = useRef<AIState>(IDLE_AI_STATE);
     const tippyRef = useRef<any>(null);
-
-    useEffect(() => {
-        aiStateRef.current = aiState;
-        // Force Tippy/Popper to reposition when content changes size
-        if (aiState.status !== 'idle') {
-            requestAnimationFrame(() => {
-                tippyRef.current?.popperInstance?.update();
-            });
-        }
-    }, [aiState]);
+    const highlightRangeRef = useRef<{ from: number; to: number } | null>(null);
 
     const editor = useEditor({
         extensions: [
@@ -177,6 +172,51 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
             onUpdate?.(editor.getHTML());
         },
     });
+
+    useEffect(() => {
+        aiStateRef.current = aiState;
+
+        // Update highlight decoration range
+        if (aiState.status !== 'idle') {
+            highlightRangeRef.current = { from: aiState.selectionFrom, to: aiState.selectionTo };
+        } else {
+            highlightRangeRef.current = null;
+        }
+
+        // Defer to avoid reentrant ProseMirror dispatch
+        if (editor && !editor.isDestroyed) {
+            setTimeout(() => {
+                if (editor.isDestroyed) return;
+                // Force ProseMirror to re-evaluate decorations
+                editor.view.dispatch(editor.state.tr);
+                tippyRef.current?.popperInstance?.update();
+            }, 0);
+        }
+    }, [aiState, editor]);
+
+    // Register AI highlight decoration plugin
+    useEffect(() => {
+        if (!editor) return;
+        const plugin = new Plugin({
+            key: aiHighlightKey,
+            props: {
+                decorations: (state) => {
+                    const range = highlightRangeRef.current;
+                    if (!range) return DecorationSet.empty;
+                    const { from, to } = range;
+                    if (from >= to || to > state.doc.content.size) return DecorationSet.empty;
+                    return DecorationSet.create(state.doc, [
+                        Decoration.inline(from, to, {
+                            class: 'ai-highlight-selection',
+                            style: 'background-color: rgba(59, 130, 246, 0.15); border-radius: 2px;',
+                        }),
+                    ]);
+                },
+            },
+        });
+        editor.registerPlugin(plugin);
+        return () => { editor.unregisterPlugin(aiHighlightKey); };
+    }, [editor]);
 
     // Click outside diff panel → dismiss
     useEffect(() => {
@@ -493,7 +533,10 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
                 >
                     {/* Idle: formatting + AI buttons */}
                     {aiState.status === 'idle' && (
-                        <div className="flex items-center justify-center gap-0.5 p-1 bg-white border border-gray-200 rounded-lg shadow-lg">
+                        <div
+                            onMouseDown={(e) => e.preventDefault()}
+                            className="flex items-center justify-center gap-0.5 p-1 bg-white border border-gray-200 rounded-lg shadow-lg"
+                        >
                             <button
                                 onClick={() => editor.chain().focus().toggleBold().run()}
                                 className={`h-7 w-7 flex items-center justify-center rounded ${
@@ -569,7 +612,7 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
 
                     {/* Loading */}
                     {aiState.status === 'loading' && (
-                        <div className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg shadow-lg">
+                        <div onMouseDown={(e) => e.preventDefault()} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg shadow-lg">
                             <Loader2 size={14} className="animate-spin text-blue-600" />
                             <span className="text-sm text-gray-700">
                                 {ACTION_LABELS[aiState.action] || 'Processing'}...
@@ -579,7 +622,7 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
 
                     {/* Diff preview */}
                     {aiState.status === 'preview' && (
-                        <div className="bg-white border border-gray-200 rounded-xl shadow-xl">
+                        <div onMouseDown={(e) => { if ((e.target as HTMLElement).tagName !== 'INPUT') e.preventDefault(); }} className="bg-white border border-gray-200 rounded-xl shadow-xl">
                             {/* Inline diff */}
                             <div className="px-4 py-3 max-h-60 overflow-y-auto">
                                 <p className="text-sm leading-relaxed">
@@ -653,6 +696,7 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
                                         type="text"
                                         value={refineInput}
                                         onChange={(e) => setRefineInput(e.target.value)}
+                                        onMouseDown={(e) => e.stopPropagation()}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
                                                 e.preventDefault();
