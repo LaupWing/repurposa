@@ -1006,6 +1006,46 @@ function EmptyState({
     );
 }
 
+function DependencyGate({
+    type,
+    onSwitchTab,
+}: {
+    type: 'visuals' | 'video';
+    onSwitchTab?: (tab: TabType) => void;
+}) {
+    const description = type === 'visuals'
+        ? 'Generate short posts or threads from your blog before creating visuals.'
+        : 'Generate short posts or threads from your blog before creating video scripts.';
+
+    return (
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-12 text-center">
+            <div className="mb-4 h-10 w-10 flex items-center justify-center rounded-full bg-gray-100">
+                <Lightbulb size={20} className="text-gray-400" />
+            </div>
+            <h3 className="mb-1 font-medium text-gray-900">Create Content First</h3>
+            <p className="mb-4 max-w-[280px] text-sm text-gray-500">
+                {description}
+            </p>
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={() => onSwitchTab?.('short')}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                    <Share2 size={16} />
+                    Generate Short Posts
+                </button>
+                <button
+                    onClick={() => onSwitchTab?.('threads')}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                    <FileText size={16} />
+                    Generate Threads
+                </button>
+            </div>
+        </div>
+    );
+}
+
 function ConfirmGenerateModal({
     isOpen,
     onClose,
@@ -1756,9 +1796,10 @@ interface RepurposePanelProps {
     isPublished?: boolean;
     publishedPostUrl?: string | null;
     editShortPostId?: number;
+    onSwitchTab?: (tab: TabType) => void;
 }
 
-export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId }: RepurposePanelProps) {
+export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>([]);
@@ -2017,9 +2058,15 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 );
 
             case 'visuals':
+                if (shortPosts.length === 0 && threads.length === 0) {
+                    return <DependencyGate type="visuals" onSwitchTab={onSwitchTab} />;
+                }
                 return <EmptyState type="visuals" onGenerate={() => {}} isGenerating={false} />;
 
             case 'video':
+                if (shortPosts.length === 0 && threads.length === 0) {
+                    return <DependencyGate type="video" onSwitchTab={onSwitchTab} />;
+                }
                 return <EmptyState type="video" onGenerate={() => {}} isGenerating={false} />;
 
             default:

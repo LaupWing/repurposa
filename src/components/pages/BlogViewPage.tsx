@@ -1611,11 +1611,11 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                     )}
 
                     {activeTab === 'visuals' && (
-                        <RepurposePanel initialTab="visuals" blogContent={post.content} blogId={post.id} />
+                        <RepurposePanel initialTab="visuals" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} />
                     )}
 
                     {activeTab === 'video' && (
-                        <RepurposePanel initialTab="video" blogContent={post.content} />
+                        <RepurposePanel initialTab="video" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} />
                     )}
 
                     {activeTab === 'settings' && (
