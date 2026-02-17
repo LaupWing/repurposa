@@ -10,6 +10,7 @@ import { toPng } from 'html-to-image';
 import {
     X,
     Download,
+    Save,
     Bookmark,
     Heart,
     Quote,
@@ -19,6 +20,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfile } from '../../context/ProfileContext';
+import { createVisual } from '../../services/api';
+import type { VisualSettings } from '../../services/api';
 
 // ============================================
 // TYPES
@@ -59,6 +62,10 @@ interface TweetPreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
     content: string;
+    blogId?: number;
+    sourceType?: 'short_post' | 'thread';
+    sourceId?: number;
+    onSaved?: () => void;
 }
 
 // ============================================
@@ -443,7 +450,7 @@ function generateRandomStats(): EngagementStats {
     };
 }
 
-export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPreviewModalProps) {
+export default function TweetPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, onSaved }: TweetPreviewModalProps) {
     const { user, socialConnections } = useProfile();
     const xConnection = socialConnections.find((c) => c.platform === 'twitter');
 
@@ -456,6 +463,7 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
     const [handle, setHandle] = useState(xConnection?.username || 'yourhandle');
     const [stats, setStats] = useState<EngagementStats>(generateRandomStats);
     const [downloading, setDownloading] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string | undefined>(xConnection?.profilePicture || undefined);
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -487,6 +495,36 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
             setDownloading(false);
         }
     }, [downloading]);
+
+    const handleSave = useCallback(async () => {
+        if (!blogId || !sourceType || !sourceId || saving) return;
+        setSaving(true);
+        try {
+            const settings: VisualSettings = {
+                style,
+                theme,
+                corners,
+                gradient_id: gradient.id,
+                display_name: displayName,
+                handle,
+                avatar_url: avatarUrl,
+                ...(style === 'detailed' && { stats }),
+            };
+            await createVisual(blogId, {
+                source_type: sourceType,
+                source_id: sourceId,
+                content,
+                settings,
+            });
+            toast.success('Visual saved!');
+            onSaved?.();
+        } catch (err) {
+            console.error('Failed to save visual:', err);
+            toast.error('Failed to save visual');
+        } finally {
+            setSaving(false);
+        }
+    }, [blogId, sourceType, sourceId, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, stats, content, onSaved]);
 
     if (!isOpen) return null;
 
@@ -613,15 +651,25 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100">
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
                     <button
                         onClick={handleDownload}
                         disabled={downloading}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
                     >
                         <Download size={16} />
-                        {downloading ? 'Generating...' : 'Download Image'}
+                        {downloading ? 'Generating...' : 'Download'}
                     </button>
+                    {blogId && sourceType && sourceId && (
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors"
+                        >
+                            <Save size={16} />
+                            {saving ? 'Saving...' : 'Save to Visuals'}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

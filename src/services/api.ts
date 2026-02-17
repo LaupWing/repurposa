@@ -252,6 +252,63 @@ export async function generateThreads(
     });
 }
 
+// ============================================
+// VISUALS API
+// ============================================
+
+export interface VisualSettings {
+    style: 'basic' | 'minimal' | 'detailed';
+    theme: 'light' | 'dark';
+    corners: 'rounded' | 'square';
+    gradient_id: string;
+    display_name: string;
+    handle: string;
+    avatar_url?: string;
+    stats?: {
+        views: number;
+        reposts: number;
+        quotes: number;
+        likes: number;
+        bookmarks: number;
+    };
+}
+
+export interface Visual {
+    id: number;
+    blog_id: number;
+    source_type: 'short_post' | 'thread';
+    source_id: number;
+    content: string | string[];
+    settings: VisualSettings;
+    created_at: string;
+    updated_at: string;
+}
+
+export async function getVisuals(blogId: number): Promise<Visual[]> {
+    const response = await apiRequest<{ data: Visual[] }>(`/blogs/${blogId}/visuals`, {}, 'GET');
+    return response.data;
+}
+
+export async function createVisual(blogId: number, data: {
+    source_type: 'short_post' | 'thread';
+    source_id: number;
+    content: string | string[];
+    settings: VisualSettings;
+}): Promise<Visual> {
+    return apiRequest<Visual>(`/blogs/${blogId}/visuals`, data as unknown as Record<string, unknown>);
+}
+
+export async function updateVisual(visualId: number, data: {
+    content?: string | string[];
+    settings?: VisualSettings;
+}): Promise<Visual> {
+    return apiRequest<Visual>(`/visuals/${visualId}`, data as unknown as Record<string, unknown>, 'PATCH');
+}
+
+export async function deleteVisual(visualId: number): Promise<void> {
+    await apiRequest<void>(`/visuals/${visualId}`, {}, 'DELETE');
+}
+
 export interface Swipe {
     id: number;
     user_id: number | null;

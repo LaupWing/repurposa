@@ -204,9 +204,10 @@ function ImageGrid({
     );
 }
 
-function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, autoEdit }: {
+function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, autoEdit }: {
     pattern: ShortPostPattern;
     index: number;
+    blogId?: number;
     onDelete: () => void;
     onDeleteCta: () => void;
     onAddCta: () => void;
@@ -617,6 +618,9 @@ function ShortPostCard({ pattern, index, onDelete, onDeleteCta, onAddCta, onEdit
                 isOpen={showVisualModal}
                 onClose={() => setShowVisualModal(false)}
                 content={pattern.content}
+                blogId={blogId}
+                sourceType="short_post"
+                sourceId={pattern.id}
             />
         </div>
     );
@@ -1949,6 +1953,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     key={pattern.id}
                                     pattern={pattern}
                                     index={index}
+                                    blogId={blogId}
                                     onDelete={() => setShortPosts(prev => prev.filter(p => p.id !== pattern.id))}
                                     onDeleteCta={() => {
                                         setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: undefined, cta_media: [] } : p));
