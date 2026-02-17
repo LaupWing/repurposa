@@ -45,6 +45,7 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
     const [showBubbleMenu, setShowBubbleMenu] = useState(false);
     const [bubbleMenuPosition, setBubbleMenuPosition] = useState({ top: 0, left: 0 });
     const bubbleMenuRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const editor = useEditor({
         extensions: [
@@ -77,14 +78,15 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
             const { from, to } = editor.state.selection;
             const hasSelection = from !== to;
 
-            if (hasSelection) {
+            if (hasSelection && containerRef.current) {
                 const { view } = editor;
                 const start = view.coordsAtPos(from);
                 const end = view.coordsAtPos(to);
+                const containerRect = containerRef.current.getBoundingClientRect();
 
                 setBubbleMenuPosition({
-                    top: start.top - 50,
-                    left: (start.left + end.left) / 2,
+                    top: start.top - containerRect.top - 50,
+                    left: (start.left + end.left) / 2 - containerRect.left,
                 });
                 setShowBubbleMenu(true);
             } else {
@@ -257,12 +259,12 @@ export function TiptapEditor({ content = '', onUpdate, onAIRequest }: TiptapEdit
             </div>
 
             {/* Editor Content with Bubble Menu */}
-            <div className="relative">
+            <div ref={containerRef} className="relative">
                 {/* Bubble Menu */}
                 {showBubbleMenu && (
                     <div
                         ref={bubbleMenuRef}
-                        className="fixed z-50 flex items-center gap-0.5 p-1 bg-white border border-gray-200 rounded-lg shadow-lg"
+                        className="absolute z-50 flex items-center gap-0.5 p-1 bg-white border border-gray-200 rounded-lg shadow-lg"
                         style={{
                             top: bubbleMenuPosition.top,
                             left: bubbleMenuPosition.left,
