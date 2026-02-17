@@ -1,7 +1,7 @@
 /**
- * Tweet Preview Modal
+ * Visual Preview Modal
  *
- * Modal that renders a short post as a tweet-style visual card
+ * Modal that renders a short post or thread as a visual card
  * with customization controls and PNG download.
  */
 
@@ -60,7 +60,7 @@ interface EngagementStats {
     bookmarks: number;
 }
 
-interface TweetPreviewModalProps {
+interface BaseVisualPreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
     content: string | string[];
@@ -71,10 +71,10 @@ interface TweetPreviewModalProps {
 }
 
 // ============================================
-// TWEET PREVIEW (inline sub-component)
+// VISUAL PREVIEW (inline sub-component)
 // ============================================
 
-export function TweetPreview({
+export function VisualPreview({
     content,
     displayName,
     handle,
@@ -452,7 +452,7 @@ function generateRandomStats(): EngagementStats {
     };
 }
 
-export default function TweetPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, onSaved }: TweetPreviewModalProps) {
+function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, onSaved }: BaseVisualPreviewModalProps) {
     const { user, socialConnections } = useProfile();
     const xConnection = socialConnections.find((c) => c.platform === 'twitter');
 
@@ -489,7 +489,7 @@ export default function TweetPreviewModal({ isOpen, onClose, content, blogId, so
                 pixelRatio: 2,
             });
             const link = document.createElement('a');
-            link.download = `tweet-visual-${Date.now()}.png`;
+            link.download = `visual-${Date.now()}.png`;
             link.href = dataUrl;
             link.click();
             toast.success('Image downloaded!');
@@ -542,7 +542,7 @@ export default function TweetPreviewModal({ isOpen, onClose, content, blogId, so
             <div className="relative w-full max-w-3xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                    <h2 className="text-lg font-semibold text-gray-900">Tweet Visual Preview</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">Visual Preview</h2>
                     <button
                         onClick={onClose}
                         className="h-8 w-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
@@ -640,7 +640,7 @@ export default function TweetPreviewModal({ isOpen, onClose, content, blogId, so
                     {/* Preview */}
                     <div className="flex justify-center">
                         <div ref={previewRef}>
-                            <TweetPreview
+                            <VisualPreview
                                 content={posts[currentPostIndex]}
                                 displayName={displayName}
                                 handle={handle}
@@ -702,4 +702,24 @@ export default function TweetPreviewModal({ isOpen, onClose, content, blogId, so
             </div>
         </div>
     );
+}
+
+// ============================================
+// TYPED WRAPPER EXPORTS
+// ============================================
+
+interface VisualShortPostPreviewModalProps extends Omit<BaseVisualPreviewModalProps, 'content' | 'sourceType'> {
+    content: string;
+}
+
+export function VisualShortPostPreviewModal(props: VisualShortPostPreviewModalProps) {
+    return <BaseVisualPreviewModal {...props} sourceType="short_post" />;
+}
+
+interface VisualThreadPreviewModalProps extends Omit<BaseVisualPreviewModalProps, 'content' | 'sourceType'> {
+    content: string[];
+}
+
+export function VisualThreadPreviewModal(props: VisualThreadPreviewModalProps) {
+    return <BaseVisualPreviewModal {...props} sourceType="thread" />;
 }

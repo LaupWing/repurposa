@@ -40,7 +40,7 @@ import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost 
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
 import ImagePickerModal from '../ImagePickerModal';
-import TweetPreviewModal, { TweetPreview, GRADIENT_PRESETS } from './TweetPreviewModal';
+import { VisualShortPostPreviewModal, VisualThreadPreviewModal, VisualPreview, GRADIENT_PRESETS } from './VisualPreviewModal';
 
 // ============================================
 // TYPES
@@ -615,12 +615,11 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
                     setShowCtaImagePicker(false);
                 }}
             />
-            <TweetPreviewModal
+            <VisualShortPostPreviewModal
                 isOpen={showVisualModal}
                 onClose={() => setShowVisualModal(false)}
                 content={pattern.content}
                 blogId={blogId}
-                sourceType="short_post"
                 sourceId={pattern.id}
                 onSaved={(visual) => {
                     onVisualSaved?.(visual);
@@ -969,12 +968,11 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSch
                 </div>
             )}
 
-            <TweetPreviewModal
+            <VisualThreadPreviewModal
                 isOpen={showVisualModal}
                 onClose={() => setShowVisualModal(false)}
                 content={thread.posts.map(p => p.content)}
                 blogId={blogId}
-                sourceType="thread"
                 sourceId={thread.id}
                 onSaved={(visual) => {
                     onVisualSaved?.(visual);
@@ -2091,10 +2089,10 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                         </div>
 
                                         <div className="flex gap-4 p-4">
-                                            {/* Left - Actual TweetPreview scaled down */}
+                                            {/* Left - Actual VisualPreview scaled down */}
                                             <div onClick={() => setViewingVisual(visual)} className="flex-shrink-0 w-44 h-44 rounded-lg overflow-hidden relative cursor-pointer hover:opacity-90 transition-opacity">
                                                 <div className="absolute top-0 left-0 pointer-events-none" style={{ width: '500px', height: '500px', transform: 'scale(0.352)', transformOrigin: 'top left' }}>
-                                                    <TweetPreview
+                                                    <VisualPreview
                                                         content={contentText}
                                                         displayName={visual.settings.display_name}
                                                         handle={visual.settings.handle}
@@ -2154,14 +2152,23 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                         </div>
 
                         {viewingVisual && (
-                            <TweetPreviewModal
-                                isOpen={true}
-                                onClose={() => setViewingVisual(null)}
-                                content={Array.isArray(viewingVisual.content) ? viewingVisual.content[0] : viewingVisual.content}
-                                blogId={blogId}
-                                sourceType={viewingVisual.source_type}
-                                sourceId={viewingVisual.source_id}
-                            />
+                            viewingVisual.source_type === 'thread' && Array.isArray(viewingVisual.content) ? (
+                                <VisualThreadPreviewModal
+                                    isOpen={true}
+                                    onClose={() => setViewingVisual(null)}
+                                    content={viewingVisual.content}
+                                    blogId={blogId}
+                                    sourceId={viewingVisual.source_id}
+                                />
+                            ) : (
+                                <VisualShortPostPreviewModal
+                                    isOpen={true}
+                                    onClose={() => setViewingVisual(null)}
+                                    content={Array.isArray(viewingVisual.content) ? viewingVisual.content[0] : viewingVisual.content}
+                                    blogId={blogId}
+                                    sourceId={viewingVisual.source_id}
+                                />
+                            )
                         )}
                     </>
                 );
