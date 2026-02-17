@@ -622,6 +622,10 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
                 blogId={blogId}
                 sourceType="short_post"
                 sourceId={pattern.id}
+                onSaved={(visual) => {
+                    onVisualSaved?.(visual);
+                    toast.success('Saved to visuals');
+                }}
             />
         </div>
     );
@@ -1819,6 +1823,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [threads, setThreads] = useState<ThreadItem[]>(initialThreads || []);
     const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
     const [visuals, setVisuals] = useState<Visual[]>(initialVisuals || []);
+    const [viewingVisual, setViewingVisual] = useState<Visual | null>(null);
 
     // Persist media changes to the API
     const syncShortPostMedia = (postId: number, media: string[], ctaContent?: string, ctaMedia?: string[]) => {
@@ -1985,6 +1990,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                         setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_media: newCtaImages } : p));
                                         syncShortPostMedia(pattern.id, pattern.media, pattern.cta_content, newCtaImages);
                                     }}
+                                    onVisualSaved={(visual) => setVisuals(prev => [...prev, visual])}
                                     autoEdit={pattern.id === editShortPostId}
                                 />
                             ))}
@@ -2052,56 +2058,94 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                     return <EmptyState type="visuals" onGenerate={() => {}} isGenerating={false} />;
                 }
                 return (
-                    <div className="grid grid-cols-2 gap-4">
-                        {visuals.map((visual) => {
-                            const gradientPreset = GRADIENT_PRESETS.find(g => g.id === visual.settings.gradient_id) || GRADIENT_PRESETS[0];
-                            const contentText = Array.isArray(visual.content) ? visual.content[0] : visual.content;
-                            return (
-                                <div key={visual.id} className="group relative rounded-xl border border-gray-200 overflow-hidden bg-white hover:shadow-md transition-shadow">
-                                    {/* Scaled-down preview */}
-                                    <div className="w-full overflow-hidden" style={{ aspectRatio: '1' }}>
-                                        <div style={{ transform: 'scale(0.44)', transformOrigin: 'top left', width: '500px', height: '500px' }}>
-                                            <TweetPreview
-                                                content={contentText}
-                                                displayName={visual.settings.display_name}
-                                                handle={visual.settings.handle}
-                                                avatarUrl={visual.settings.avatar_url}
-                                                theme={visual.settings.theme}
-                                                style={visual.settings.style}
-                                                stats={visual.settings.stats || { views: 0, reposts: 0, quotes: 0, likes: 0, bookmarks: 0 }}
-                                                roundedCorners={visual.settings.corners === 'rounded'}
-                                                gradient={gradientPreset}
-                                            />
+                    <>
+                        <div className="space-y-4">
+                            {visuals.map((visual, index) => {
+                                const gradientPreset = GRADIENT_PRESETS.find(g => g.id === visual.settings.gradient_id) || GRADIENT_PRESETS[0];
+                                const contentText = Array.isArray(visual.content) ? visual.content[0] : visual.content;
+                                const isBasic = visual.settings.style === 'basic';
+
+                                return (
+                                    <div key={visual.id} className="group relative rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
+                                        {/* Number badge */}
+                                        <div className="absolute -top-2 -left-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white shadow-sm">
+                                            {index + 1}
+                                        </div>
+
+                                        <div className="flex gap-4 p-4">
+                                            {/* Left - Actual TweetPreview scaled down */}
+                                            <div onClick={() => setViewingVisual(visual)} className="flex-shrink-0 w-44 h-44 rounded-lg overflow-hidden relative cursor-pointer hover:opacity-90 transition-opacity">
+                                                <div className="absolute top-0 left-0 pointer-events-none" style={{ width: '500px', height: '500px', transform: 'scale(0.352)', transformOrigin: 'top left' }}>
+                                                    <TweetPreview
+                                                        content={contentText}
+                                                        displayName={visual.settings.display_name}
+                                                        handle={visual.settings.handle}
+                                                        avatarUrl={visual.settings.avatar_url}
+                                                        theme={visual.settings.theme}
+                                                        style={visual.settings.style}
+                                                        stats={visual.settings.stats || { views: 0, reposts: 0, quotes: 0, likes: 0, bookmarks: 0 }}
+                                                        roundedCorners={visual.settings.corners === 'rounded'}
+                                                        gradient={gradientPreset}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Right - Content + meta */}
+                                            <div className="flex-1 min-w-0 flex flex-col">
+                                                {/* Content preview */}
+                                                <div className="mb-3 flex-1">
+                                                    {contentText.split('\n').slice(0, 4).map((line, i) => (
+                                                        <p key={i} className="text-sm leading-relaxed text-gray-800">
+                                                            {line || <span className="block h-2" />}
+                                                        </p>
+                                                    ))}
+                                                    {contentText.split('\n').length > 4 && (
+                                                        <p className="text-sm text-gray-400">...</p>
+                                                    )}
+                                                </div>
+
+                                                {/* Style badges */}
+                                                <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                                                    <span className="rounded-full border px-2 py-0.5 text-[10px] bg-gray-100 text-gray-600 border-gray-200 capitalize">{visual.settings.style}</span>
+                                                    <span className="rounded-full border px-2 py-0.5 text-[10px] bg-gray-100 text-gray-600 border-gray-200 capitalize">{visual.settings.theme}</span>
+                                                    {!isBasic && (
+                                                        <span className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] bg-gray-100 text-gray-600 border-gray-200">
+                                                            <span className={`h-2.5 w-2.5 rounded-full bg-gradient-to-br ${gradientPreset.swatch}`} />
+                                                            {gradientPreset.label}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Footer actions */}
+                                                <div className="flex items-center justify-end gap-1 border-t border-gray-100 pt-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setVisuals(prev => prev.filter(v => v.id !== visual.id));
+                                                            deleteVisual(visual.id).catch(() => toast.error('Failed to delete visual'));
+                                                        }}
+                                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
+                                );
+                            })}
+                        </div>
 
-                                    {/* Hover overlay with actions */}
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                        <button
-                                            onClick={() => {
-                                                setVisuals(prev => prev.filter(v => v.id !== visual.id));
-                                                deleteVisual(visual.id).catch(() => toast.error('Failed to delete visual'));
-                                            }}
-                                            className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-                                        >
-                                            <Trash2 size={14} />
-                                            Delete
-                                        </button>
-                                    </div>
-
-                                    {/* Meta */}
-                                    <div className="px-3 py-2 border-t border-gray-100">
-                                        <p className="text-xs text-gray-500 truncate">{contentText}</p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{visual.settings.style}</span>
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{visual.settings.theme}</span>
-                                            <span className={`h-3 w-3 rounded-full bg-gradient-to-br ${gradientPreset.swatch}`} />
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                        {viewingVisual && (
+                            <TweetPreviewModal
+                                isOpen={true}
+                                onClose={() => setViewingVisual(null)}
+                                content={Array.isArray(viewingVisual.content) ? viewingVisual.content[0] : viewingVisual.content}
+                                blogId={blogId}
+                                sourceType={viewingVisual.source_type}
+                                sourceId={viewingVisual.source_id}
+                            />
+                        )}
+                    </>
                 );
 
             case 'video':
