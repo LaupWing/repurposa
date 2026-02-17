@@ -25,7 +25,7 @@ import { useProfile } from '../../context/ProfileContext';
 // ============================================
 
 type Theme = 'light' | 'dark';
-type Style = 'minimal' | 'detailed';
+type Style = 'basic' | 'minimal' | 'detailed';
 type Corners = 'rounded' | 'square';
 
 interface GradientPreset {
@@ -37,14 +37,14 @@ interface GradientPreset {
 }
 
 const GRADIENT_PRESETS: GradientPreset[] = [
-    { id: 'purple',  label: 'Purple',  light: 'from-violet-400 via-purple-400 to-violet-500',   dark: 'from-violet-600 via-purple-600 to-violet-700',   swatch: 'from-violet-500 to-purple-600' },
-    { id: 'blue',    label: 'Blue',    light: 'from-blue-400 via-sky-400 to-blue-500',          dark: 'from-blue-600 via-sky-600 to-blue-700',          swatch: 'from-blue-500 to-sky-600' },
-    { id: 'ocean',   label: 'Ocean',   light: 'from-cyan-400 via-teal-400 to-emerald-400',      dark: 'from-cyan-600 via-teal-600 to-emerald-600',      swatch: 'from-cyan-500 to-emerald-500' },
-    { id: 'green',   label: 'Green',   light: 'from-emerald-400 via-green-400 to-teal-400',     dark: 'from-emerald-600 via-green-600 to-teal-600',     swatch: 'from-emerald-500 to-teal-500' },
-    { id: 'sunset',  label: 'Sunset',  light: 'from-orange-400 via-rose-400 to-pink-400',       dark: 'from-orange-600 via-rose-600 to-pink-600',       swatch: 'from-orange-500 to-pink-500' },
-    { id: 'rose',    label: 'Rose',    light: 'from-pink-400 via-rose-400 to-red-400',          dark: 'from-pink-600 via-rose-600 to-red-600',          swatch: 'from-pink-500 to-red-500' },
-    { id: 'amber',   label: 'Amber',   light: 'from-amber-400 via-yellow-400 to-orange-400',    dark: 'from-amber-600 via-yellow-600 to-orange-600',    swatch: 'from-amber-500 to-orange-500' },
-    { id: 'slate',   label: 'Slate',   light: 'from-slate-300 via-gray-300 to-zinc-400',        dark: 'from-slate-600 via-gray-600 to-zinc-700',        swatch: 'from-slate-500 to-zinc-600' },
+    { id: 'purple',   label: 'Purple',   light: 'from-violet-500 via-purple-500 to-fuchsia-500',  dark: 'from-violet-700 via-purple-700 to-fuchsia-700',  swatch: 'from-violet-500 to-fuchsia-500' },
+    { id: 'indigo',   label: 'Indigo',   light: 'from-indigo-500 via-blue-500 to-violet-500',     dark: 'from-indigo-700 via-blue-700 to-violet-700',     swatch: 'from-indigo-500 to-violet-500' },
+    { id: 'ocean',    label: 'Ocean',    light: 'from-blue-500 via-cyan-400 to-teal-400',         dark: 'from-blue-700 via-cyan-600 to-teal-600',         swatch: 'from-blue-500 to-teal-400' },
+    { id: 'emerald',  label: 'Emerald',  light: 'from-emerald-500 via-green-400 to-lime-400',     dark: 'from-emerald-700 via-green-600 to-lime-600',     swatch: 'from-emerald-500 to-lime-400' },
+    { id: 'sunset',   label: 'Sunset',   light: 'from-orange-500 via-red-500 to-pink-500',        dark: 'from-orange-700 via-red-700 to-pink-700',        swatch: 'from-orange-500 to-pink-500' },
+    { id: 'rose',     label: 'Rose',     light: 'from-rose-500 via-pink-500 to-fuchsia-500',      dark: 'from-rose-700 via-pink-700 to-fuchsia-700',      swatch: 'from-rose-500 to-fuchsia-500' },
+    { id: 'gold',     label: 'Gold',     light: 'from-amber-500 via-orange-400 to-yellow-400',    dark: 'from-amber-700 via-orange-600 to-yellow-600',    swatch: 'from-amber-500 to-yellow-400' },
+    { id: 'midnight', label: 'Midnight', light: 'from-slate-500 via-gray-600 to-zinc-700',        dark: 'from-slate-800 via-gray-800 to-zinc-900',        swatch: 'from-slate-600 to-zinc-800' },
 ];
 
 interface EngagementStats {
@@ -87,6 +87,7 @@ function TweetPreview({
     gradient: GradientPreset;
 }) {
     const isDark = theme === 'dark';
+    const isBasic = style === 'basic';
     const isMinimal = style === 'minimal';
     const initial = displayName?.charAt(0).toUpperCase() || handle?.charAt(0).toUpperCase() || '?';
 
@@ -106,18 +107,50 @@ function TweetPreview({
 
     const getTextSize = () => {
         const len = content.length;
+        if (isBasic) {
+            if (len > 250) return 'text-lg';
+            if (len > 180) return 'text-xl';
+            if (len > 120) return 'text-2xl font-semibold';
+            return 'text-3xl font-semibold';
+        }
         if (isMinimal) {
             if (len > 250) return 'text-base';
             if (len > 180) return 'text-lg';
             if (len > 120) return 'text-xl';
             return 'text-2xl font-medium';
-        } else {
-            if (len > 250) return 'text-sm';
-            if (len > 180) return 'text-base';
-            if (len > 120) return 'text-lg';
-            return 'text-xl';
         }
+        if (len > 250) return 'text-sm';
+        if (len > 180) return 'text-base';
+        if (len > 120) return 'text-lg';
+        return 'text-xl';
     };
+
+    // Basic style: flat card, no gradient wrapper
+    if (isBasic) {
+        return (
+            <div className={`h-[500px] w-[500px] flex flex-col justify-center px-10 py-12 shadow-2xl ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'}`}>
+                {/* Avatar + Name */}
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-violet-600">
+                        {avatarUrl ? (
+                            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-white">
+                                {initial}
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xl">{displayName || 'Your Name'}</span>
+                        <BadgeCheck className="h-6 w-6 fill-blue-500 text-white" />
+                    </div>
+                </div>
+
+                {/* Content */}
+                <p className={`whitespace-pre-wrap leading-snug ${getTextSize()}`}>{content}</p>
+            </div>
+        );
+    }
 
     return (
         <div className={`h-[500px] w-[500px] p-10 shadow-2xl ${roundedCorners ? 'rounded-2xl' : ''} ${gradientBg}`}>
@@ -127,12 +160,12 @@ function TweetPreview({
                 } ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'}`}
             >
                 {/* Header */}
-                <div className="flex gap-3">
-                    <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-violet-600">
+                <div className="flex items-center gap-3">
+                    <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-violet-600">
                         {avatarUrl ? (
                             <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
-                            <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-white">
+                            <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-white">
                                 {initial}
                             </div>
                         )}
@@ -317,6 +350,8 @@ function StatsEditor({
                 <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
             {open && (
+                <>
+                <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
                 <div className="absolute top-full mt-1 left-0 w-56 bg-white rounded-lg border border-gray-200 shadow-lg p-3 z-20">
                     <div className="space-y-2">
                         {fields.map(({ key, label }) => (
@@ -337,6 +372,56 @@ function StatsEditor({
                         ))}
                     </div>
                 </div>
+                </>
+            )}
+        </div>
+    );
+}
+
+// ============================================
+// GRADIENT PICKER
+// ============================================
+
+function GradientPicker({
+    gradient,
+    onChange,
+}: {
+    gradient: GradientPreset;
+    onChange: (preset: GradientPreset) => void;
+}) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <div className="relative">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Color</label>
+            <button
+                onClick={() => setOpen(!open)}
+                className="h-[34px] w-[34px] rounded-lg shadow-sm border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer overflow-hidden"
+                title={gradient.label}
+            >
+                <div className={`h-full w-full bg-gradient-to-br ${gradient.swatch}`} />
+            </button>
+            {open && (
+                <>
+                    <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 bg-white rounded-xl border border-gray-200 shadow-lg z-20 p-3 w-[200px]">
+                        <p className="text-xs font-medium text-gray-500 mb-2">Background gradient</p>
+                        <div className="grid grid-cols-4 gap-2">
+                            {GRADIENT_PRESETS.map((preset) => (
+                                <button
+                                    key={preset.id}
+                                    onClick={() => { onChange(preset); setOpen(false); }}
+                                    title={preset.label}
+                                    className={`h-10 w-10 rounded-lg bg-gradient-to-br ${preset.swatch} transition-all ${
+                                        gradient.id === preset.id
+                                            ? 'ring-2 ring-blue-500 ring-offset-2'
+                                            : 'hover:scale-105 hover:shadow-md'
+                                    }`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </>
             )}
         </div>
     );
@@ -431,13 +516,13 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
                             <label className="block text-xs font-medium text-gray-500 mb-1">Avatar</label>
                             <button
                                 onClick={() => avatarInputRef.current?.click()}
-                                className="h-[34px] w-[34px] rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-violet-600 hover:ring-2 hover:ring-blue-400 transition-all flex-shrink-0"
+                                className="h-[52px] w-[52px] rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-violet-600 hover:ring-2 hover:ring-blue-400 hover:ring-offset-2 transition-all flex-shrink-0"
                                 title="Change avatar"
                             >
                                 {avatarUrl ? (
                                     <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                                 ) : (
-                                    <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-white">
+                                    <span className="flex h-full w-full items-center justify-center text-lg font-semibold text-white">
                                         {(displayName?.charAt(0) || '?').toUpperCase()}
                                     </span>
                                 )}
@@ -478,8 +563,9 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
                         <SelectDropdown
                             label="Style"
                             options={[
-                                { label: 'Detailed', value: 'detailed' as Style },
+                                { label: 'Basic', value: 'basic' as Style },
                                 { label: 'Minimal', value: 'minimal' as Style },
+                                { label: 'Detailed', value: 'detailed' as Style },
                             ]}
                             value={style}
                             onChange={setStyle}
@@ -492,34 +578,20 @@ export default function TweetPreviewModal({ isOpen, onClose, content }: TweetPre
                             value={theme}
                             onChange={setTheme}
                         />
-                        <ToggleGroup
-                            options={[
-                                { label: 'Rounded', value: 'rounded' as Corners },
-                                { label: 'Square', value: 'square' as Corners },
-                            ]}
-                            value={corners}
-                            onChange={setCorners}
-                        />
+                        {style !== 'basic' && (
+                            <ToggleGroup
+                                options={[
+                                    { label: 'Rounded', value: 'rounded' as Corners },
+                                    { label: 'Square', value: 'square' as Corners },
+                                ]}
+                                value={corners}
+                                onChange={setCorners}
+                            />
+                        )}
+                        {style !== 'basic' && (
+                            <GradientPicker gradient={gradient} onChange={setGradient} />
+                        )}
                         {style === 'detailed' && <StatsEditor stats={stats} onChange={setStats} />}
-                    </div>
-
-                    {/* Gradient presets */}
-                    <div className="mb-6">
-                        <label className="block text-xs font-medium text-gray-500 mb-2">Background</label>
-                        <div className="flex items-center gap-2">
-                            {GRADIENT_PRESETS.map((preset) => (
-                                <button
-                                    key={preset.id}
-                                    onClick={() => setGradient(preset)}
-                                    title={preset.label}
-                                    className={`h-7 w-7 rounded-full bg-gradient-to-br ${preset.swatch} transition-all ${
-                                        gradient.id === preset.id
-                                            ? 'ring-2 ring-blue-500 ring-offset-2 scale-110'
-                                            : 'hover:scale-110'
-                                    }`}
-                                />
-                            ))}
-                        </div>
                     </div>
 
                     {/* Preview */}
