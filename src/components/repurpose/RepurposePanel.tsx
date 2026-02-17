@@ -2122,6 +2122,9 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
 
                                                 {/* Style badges */}
                                                 <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                                                    <span className={`rounded-full border px-2 py-0.5 text-[10px] ${visual.source_type === 'thread' ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                                                        {visual.source_type === 'thread' ? `Thread · ${Array.isArray(visual.content) ? visual.content.length : 1} posts` : 'Short Post'}
+                                                    </span>
                                                     <span className="rounded-full border px-2 py-0.5 text-[10px] bg-gray-100 text-gray-600 border-gray-200 capitalize">{visual.settings.style}</span>
                                                     <span className="rounded-full border px-2 py-0.5 text-[10px] bg-gray-100 text-gray-600 border-gray-200 capitalize">{visual.settings.theme}</span>
                                                     {!isBasic && (

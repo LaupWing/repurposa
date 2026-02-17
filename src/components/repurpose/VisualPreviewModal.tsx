@@ -638,44 +638,52 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                     </div>
 
                     {/* Preview */}
-                    <div className="flex justify-center">
-                        <div ref={previewRef}>
-                            <VisualPreview
-                                content={posts[currentPostIndex]}
-                                displayName={displayName}
-                                handle={handle}
-                                avatarUrl={avatarUrl}
-                                theme={theme}
-                                style={style}
-                                stats={stats}
-                                roundedCorners={corners === 'rounded'}
-                                gradient={gradient}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Post navigation for threads */}
-                    {posts.length > 1 && (
-                        <div className="flex items-center justify-center gap-3 mt-4">
+                    <div className="flex items-center justify-center gap-3">
+                        {/* Left chevron */}
+                        {posts.length > 1 ? (
                             <button
                                 onClick={() => setCurrentPostIndex((i) => Math.max(0, i - 1))}
                                 disabled={currentPostIndex === 0}
-                                className="h-8 w-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
-                                <ChevronLeft size={18} />
+                                <ChevronLeft size={22} />
                             </button>
-                            <span className="text-sm text-gray-600 font-medium">
-                                Post {currentPostIndex + 1} of {posts.length}
-                            </span>
+                        ) : null}
+
+                        {/* Card + badge */}
+                        <div className="relative">
+                            {posts.length > 1 && (
+                                <div className="absolute -top-3 right-3 z-10 rounded-full bg-black/70 px-2.5 py-0.5 text-xs font-medium text-white shadow-sm">
+                                    Post {currentPostIndex + 1} of {posts.length}
+                                </div>
+                            )}
+                            <div ref={previewRef}>
+                                <VisualPreview
+                                    content={posts[currentPostIndex]}
+                                    displayName={displayName}
+                                    handle={handle}
+                                    avatarUrl={avatarUrl}
+                                    theme={theme}
+                                    style={style}
+                                    stats={stats}
+                                    roundedCorners={corners === 'rounded'}
+                                    gradient={gradient}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Right chevron */}
+                        {posts.length > 1 ? (
                             <button
                                 onClick={() => setCurrentPostIndex((i) => Math.min(posts.length - 1, i + 1))}
                                 disabled={currentPostIndex === posts.length - 1}
-                                className="h-8 w-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
-                                <ChevronRight size={18} />
+                                <ChevronRight size={22} />
                             </button>
-                        </div>
-                    )}
+                        ) : null}
+                    </div>
+
                 </div>
 
                 {/* Footer */}
