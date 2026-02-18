@@ -2138,11 +2138,37 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                                 {/* Footer actions */}
                                                 <div className="flex items-center justify-end gap-1 border-t border-gray-100 pt-2">
                                                     <button
+                                                        onClick={() => setViewingVisual(visual)}
+                                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-blue-50 hover:text-blue-500"
+                                                        title="Edit visual"
+                                                    >
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const text = Array.isArray(visual.content) ? visual.content.join('\n\n---\n\n') : visual.content;
+                                                            setSchedulingPost({
+                                                                id: visual.source_id,
+                                                                content: text,
+                                                                emotions: [],
+                                                                media: [],
+                                                                cta_content: '',
+                                                                cta_media: [],
+                                                                scheduled_post: null,
+                                                            });
+                                                        }}
+                                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-blue-50 hover:text-blue-500"
+                                                        title="Schedule"
+                                                    >
+                                                        <Calendar size={14} />
+                                                    </button>
+                                                    <button
                                                         onClick={() => {
                                                             setVisuals(prev => prev.filter(v => v.id !== visual.id));
                                                             deleteVisual(visual.id).catch(() => toast.error('Failed to delete visual'));
                                                         }}
                                                         className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                                        title="Delete"
                                                     >
                                                         <Trash2 size={14} />
                                                     </button>
@@ -2162,7 +2188,12 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     content={viewingVisual.content}
                                     blogId={blogId}
                                     sourceId={viewingVisual.source_id}
+                                    visualId={viewingVisual.id}
                                     initialSettings={viewingVisual.settings}
+                                    onSaved={(updated) => {
+                                        setVisuals(prev => prev.map(v => v.id === updated.id ? updated : v));
+                                        setViewingVisual(null);
+                                    }}
                                 />
                             ) : (
                                 <VisualShortPostPreviewModal
@@ -2171,7 +2202,12 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     content={Array.isArray(viewingVisual.content) ? viewingVisual.content[0] : viewingVisual.content}
                                     blogId={blogId}
                                     sourceId={viewingVisual.source_id}
+                                    visualId={viewingVisual.id}
                                     initialSettings={viewingVisual.settings}
+                                    onSaved={(updated) => {
+                                        setVisuals(prev => prev.map(v => v.id === updated.id ? updated : v));
+                                        setViewingVisual(null);
+                                    }}
                                 />
                             )
                         )}
