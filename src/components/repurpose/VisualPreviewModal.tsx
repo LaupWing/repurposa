@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfile } from '../../context/ProfileContext';
-import { createVisual } from '../../services/api';
+import { createVisual, updateVisual } from '../../services/api';
 import type { VisualSettings } from '../../services/api';
 
 // ============================================
@@ -67,6 +67,7 @@ interface BaseVisualPreviewModalProps {
     blogId?: number;
     sourceType?: 'short_post' | 'thread';
     sourceId?: number;
+    visualId?: number;
     initialSettings?: VisualSettings;
     onSaved?: (visual: import('../../services/api').Visual) => void;
 }
@@ -503,7 +504,7 @@ function generateRandomStats(): EngagementStats {
     };
 }
 
-function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, initialSettings, onSaved }: BaseVisualPreviewModalProps) {
+function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, visualId, initialSettings, onSaved }: BaseVisualPreviewModalProps) {
     const { user, socialConnections } = useProfile();
     const xConnection = socialConnections.find((c) => c.platform === 'twitter');
 
@@ -570,8 +571,10 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         }
     }, [downloading]);
 
+    const isEditing = !!visualId;
+
     const handleSave = useCallback(async () => {
-        if (!blogId || !sourceType || !sourceId || saving) return;
+        if (saving) return;
         setSaving(true);
         try {
             const settings: VisualSettings = {
@@ -584,13 +587,20 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                 avatar_url: avatarUrl,
                 ...(style === 'detailed' && { stats }),
             };
-            const visual = await createVisual(blogId, {
-                source_type: sourceType,
-                source_id: sourceId,
-                content,
-                settings,
-            });
-            toast.success('Visual saved!');
+
+            let visual: import('../../services/api').Visual;
+            if (isEditing) {
+                visual = await updateVisual(visualId, { content, settings });
+            } else {
+                if (!blogId || !sourceType || !sourceId) return;
+                visual = await createVisual(blogId, {
+                    source_type: sourceType,
+                    source_id: sourceId,
+                    content,
+                    settings,
+                });
+            }
+            toast.success(isEditing ? 'Visual updated!' : 'Visual saved!');
             onSaved?.(visual);
         } catch (err) {
             console.error('Failed to save visual:', err);
@@ -598,7 +608,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         } finally {
             setSaving(false);
         }
-    }, [blogId, sourceType, sourceId, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, stats, content, onSaved]);
+    }, [blogId, sourceType, sourceId, visualId, isEditing, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, stats, content, onSaved]);
 
     if (!isOpen) return null;
 
@@ -765,14 +775,14 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                         <Download size={16} />
                         {downloading ? 'Generating...' : 'Download'}
                     </button>
-                    {blogId && sourceType && sourceId && (
+                    {(isEditing || (blogId && sourceType && sourceId)) && (
                         <button
                             onClick={handleSave}
                             disabled={saving}
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors"
                         >
                             <Save size={16} />
-                            {saving ? 'Saving...' : 'Save to Visuals'}
+                            {saving ? 'Saving...' : isEditing ? 'Save' : 'Save to Visuals'}
                         </button>
                     )}
                 </div>
