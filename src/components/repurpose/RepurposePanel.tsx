@@ -2189,6 +2189,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     blogId={blogId}
                                     sourceId={viewingVisual.source_id}
                                     visualId={viewingVisual.id}
+                                    initialDescription={viewingVisual.description}
                                     initialSettings={viewingVisual.settings}
                                     onSaved={(updated) => {
                                         setVisuals(prev => prev.map(v => v.id === updated.id ? updated : v));
@@ -2203,6 +2204,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     blogId={blogId}
                                     sourceId={viewingVisual.source_id}
                                     visualId={viewingVisual.id}
+                                    initialDescription={viewingVisual.description}
                                     initialSettings={viewingVisual.settings}
                                     onSaved={(updated) => {
                                         setVisuals(prev => prev.map(v => v.id === updated.id ? updated : v));

@@ -594,13 +594,14 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
 
             let visual: import('../../services/api').Visual;
             if (isEditing) {
-                visual = await updateVisual(visualId, { content, settings });
+                visual = await updateVisual(visualId, { content, description, settings });
             } else {
                 if (!blogId || !sourceType || !sourceId) return;
                 visual = await createVisual(blogId, {
                     source_type: sourceType,
                     source_id: sourceId,
                     content,
+                    description,
                     settings,
                 });
             }
@@ -612,7 +613,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         } finally {
             setSaving(false);
         }
-    }, [blogId, sourceType, sourceId, visualId, isEditing, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, stats, content, onSaved]);
+    }, [blogId, sourceType, sourceId, visualId, isEditing, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, stats, content, description, onSaved]);
 
     if (!isOpen) return null;
 
