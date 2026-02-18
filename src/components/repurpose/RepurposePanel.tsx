@@ -28,6 +28,7 @@ import {
     MoreHorizontal,
     Send,
     Search,
+    Link2,
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
@@ -631,7 +632,7 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
     );
 }
 
-function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, autoEdit, onAutoEditHandled }: { post: ThreadItem['posts'][number]; idx: number; isLast: boolean; onEdit: (content: string) => void; onDelete: () => void; onInsertBelow: () => void; autoEdit?: boolean; onAutoEditHandled?: () => void }) {
+function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, autoEdit, onAutoEditHandled, isPublished, onCreateCta }: { post: ThreadItem['posts'][number]; idx: number; isLast: boolean; onEdit: (content: string) => void; onDelete: () => void; onInsertBelow: () => void; autoEdit?: boolean; onAutoEditHandled?: () => void; isPublished?: boolean; onCreateCta?: () => void }) {
     const [isEditing, setIsEditing] = useState(autoEdit || false);
     const [editContent, setEditContent] = useState(post.content);
 
@@ -653,6 +654,7 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
     const handleSave = () => {
         onEdit(editContent);
         setIsEditing(false);
+        toast.success('Tweet saved');
     };
 
     const handleCancel = () => {
@@ -732,6 +734,25 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
                                 >
                                     <Pencil size={14} />
                                 </button>
+                                <Tooltip
+                                    text={isPublished ? 'Create CTA' : 'Publish the blog first to generate a CTA'}
+                                    delay={0}
+                                    placement="top"
+                                >
+                                    <span className="inline-flex">
+                                        <button
+                                            onClick={isPublished ? onCreateCta : undefined}
+                                            disabled={!isPublished}
+                                            className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${
+                                                isPublished
+                                                    ? 'text-gray-400 hover:bg-blue-50 hover:text-blue-500'
+                                                    : 'text-gray-300 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            <Link2 size={14} />
+                                        </button>
+                                    </span>
+                                </Tooltip>
                                 <button
                                     onClick={onDelete}
                                     className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
@@ -745,14 +766,14 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
             </div>
             {/* Insert post below button */}
             {!isLast && (
-                <div className="relative flex items-center justify-center -mb-2 mt-1 group/insert">
-                    <div className="absolute inset-x-0 top-1/2 h-px bg-transparent group-hover/insert:bg-blue-200 transition-colors" />
+                <div className="relative flex items-center justify-center mt-0.5 -mb-1.5">
+                    <div className="absolute inset-x-0 top-1/2 h-px border-t border-dashed border-gray-200" />
                     <button
                         onClick={onInsertBelow}
-                        className="relative z-[1] h-5 w-5 flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-500 transition-all opacity-0 group-hover/insert:opacity-100"
+                        className="relative z-[1] h-6 w-6 flex items-center justify-center rounded-full border border-gray-300 bg-white text-gray-400 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-500 transition-all shadow-sm"
                         title="Insert tweet below"
                     >
-                        <Plus size={12} />
+                        <Plus size={13} />
                     </button>
                 </div>
             )}
@@ -760,7 +781,7 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
     );
 }
 
-function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onDelete, blogId, onVisualSaved }: {
+function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onDelete, blogId, onVisualSaved, isPublished }: {
     thread: ThreadItem;
     index: number;
     onEditPost: (postIndex: number, content: string) => void;
@@ -771,6 +792,7 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onE
     onDelete: () => void;
     blogId?: number;
     onVisualSaved?: (visual: Visual) => void;
+    isPublished?: boolean;
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditingHook, setIsEditingHook] = useState(false);
@@ -781,6 +803,32 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onE
     const menuRef = useRef<HTMLDivElement>(null);
     const [showVisualModal, setShowVisualModal] = useState(false);
     const [autoEditIndex, setAutoEditIndex] = useState<number | null>(null);
+
+    // Stable unique keys for posts so React doesn't reuse components on insert/delete
+    const nextKeyId = useRef(thread.posts.length);
+    const [postKeys, setPostKeys] = useState<string[]>(() =>
+        thread.posts.map((_, i) => `p-${i}`)
+    );
+
+    // Reset keys if thread identity changes (e.g. regeneration)
+    const prevThreadId = useRef(thread.id);
+    if (thread.id !== prevThreadId.current) {
+        prevThreadId.current = thread.id;
+        nextKeyId.current = thread.posts.length;
+        setPostKeys(thread.posts.map((_, i) => `p-${i}`));
+    }
+
+    const handleInsertPost = (afterIdx: number) => {
+        const newKey = `p-${nextKeyId.current++}`;
+        setPostKeys(prev => [...prev.slice(0, afterIdx + 1), newKey, ...prev.slice(afterIdx + 1)]);
+        onInsertPost(afterIdx);
+        setAutoEditIndex(afterIdx + 1);
+    };
+
+    const handleDeletePost = (idx: number) => {
+        setPostKeys(prev => prev.filter((_, i) => i !== idx));
+        onDeletePost(idx);
+    };
 
     useEffect(() => {
         if (!menuOpen) return;
@@ -979,26 +1027,26 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onE
                     <div className="relative mt-2">
                         {thread.posts.map((post, idx) => (
                             <ThreadPostItem
-                                key={idx}
+                                key={postKeys[idx] || idx}
                                 post={post}
                                 idx={idx}
                                 isLast={idx === thread.posts.length - 1}
                                 onEdit={(content) => onEditPost(idx, content)}
-                                onDelete={() => onDeletePost(idx)}
-                                onInsertBelow={() => {
-                                    onInsertPost(idx);
-                                    setAutoEditIndex(idx + 1);
-                                }}
+                                onDelete={() => handleDeletePost(idx)}
+                                onInsertBelow={() => handleInsertPost(idx)}
                                 autoEdit={autoEditIndex === idx}
                                 onAutoEditHandled={() => setAutoEditIndex(null)}
+                                isPublished={isPublished}
+                                onCreateCta={() => {
+                                    toast.info('CTA generation coming soon');
+                                }}
                             />
                         ))}
                         {/* Add tweet at end */}
                         <div className="pl-8 pt-1">
                             <button
                                 onClick={() => {
-                                    onInsertPost(thread.posts.length - 1);
-                                    setAutoEditIndex(thread.posts.length);
+                                    handleInsertPost(thread.posts.length - 1);
                                     setIsExpanded(true);
                                 }}
                                 className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-blue-500 transition-colors px-2 py-1.5 rounded-md hover:bg-blue-50"
@@ -2121,6 +2169,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                 }}
                                 onDelete={() => setThreads(prev => prev.filter(t => t.id !== thread.id))}
                                 blogId={blogId}
+                                isPublished={isPublished}
                                 onVisualSaved={(visual) => {
                                     setVisuals(prev => [...prev, visual]);
                                     onVisualCreated?.(visual);
