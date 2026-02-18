@@ -631,9 +631,16 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
     );
 }
 
-function ThreadPostItem({ post, idx, isLast, onEdit, onDelete }: { post: ThreadItem['posts'][number]; idx: number; isLast: boolean; onEdit: (content: string) => void; onDelete: () => void }) {
-    const [isEditing, setIsEditing] = useState(false);
+function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, autoEdit, onAutoEditHandled }: { post: ThreadItem['posts'][number]; idx: number; isLast: boolean; onEdit: (content: string) => void; onDelete: () => void; onInsertBelow: () => void; autoEdit?: boolean; onAutoEditHandled?: () => void }) {
+    const [isEditing, setIsEditing] = useState(autoEdit || false);
     const [editContent, setEditContent] = useState(post.content);
+
+    useEffect(() => {
+        if (autoEdit) {
+            setIsEditing(true);
+            onAutoEditHandled?.();
+        }
+    }, [autoEdit]);
     const [copied, setCopied] = useState(false);
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -736,15 +743,29 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete }: { post: ThreadI
                     </>
                 )}
             </div>
+            {/* Insert post below button */}
+            {!isLast && (
+                <div className="relative flex items-center justify-center -mb-2 mt-1 group/insert">
+                    <div className="absolute inset-x-0 top-1/2 h-px bg-transparent group-hover/insert:bg-blue-200 transition-colors" />
+                    <button
+                        onClick={onInsertBelow}
+                        className="relative z-[1] h-5 w-5 flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-500 transition-all opacity-0 group-hover/insert:opacity-100"
+                        title="Insert tweet below"
+                    >
+                        <Plus size={12} />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
 
-function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSchedule, onDelete, blogId, onVisualSaved }: {
+function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onDelete, blogId, onVisualSaved }: {
     thread: ThreadItem;
     index: number;
     onEditPost: (postIndex: number, content: string) => void;
     onDeletePost: (postIndex: number) => void;
+    onInsertPost: (afterIndex: number) => void;
     onEditHook: (content: string) => void;
     onSchedule: () => void;
     onDelete: () => void;
@@ -759,6 +780,7 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSch
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const [showVisualModal, setShowVisualModal] = useState(false);
+    const [autoEditIndex, setAutoEditIndex] = useState<number | null>(null);
 
     useEffect(() => {
         if (!menuOpen) return;
@@ -963,8 +985,28 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onEditHook, onSch
                                 isLast={idx === thread.posts.length - 1}
                                 onEdit={(content) => onEditPost(idx, content)}
                                 onDelete={() => onDeletePost(idx)}
+                                onInsertBelow={() => {
+                                    onInsertPost(idx);
+                                    setAutoEditIndex(idx + 1);
+                                }}
+                                autoEdit={autoEditIndex === idx}
+                                onAutoEditHandled={() => setAutoEditIndex(null)}
                             />
                         ))}
+                        {/* Add tweet at end */}
+                        <div className="pl-8 pt-1">
+                            <button
+                                onClick={() => {
+                                    onInsertPost(thread.posts.length - 1);
+                                    setAutoEditIndex(thread.posts.length);
+                                    setIsExpanded(true);
+                                }}
+                                className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-blue-500 transition-colors px-2 py-1.5 rounded-md hover:bg-blue-50"
+                            >
+                                <Plus size={14} />
+                                Add tweet
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -2051,6 +2093,13 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     setThreads(prev => prev.map(t =>
                                         t.id === thread.id
                                             ? { ...t, posts: t.posts.filter((_, i) => i !== postIndex) }
+                                            : t
+                                    ));
+                                }}
+                                onInsertPost={(afterIndex) => {
+                                    setThreads(prev => prev.map(t =>
+                                        t.id === thread.id
+                                            ? { ...t, posts: [...t.posts.slice(0, afterIndex + 1), { content: '', media: null }, ...t.posts.slice(afterIndex + 1)] }
                                             : t
                                     ));
                                 }}
