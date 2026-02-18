@@ -1820,12 +1820,14 @@ interface RepurposePanelProps {
     publishedPostUrl?: string | null;
     editShortPostId?: number;
     onSwitchTab?: (tab: TabType) => void;
+    onVisualCreated?: (visual: Visual) => void;
+    initialHighlightVisualId?: number | null;
     initialShortPosts?: ShortPost[];
     initialThreads?: ThreadItem[];
     initialVisuals?: Visual[];
 }
 
-export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab, initialShortPosts, initialThreads, initialVisuals }: RepurposePanelProps) {
+export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab, onVisualCreated, initialHighlightVisualId, initialShortPosts, initialThreads, initialVisuals }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>(() =>
@@ -1838,6 +1840,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
     const [visuals, setVisuals] = useState<Visual[]>(initialVisuals || []);
     const [viewingVisual, setViewingVisual] = useState<Visual | null>(null);
+    const [highlightVisualId, setHighlightVisualId] = useState<number | null>(initialHighlightVisualId ?? null);
 
     // Persist media changes to the API
     const syncShortPostMedia = (postId: number, media: string[], ctaContent?: string, ctaMedia?: string[]) => {
@@ -2004,7 +2007,11 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                         setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_media: newCtaImages } : p));
                                         syncShortPostMedia(pattern.id, pattern.media, pattern.cta_content, newCtaImages);
                                     }}
-                                    onVisualSaved={(visual) => setVisuals(prev => [...prev, visual])}
+                                    onVisualSaved={(visual) => {
+                                        setVisuals(prev => [...prev, visual]);
+                                        onVisualCreated?.(visual);
+                                        onSwitchTab?.('visuals');
+                                    }}
                                     autoEdit={pattern.id === editShortPostId}
                                 />
                             ))}
@@ -2060,7 +2067,11 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                 }}
                                 onDelete={() => setThreads(prev => prev.filter(t => t.id !== thread.id))}
                                 blogId={blogId}
-                                onVisualSaved={(visual) => setVisuals(prev => [...prev, visual])}
+                                onVisualSaved={(visual) => {
+                                    setVisuals(prev => [...prev, visual]);
+                                    onVisualCreated?.(visual);
+                                    onSwitchTab?.('visuals');
+                                }}
                             />
                         ))}
                     </div>
@@ -2081,8 +2092,23 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                 const contentText = Array.isArray(visual.content) ? visual.content[0] : visual.content;
                                 const isBasic = visual.settings.style === 'basic';
 
+                                const isHighlighted = highlightVisualId === visual.id;
+
                                 return (
-                                    <div key={visual.id} className="group relative rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
+                                    <div
+                                        key={visual.id}
+                                        ref={isHighlighted ? (el) => {
+                                            if (el) {
+                                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                setTimeout(() => setHighlightVisualId(null), 2000);
+                                            }
+                                        } : undefined}
+                                        className={`group relative rounded-xl border bg-white shadow-sm transition-all hover:border-blue-300 hover:shadow-md ${
+                                            isHighlighted
+                                                ? 'border-blue-400 ring-2 ring-blue-200 animate-pulse'
+                                                : 'border-gray-200'
+                                        }`}
+                                    >
                                         {/* Number badge */}
                                         <div className="absolute -top-2 -left-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white shadow-sm">
                                             {index + 1}

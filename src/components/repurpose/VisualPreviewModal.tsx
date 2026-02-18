@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import { useProfile } from '../../context/ProfileContext';
 import { createVisual, updateVisual } from '../../services/api';
+import { AITextPopup } from '../AITextPopup';
 import type { VisualSettings } from '../../services/api';
 
 // ============================================
@@ -527,6 +528,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const [currentPostIndex, setCurrentPostIndex] = useState(0);
 
     const previewRef = useRef<HTMLDivElement>(null);
+    const descriptionRef = useRef<HTMLTextAreaElement>(null);
     const [theme, setTheme] = useState<Theme>('light');
     const [style, setStyle] = useState<Style>('detailed');
     const [corners, setCorners] = useState<Corners>('square');
@@ -813,9 +815,11 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                             </div>
                         </>
                     ) : (
-                        <div>
+                        <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Caption / Description</label>
+                            <AITextPopup textareaRef={descriptionRef} value={description} onChange={setDescription} />
                             <textarea
+                                ref={descriptionRef}
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 rows={14}

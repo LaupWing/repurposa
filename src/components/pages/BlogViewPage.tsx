@@ -1424,6 +1424,7 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false);
     const [editorKey, setEditorKey] = useState(0);
+    const [highlightVisualId, setHighlightVisualId] = useState<number | null>(null);
 
     // Fetch blog from API
     useEffect(() => {
@@ -1603,15 +1604,15 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                     )}
 
                     {activeTab === 'short' && (
-                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} publishedPostUrl={post.published_post_url} editShortPostId={shortPostId} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
+                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} publishedPostUrl={post.published_post_url} editShortPostId={shortPostId} onSwitchTab={setActiveTab} onVisualCreated={(visual) => { setPost(prev => prev ? { ...prev, visuals: [...(prev.visuals || []), visual] } : prev); setHighlightVisualId(visual.id); }} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
                     )}
 
                     {activeTab === 'threads' && (
-                        <RepurposePanel initialTab="threads" blogContent={post.content} blogId={post.id} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
+                        <RepurposePanel initialTab="threads" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} onVisualCreated={(visual) => { setPost(prev => prev ? { ...prev, visuals: [...(prev.visuals || []), visual] } : prev); setHighlightVisualId(visual.id); }} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
                     )}
 
                     {activeTab === 'visuals' && (
-                        <RepurposePanel initialTab="visuals" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
+                        <RepurposePanel initialTab="visuals" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} initialHighlightVisualId={highlightVisualId} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
                     )}
 
                     {activeTab === 'video' && (
