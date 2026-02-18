@@ -32,12 +32,16 @@ import {
     History,
     RotateCcw,
     Clock,
+    Zap,
+    Search,
+    BookOpen,
+    ChevronDown,
 } from 'lucide-react';
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
 import ImagePickerModal from '../ImagePickerModal';
 import { getBlog, updateBlog, deleteBlog, generateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion, refineText } from '../../services/api';
-import type { TopicSuggestion } from '../../services/api';
+import type { TopicSuggestion, BlogGenerationMode } from '../../services/api';
 import type { BlogPost, OutlineSection, PostVersion } from '../../services/api';
 import { useProfile } from '../../context/ProfileContext';
 import {
@@ -309,6 +313,9 @@ function RegenerateModal({
         (post.outline || []).map((s, i) => ({ id: `section-${i + 1}`, title: s.title, purpose: s.purpose }))
     );
     const [isGenerating, setIsGenerating] = useState(false);
+    const [generationMode, setGenerationMode] = useState<BlogGenerationMode>('quick');
+    const [openSections, setOpenSections] = useState<Record<string, boolean>>({ info: true, outline: true, mode: true });
+    const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
 
     // Topic generation
     const [isGeneratingTopics, setIsGeneratingTopics] = useState(false);
@@ -425,6 +432,7 @@ function RegenerateModal({
 
             const response = await generateBlog(topic, outlineForApi, {
                 target_audience: targetAudience || undefined,
+                mode: generationMode,
             });
 
             await updateBlog(post.id, {
@@ -472,214 +480,311 @@ function RegenerateModal({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-                    {/* Topic */}
-                    <div className="relative">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-sm font-medium text-gray-700">Topic</label>
-                            <button
-                                onClick={handleGenerateTopics}
-                                disabled={isGeneratingTopics || !topic.trim()}
-                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 disabled:opacity-50"
-                            >
-                                {isGeneratingTopics ? (
-                                    <Loader2 size={12} className="animate-spin" />
-                                ) : (
-                                    <Sparkles size={12} />
+                <div className="flex-1 overflow-y-auto">
+                    {/* Section: Main Info */}
+                    <div className="border-b border-gray-200">
+                        <button
+                            onClick={() => toggleSection('info')}
+                            className="w-full flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-gray-900">Main Info</span>
+                                {!openSections.info && topic && (
+                                    <span className="text-xs text-gray-400 truncate max-w-[200px]">{topic}</span>
                                 )}
-                                Generate Ideas
-                            </button>
-                        </div>
-                        <input
-                            type="text"
-                            value={topic}
-                            onChange={(e) => setTopic(e.target.value)}
-                            placeholder="What is your blog about?"
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
+                            </div>
+                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openSections.info ? 'rotate-180' : ''}`} />
+                        </button>
+                        {openSections.info && (
+                            <div className="px-6 pb-4 space-y-4">
+                                {/* Topic */}
+                                <div className="relative">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-sm font-medium text-gray-700">Topic</label>
+                                        <button
+                                            onClick={handleGenerateTopics}
+                                            disabled={isGeneratingTopics || !topic.trim()}
+                                            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 disabled:opacity-50"
+                                        >
+                                            {isGeneratingTopics ? (
+                                                <Loader2 size={12} className="animate-spin" />
+                                            ) : (
+                                                <Sparkles size={12} />
+                                            )}
+                                            Generate Ideas
+                                        </button>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={topic}
+                                        onChange={(e) => setTopic(e.target.value)}
+                                        placeholder="What is your blog about?"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
 
-                        {/* Topic Suggestions Popover */}
-                        {showTopicPopover && topicSuggestions.length > 0 && (
-                            <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden">
-                                <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
-                                    <span className="text-xs font-medium text-gray-500">Topic Suggestions</span>
-                                    <button onClick={() => setShowTopicPopover(false)} className="p-0.5 hover:bg-gray-200 rounded">
-                                        <X size={12} className="text-gray-400" />
-                                    </button>
-                                </div>
-                                <div className="max-h-48 overflow-y-auto">
-                                    {topicSuggestions.map((suggestion, index) => (
-                                        <div key={index} className="border-b border-gray-100 last:border-0">
-                                            <div className="flex items-center gap-2 px-3 py-2 hover:bg-blue-50 transition-colors">
-                                                <button
-                                                    onClick={() => selectTopic(suggestion)}
-                                                    className="flex-1 text-left text-sm text-gray-900 hover:text-blue-700"
-                                                >
-                                                    {suggestion.title}
-                                                </button>
-                                                <button
-                                                    onClick={() => setExpandedSuggestion(expandedSuggestion === index ? null : index)}
-                                                    className="shrink-0 p-1 rounded hover:bg-gray-200 transition-colors"
-                                                    title="Why it works"
-                                                >
-                                                    <Info size={12} className={expandedSuggestion === index ? 'text-blue-600' : 'text-gray-400'} />
+                                    {/* Topic Suggestions Popover */}
+                                    {showTopicPopover && topicSuggestions.length > 0 && (
+                                        <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden">
+                                            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+                                                <span className="text-xs font-medium text-gray-500">Topic Suggestions</span>
+                                                <button onClick={() => setShowTopicPopover(false)} className="p-0.5 hover:bg-gray-200 rounded">
+                                                    <X size={12} className="text-gray-400" />
                                                 </button>
                                             </div>
-                                            {expandedSuggestion === index && (
-                                                <div className="px-3 pb-2">
-                                                    <p className="text-xs text-gray-500 bg-blue-50 rounded px-2 py-1.5">{suggestion.why_it_works}</p>
-                                                </div>
-                                            )}
+                                            <div className="max-h-48 overflow-y-auto">
+                                                {topicSuggestions.map((suggestion, index) => (
+                                                    <div key={index} className="border-b border-gray-100 last:border-0">
+                                                        <div className="flex items-center gap-2 px-3 py-2 hover:bg-blue-50 transition-colors">
+                                                            <button
+                                                                onClick={() => selectTopic(suggestion)}
+                                                                className="flex-1 text-left text-sm text-gray-900 hover:text-blue-700"
+                                                            >
+                                                                {suggestion.title}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setExpandedSuggestion(expandedSuggestion === index ? null : index)}
+                                                                className="shrink-0 p-1 rounded hover:bg-gray-200 transition-colors"
+                                                                title="Why it works"
+                                                            >
+                                                                <Info size={12} className={expandedSuggestion === index ? 'text-blue-600' : 'text-gray-400'} />
+                                                            </button>
+                                                        </div>
+                                                        {expandedSuggestion === index && (
+                                                            <div className="px-3 pb-2">
+                                                                <p className="text-xs text-gray-500 bg-blue-50 rounded px-2 py-1.5">{suggestion.why_it_works}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    ))}
+                                    )}
+                                </div>
+
+                                {/* Target Audience */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Target Audience</label>
+                                    <input
+                                        type="text"
+                                        value={targetAudience}
+                                        onChange={(e) => setTargetAudience(e.target.value)}
+                                        placeholder="Who is this blog for?"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    {/* Target Audience */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Target Audience</label>
-                        <input
-                            type="text"
-                            value={targetAudience}
-                            onChange={(e) => setTargetAudience(e.target.value)}
-                            placeholder="Who is this blog for?"
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                    </div>
-
-                    {/* Step Tabs */}
-                    <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
+                    {/* Section: Outline */}
+                    <div className="border-b border-gray-200">
                         <button
-                            onClick={() => setActiveStep('rough')}
-                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                                activeStep === 'rough'
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
-                            }`}
+                            onClick={() => toggleSection('outline')}
+                            className="w-full flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors"
                         >
-                            <FileText size={14} />
-                            Rough Outline
-                            {roughOutline.length > 0 && (
-                                <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">{roughOutline.length}</span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveStep('outline')}
-                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                                activeStep === 'outline'
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
-                            }`}
-                        >
-                            <ListOrdered size={14} />
-                            Generated Outline
-                            {outline.length > 0 && (
-                                <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">{outline.length}</span>
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Tab Content */}
-                    {activeStep === 'rough' ? (
-                        <div className="space-y-3">
-                            <p className="text-xs text-gray-500">Add rough ideas, stories, or notes. These will guide the AI when generating the outline.</p>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={newIdea}
-                                    onChange={(e) => setNewIdea(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addIdea(); } }}
-                                    placeholder="e.g., I struggled with yo-yo dieting for 10 years..."
-                                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
-                                <button
-                                    onClick={addIdea}
-                                    disabled={!newIdea.trim()}
-                                    className="flex items-center gap-1 px-3 py-2 bg-gray-100 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
-                                >
-                                    <Plus size={14} />
-                                    Add
-                                </button>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-gray-900">Outline</span>
+                                {outline.length > 0 && (
+                                    <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">{outline.length} sections</span>
+                                )}
                             </div>
-                            {roughOutline.length > 0 ? (
-                                <div className="space-y-1.5">
-                                    {roughOutline.map((idea, index) => (
-                                        <div key={index} className="group flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                                            <span className="flex-1 text-sm text-gray-700">{idea}</span>
+                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openSections.outline ? 'rotate-180' : ''}`} />
+                        </button>
+                        {openSections.outline && (
+                            <div className="px-6 pb-4 space-y-4">
+                                {/* Step Tabs */}
+                                <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
+                                    <button
+                                        onClick={() => setActiveStep('rough')}
+                                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                                            activeStep === 'rough'
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700'
+                                        }`}
+                                    >
+                                        <FileText size={14} />
+                                        Rough Outline
+                                        {roughOutline.length > 0 && (
+                                            <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">{roughOutline.length}</span>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveStep('outline')}
+                                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                                            activeStep === 'outline'
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700'
+                                        }`}
+                                    >
+                                        <ListOrdered size={14} />
+                                        Generated Outline
+                                        {outline.length > 0 && (
+                                            <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">{outline.length}</span>
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* Tab Content */}
+                                {activeStep === 'rough' ? (
+                                    <div className="space-y-3">
+                                        <p className="text-xs text-gray-500">Add rough ideas, stories, or notes. These will guide the AI when generating the outline.</p>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={newIdea}
+                                                onChange={(e) => setNewIdea(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addIdea(); } }}
+                                                placeholder="e.g., I struggled with yo-yo dieting for 10 years..."
+                                                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            />
                                             <button
-                                                onClick={() => removeIdea(index)}
-                                                className="shrink-0 rounded p-1 hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-all"
+                                                onClick={addIdea}
+                                                disabled={!newIdea.trim()}
+                                                className="flex items-center gap-1 px-3 py-2 bg-gray-100 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
                                             >
-                                                <Trash2 size={12} className="text-red-500" />
+                                                <Plus size={14} />
+                                                Add
                                             </button>
                                         </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center">
-                                    <FileText size={20} className="mx-auto mb-2 text-gray-300" />
-                                    <p className="text-xs text-gray-500">No ideas added yet. Add your first idea above!</p>
-                                </div>
-                            )}
-                            <button
-                                onClick={handleGenerateOutline}
-                                disabled={isGeneratingOutline || !topic.trim()}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                            >
-                                {isGeneratingOutline ? (
-                                    <>
-                                        <Loader2 size={14} className="animate-spin" />
-                                        Generating Outline...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Sparkles size={14} />
-                                        {outline.length > 0 ? 'Regenerate Outline' : 'Generate Outline'}
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {outline.length > 0 ? (
-                                <>
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-xs text-gray-500">Drag to reorder, click to edit. The AI will use this outline to generate your blog.</p>
-                                        <button
-                                            onClick={addSection}
-                                            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700"
-                                        >
-                                            <Plus size={12} />
-                                            Add Section
-                                        </button>
-                                    </div>
-                                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                                        <SortableContext items={outline.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-                                            <div className="space-y-2">
-                                                {outline.map((section, index) => (
-                                                    <SortableRegenerateItem
-                                                        key={section.id}
-                                                        section={section}
-                                                        index={index}
-                                                        onRemove={() => removeSection(section.id)}
-                                                        onEdit={(title, purpose) => updateSection(section.id, title, purpose)}
-                                                    />
+                                        {roughOutline.length > 0 ? (
+                                            <div className="space-y-1.5">
+                                                {roughOutline.map((idea, index) => (
+                                                    <div key={index} className="group flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                                                        <span className="flex-1 text-sm text-gray-700">{idea}</span>
+                                                        <button
+                                                            onClick={() => removeIdea(index)}
+                                                            className="shrink-0 rounded p-1 hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-all"
+                                                        >
+                                                            <Trash2 size={12} className="text-red-500" />
+                                                        </button>
+                                                    </div>
                                                 ))}
                                             </div>
-                                        </SortableContext>
-                                    </DndContext>
-                                </>
-                            ) : (
-                                <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-                                    <Sparkles size={24} className="mx-auto mb-2 text-gray-300" />
-                                    <p className="text-sm text-gray-500 mb-1">No outline yet</p>
-                                    <p className="text-xs text-gray-400">Switch to <strong>Rough Outline</strong> to add ideas, then click <strong>Generate Outline</strong>.</p>
+                                        ) : (
+                                            <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center">
+                                                <FileText size={20} className="mx-auto mb-2 text-gray-300" />
+                                                <p className="text-xs text-gray-500">No ideas added yet. Add your first idea above!</p>
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={handleGenerateOutline}
+                                            disabled={isGeneratingOutline || !topic.trim()}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                        >
+                                            {isGeneratingOutline ? (
+                                                <>
+                                                    <Loader2 size={14} className="animate-spin" />
+                                                    Generating Outline...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles size={14} />
+                                                    {outline.length > 0 ? 'Regenerate Outline' : 'Generate Outline'}
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {outline.length > 0 ? (
+                                            <>
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-xs text-gray-500">Drag to reorder, click to edit. The AI will use this outline to generate your blog.</p>
+                                                    <button
+                                                        onClick={addSection}
+                                                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700"
+                                                    >
+                                                        <Plus size={12} />
+                                                        Add Section
+                                                    </button>
+                                                </div>
+                                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                                    <SortableContext items={outline.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                                                        <div className="space-y-2">
+                                                            {outline.map((section, index) => (
+                                                                <SortableRegenerateItem
+                                                                    key={section.id}
+                                                                    section={section}
+                                                                    index={index}
+                                                                    onRemove={() => removeSection(section.id)}
+                                                                    onEdit={(title, purpose) => updateSection(section.id, title, purpose)}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </SortableContext>
+                                                </DndContext>
+                                            </>
+                                        ) : (
+                                            <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+                                                <Sparkles size={24} className="mx-auto mb-2 text-gray-300" />
+                                                <p className="text-sm text-gray-500 mb-1">No outline yet</p>
+                                                <p className="text-xs text-gray-400">Switch to <strong>Rough Outline</strong> to add ideas, then click <strong>Generate Outline</strong>.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Section: Generation Mode */}
+                    <div className="border-b border-gray-200">
+                        <button
+                            onClick={() => toggleSection('mode')}
+                            className="w-full flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-gray-900">Generation Mode</span>
+                                {!openSections.mode && (
+                                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                                        generationMode === 'quick'
+                                            ? 'bg-gray-100 text-gray-600'
+                                            : 'bg-blue-100 text-blue-700'
+                                    }`}>
+                                        {generationMode === 'quick' ? 'Quick' : generationMode === 'researched' ? 'Researched' : 'Citations'}
+                                    </span>
+                                )}
+                            </div>
+                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openSections.mode ? 'rotate-180' : ''}`} />
+                        </button>
+                        {openSections.mode && (
+                            <div className="px-6 pb-4">
+                                <div className="grid grid-cols-3 gap-2">
+                                    {([
+                                        { id: 'quick' as const, label: 'Quick', description: 'Pure AI, no web search', icon: Zap },
+                                        { id: 'researched' as const, label: 'Researched', description: 'With web search for data', icon: Search, badge: 'Takes longer' },
+                                        { id: 'citations' as const, label: 'Citations', description: 'Web search + source links', icon: BookOpen, badge: 'Takes longer' },
+                                    ]).map((mode) => {
+                                        const Icon = mode.icon;
+                                        const isSelected = generationMode === mode.id;
+                                        return (
+                                            <button
+                                                key={mode.id}
+                                                onClick={() => setGenerationMode(mode.id)}
+                                                className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition-colors ${
+                                                    isSelected
+                                                        ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-200'
+                                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                                                    isSelected ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
+                                                }`}>
+                                                    <Icon size={14} />
+                                                </div>
+                                                <span className={`text-xs font-medium ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>{mode.label}</span>
+                                                {mode.badge && (
+                                                    <span className="text-[9px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5">
+                                                        {mode.badge}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-                            )}
-                        </div>
-                    )}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Footer */}
