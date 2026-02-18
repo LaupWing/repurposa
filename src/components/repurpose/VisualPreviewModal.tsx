@@ -97,13 +97,18 @@ function useFitText(
         const container = inner?.parentElement as HTMLElement | null;
         if (!inner || !container) return;
 
+        const cs = getComputedStyle(container);
+        const availableHeight = container.clientHeight
+            - parseFloat(cs.paddingTop)
+            - parseFloat(cs.paddingBottom);
+
         let result: TextSize = TEXT_SCALE[end];
 
         for (let i = start; i <= end; i++) {
             TEXT_SCALE.forEach(cls => inner.classList.remove(cls));
             inner.classList.add(TEXT_SCALE[i]);
 
-            if (inner.offsetHeight <= container.clientHeight) {
+            if (inner.offsetHeight <= availableHeight) {
                 result = TEXT_SCALE[i];
                 break;
             }
@@ -195,7 +200,7 @@ export function VisualPreview({
                 <div className="flex-1 min-h-0 overflow-hidden">
                     <div ref={innerRef} className={`${textClass} ${fontWeightClass}`}>
                         {paragraphs.map((para, i) => (
-                            <p key={i} className={`whitespace-pre-wrap leading-snug ${i < paragraphs.length - 1 ? 'mb-[0.4em]' : ''}`}>{para}</p>
+                            <p key={i} className={`whitespace-pre-wrap leading-snug ${i < paragraphs.length - 1 ? 'mb-[1em]' : ''}`}>{para}</p>
                         ))}
                     </div>
                 </div>
@@ -236,7 +241,7 @@ export function VisualPreview({
                 <div className="flex-1 min-h-0 py-4 overflow-hidden">
                     <div ref={innerRef} className={`${textClass} ${fontWeightClass}`}>
                         {paragraphs.map((para, i) => (
-                            <p key={i} className={`whitespace-pre-wrap leading-relaxed ${i < paragraphs.length - 1 ? 'mb-[0.4em]' : ''}`}>{para}</p>
+                            <p key={i} className={`whitespace-pre-wrap leading-relaxed ${i < paragraphs.length - 1 ? 'mb-[1em]' : ''}`}>{para}</p>
                         ))}
                     </div>
                 </div>
