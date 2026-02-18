@@ -5,7 +5,7 @@
  * with customization controls and PNG download.
  */
 
-import { useState, useRef, useCallback, useEffect } from '@wordpress/element';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from '@wordpress/element';
 import { toPng } from 'html-to-image';
 import {
     X,
@@ -72,6 +72,50 @@ interface BaseVisualPreviewModalProps {
 }
 
 // ============================================
+// FIT TEXT HOOK
+// ============================================
+
+const TEXT_SCALE = ['!text-4xl', '!text-3xl', '!text-2xl', '!text-xl', '!text-lg', '!text-base', '!text-sm', '!text-xs'] as const;
+type TextSize = typeof TEXT_SCALE[number];
+
+const STYLE_RANGE: Record<Style, { start: number; end: number }> = {
+    basic:    { start: 1, end: 6 },  // text-3xl → text-sm
+    minimal:  { start: 2, end: 7 },  // text-2xl → text-xs
+    detailed: { start: 3, end: 7 },  // text-xl  → text-xs
+};
+
+function useFitText(
+    innerRef: React.RefObject<HTMLDivElement | null>,
+    content: string,
+    style: Style,
+): TextSize {
+    const { start, end } = STYLE_RANGE[style];
+    const [textClass, setTextClass] = useState<TextSize>(TEXT_SCALE[start]);
+
+    useLayoutEffect(() => {
+        const inner = innerRef.current;
+        const container = inner?.parentElement as HTMLElement | null;
+        if (!inner || !container) return;
+
+        let result: TextSize = TEXT_SCALE[end];
+
+        for (let i = start; i <= end; i++) {
+            TEXT_SCALE.forEach(cls => inner.classList.remove(cls));
+            inner.classList.add(TEXT_SCALE[i]);
+
+            if (inner.offsetHeight <= container.clientHeight) {
+                result = TEXT_SCALE[i];
+                break;
+            }
+        }
+
+        setTextClass(result);
+    }, [content, style, start, end]);
+
+    return textClass;
+}
+
+// ============================================
 // VISUAL PREVIEW (inline sub-component)
 // ============================================
 
@@ -101,6 +145,17 @@ export function VisualPreview({
     const isMinimal = style === 'minimal';
     const initial = displayName?.charAt(0).toUpperCase() || handle?.charAt(0).toUpperCase() || '?';
 
+    const innerRef = useRef<HTMLDivElement>(null);
+
+    const textClass = useFitText(innerRef, content, style);
+
+    const paragraphs = content.split('\n\n');
+
+    const fontWeightClass =
+        isBasic && ['text-4xl', 'text-3xl', 'text-2xl'].includes(textClass) ? 'font-semibold' :
+        isMinimal && ['text-4xl', 'text-3xl', 'text-2xl', 'text-xl'].includes(textClass) ? 'font-medium' :
+        '';
+
     const now = new Date();
     const timeString = now.toLocaleTimeString('en-US', {
         hour: 'numeric',
@@ -115,32 +170,12 @@ export function VisualPreview({
 
     const gradientBg = `bg-gradient-to-br ${isDark ? gradient.dark : gradient.light}`;
 
-    const getTextSize = () => {
-        const len = content.length;
-        if (isBasic) {
-            if (len > 250) return 'text-lg';
-            if (len > 180) return 'text-xl';
-            if (len > 120) return 'text-2xl font-semibold';
-            return 'text-3xl font-semibold';
-        }
-        if (isMinimal) {
-            if (len > 250) return 'text-base';
-            if (len > 180) return 'text-lg';
-            if (len > 120) return 'text-xl';
-            return 'text-2xl font-medium';
-        }
-        if (len > 250) return 'text-sm';
-        if (len > 180) return 'text-base';
-        if (len > 120) return 'text-lg';
-        return 'text-xl';
-    };
-
     // Basic style: flat card, no gradient wrapper
     if (isBasic) {
         return (
-            <div className={`h-[500px] w-[500px] flex flex-col justify-center px-10 py-12 shadow-2xl ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'}`}>
+            <div className={`h-[500px] w-[500px] flex flex-col px-10 py-12 shadow-2xl ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'}`}>
                 {/* Avatar + Name */}
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-3 mb-6 flex-shrink-0">
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-violet-600">
                         {avatarUrl ? (
                             <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -157,7 +192,13 @@ export function VisualPreview({
                 </div>
 
                 {/* Content */}
-                <p className={`whitespace-pre-wrap leading-snug ${getTextSize()}`}>{content}</p>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                    <div ref={innerRef} className={`${textClass} ${fontWeightClass}`}>
+                        {paragraphs.map((para, i) => (
+                            <p key={i} className={`whitespace-pre-wrap leading-snug ${i < paragraphs.length - 1 ? 'mb-[0.4em]' : ''}`}>{para}</p>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
@@ -170,7 +211,7 @@ export function VisualPreview({
                 } ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'}`}
             >
                 {/* Header */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-violet-600">
                         {avatarUrl ? (
                             <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -192,12 +233,16 @@ export function VisualPreview({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 py-4 overflow-hidden">
-                    <p className={`whitespace-pre-wrap leading-relaxed ${getTextSize()}`}>{content}</p>
+                <div className="flex-1 min-h-0 py-4 overflow-hidden">
+                    <div ref={innerRef} className={`${textClass} ${fontWeightClass}`}>
+                        {paragraphs.map((para, i) => (
+                            <p key={i} className={`whitespace-pre-wrap leading-relaxed ${i < paragraphs.length - 1 ? 'mb-[0.4em]' : ''}`}>{para}</p>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Timestamp */}
-                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <div className={`text-sm flex-shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     <span>{timeString}</span>
                     <span className="mx-1">·</span>
                     <span>{dateString}</span>
@@ -213,7 +258,7 @@ export function VisualPreview({
                 {/* Engagement Stats - detailed only */}
                 {!isMinimal && (
                     <div
-                        className={`mt-3 flex flex-wrap gap-4 border-t pt-3 text-sm ${
+                        className={`mt-3 flex flex-wrap gap-4 border-t pt-3 text-sm flex-shrink-0 ${
                             isDark ? 'border-gray-700' : 'border-gray-200'
                         }`}
                     >
