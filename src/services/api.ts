@@ -279,6 +279,7 @@ export interface Visual {
     source_type: 'short_post' | 'thread';
     source_id: number;
     content: string | string[];
+    description?: string;
     settings: VisualSettings;
     created_at: string;
     updated_at: string;
@@ -293,6 +294,7 @@ export async function createVisual(blogId: number, data: {
     source_type: 'short_post' | 'thread';
     source_id: number;
     content: string | string[];
+    description?: string;
     settings: VisualSettings;
 }): Promise<Visual> {
     return apiRequest<Visual>(`/blogs/${blogId}/visuals`, data as unknown as Record<string, unknown>);
@@ -300,6 +302,7 @@ export async function createVisual(blogId: number, data: {
 
 export async function updateVisual(visualId: number, data: {
     content?: string | string[];
+    description?: string;
     settings?: VisualSettings;
 }): Promise<Visual> {
     return apiRequest<Visual>(`/visuals/${visualId}`, data as unknown as Record<string, unknown>, 'PATCH');

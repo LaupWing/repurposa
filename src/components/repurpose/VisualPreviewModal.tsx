@@ -68,6 +68,7 @@ interface BaseVisualPreviewModalProps {
     sourceType?: 'short_post' | 'thread';
     sourceId?: number;
     visualId?: number;
+    initialDescription?: string;
     initialSettings?: VisualSettings;
     onSaved?: (visual: import('../../services/api').Visual) => void;
 }
@@ -504,7 +505,7 @@ function generateRandomStats(): EngagementStats {
     };
 }
 
-function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, visualId, initialSettings, onSaved }: BaseVisualPreviewModalProps) {
+function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, visualId, initialDescription, initialSettings, onSaved }: BaseVisualPreviewModalProps) {
     const { user, socialConnections } = useProfile();
     const xConnection = socialConnections.find((c) => c.platform === 'twitter');
 
@@ -523,6 +524,8 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const [saving, setSaving] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string | undefined>(xConnection?.profilePicture || undefined);
     const avatarInputRef = useRef<HTMLInputElement>(null);
+    const defaultDescription = Array.isArray(content) ? content.join('\n\n') : content;
+    const [description, setDescription] = useState(initialDescription ?? defaultDescription);
 
     // Reset all state when the modal opens
     useEffect(() => {
@@ -535,6 +538,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         setDisplayName(initialSettings?.display_name ?? user?.name ?? 'Your Name');
         setHandle(initialSettings?.handle ?? xConnection?.username ?? 'yourhandle');
         setAvatarUrl(initialSettings?.avatar_url ?? xConnection?.profilePicture ?? undefined);
+        setDescription(initialDescription ?? (Array.isArray(content) ? content.join('\n\n') : content));
         if (initialSettings?.stats) {
             setStats(initialSettings.stats);
         } else {
@@ -761,6 +765,19 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                 <ChevronRight size={22} />
                             </button>
                         ) : null}
+                    </div>
+
+                    {/* Description */}
+                    <div className="mt-6">
+                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Description / Caption</label>
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={3}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                            placeholder="Add a description for when this visual is posted..."
+                        />
+                        <p className="mt-1 text-xs text-gray-400">{description.length} characters</p>
                     </div>
 
                 </div>
