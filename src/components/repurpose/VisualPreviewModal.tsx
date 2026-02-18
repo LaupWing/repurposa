@@ -19,11 +19,25 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
+    Image,
+    FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfile } from '../../context/ProfileContext';
 import { createVisual, updateVisual } from '../../services/api';
 import type { VisualSettings } from '../../services/api';
+
+// ============================================
+// CONSTANTS
+// ============================================
+
+const PLATFORM_LIMITS = [
+    { name: 'X', limit: 280 },
+    { name: 'LinkedIn', limit: 3000 },
+    { name: 'Threads', limit: 500 },
+    { name: 'Instagram', limit: 2200 },
+    { name: 'Facebook', limit: 63206 },
+];
 
 // ============================================
 // TYPES
@@ -526,11 +540,13 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const defaultDescription = Array.isArray(content) ? content.join('\n\n') : content;
     const [description, setDescription] = useState(initialDescription ?? defaultDescription);
+    const [modalTab, setModalTab] = useState<'visual' | 'description'>('visual');
 
     // Reset all state when the modal opens
     useEffect(() => {
         if (!isOpen) return;
         setCurrentPostIndex(0);
+        setModalTab('visual');
         setTheme(initialSettings?.theme ?? 'light');
         setStyle(initialSettings?.style ?? 'detailed');
         setCorners(initialSettings?.corners ?? 'square');
@@ -635,152 +651,198 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                     </button>
                 </div>
 
+                {/* Tabs */}
+                <div className="flex border-b border-gray-100 px-6">
+                    <button
+                        onClick={() => setModalTab('visual')}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                            modalTab === 'visual'
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        <Image size={15} />
+                        Visual
+                    </button>
+                    <button
+                        onClick={() => setModalTab('description')}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                            modalTab === 'description'
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        <FileText size={15} />
+                        Description
+                    </button>
+                </div>
+
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto p-6">
-                    {/* Profile inputs */}
-                    <div className="flex items-center gap-3 mb-4">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Avatar</label>
-                            <button
-                                onClick={() => avatarInputRef.current?.click()}
-                                className="h-[52px] w-[52px] rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-violet-600 hover:ring-2 hover:ring-blue-400 hover:ring-offset-2 transition-all flex-shrink-0"
-                                title="Change avatar"
-                            >
-                                {avatarUrl ? (
-                                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                                ) : (
-                                    <span className="flex h-full w-full items-center justify-center text-lg font-semibold text-white">
-                                        {(displayName?.charAt(0) || '?').toUpperCase()}
-                                    </span>
-                                )}
-                            </button>
-                            <input
-                                ref={avatarInputRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={handleAvatarChange}
-                                className="hidden"
-                            />
-                        </div>
-                        <div className="flex-1">
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Display Name</label>
-                            <input
-                                type="text"
-                                value={displayName}
-                                onChange={(e) => setDisplayName(e.target.value)}
-                                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
-                            />
-                        </div>
-                        <div className="flex-1">
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Handle</label>
-                            <div className="flex items-center rounded-lg border border-gray-200 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400">
-                                <span className="pl-3 text-sm text-gray-400">@</span>
-                                <input
-                                    type="text"
-                                    value={handle}
-                                    onChange={(e) => setHandle(e.target.value)}
-                                    className="w-full rounded-r-lg px-1 py-1.5 text-sm focus:outline-none border-none"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Controls */}
-                    <div className="flex flex-wrap items-end gap-3 mb-6">
-                        <SelectDropdown
-                            label="Style"
-                            options={[
-                                { label: 'Basic', value: 'basic' as Style },
-                                { label: 'Minimal', value: 'minimal' as Style },
-                                { label: 'Detailed', value: 'detailed' as Style },
-                            ]}
-                            value={style}
-                            onChange={setStyle}
-                        />
-                        <ToggleGroup
-                            options={[
-                                { label: 'Light', value: 'light' as Theme },
-                                { label: 'Dark', value: 'dark' as Theme },
-                            ]}
-                            value={theme}
-                            onChange={setTheme}
-                        />
-                        {style !== 'basic' && (
-                            <ToggleGroup
-                                options={[
-                                    { label: 'Rounded', value: 'rounded' as Corners },
-                                    { label: 'Square', value: 'square' as Corners },
-                                ]}
-                                value={corners}
-                                onChange={setCorners}
-                            />
-                        )}
-                        {style !== 'basic' && (
-                            <GradientPicker gradient={gradient} onChange={setGradient} />
-                        )}
-                        {style === 'detailed' && <StatsEditor stats={stats} onChange={setStats} />}
-                    </div>
-
-                    {/* Preview */}
-                    <div className="flex items-center justify-center gap-3">
-                        {/* Left chevron */}
-                        {posts.length > 1 ? (
-                            <button
-                                onClick={() => setCurrentPostIndex((i) => Math.max(0, i - 1))}
-                                disabled={currentPostIndex === 0}
-                                className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            >
-                                <ChevronLeft size={22} />
-                            </button>
-                        ) : null}
-
-                        {/* Card + badge */}
-                        <div className="relative">
-                            {posts.length > 1 && (
-                                <div className="absolute -top-3 right-3 z-10 rounded-full bg-black/70 px-2.5 py-0.5 text-xs font-medium text-white shadow-sm">
-                                    Post {currentPostIndex + 1} of {posts.length}
+                    {modalTab === 'visual' ? (
+                        <>
+                            {/* Profile inputs */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Avatar</label>
+                                    <button
+                                        onClick={() => avatarInputRef.current?.click()}
+                                        className="h-[52px] w-[52px] rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-violet-600 hover:ring-2 hover:ring-blue-400 hover:ring-offset-2 transition-all flex-shrink-0"
+                                        title="Change avatar"
+                                    >
+                                        {avatarUrl ? (
+                                            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                                        ) : (
+                                            <span className="flex h-full w-full items-center justify-center text-lg font-semibold text-white">
+                                                {(displayName?.charAt(0) || '?').toUpperCase()}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <input
+                                        ref={avatarInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleAvatarChange}
+                                        className="hidden"
+                                    />
                                 </div>
-                            )}
-                            <div ref={previewRef}>
-                                <VisualPreview
-                                    content={posts[currentPostIndex]}
-                                    displayName={displayName}
-                                    handle={handle}
-                                    avatarUrl={avatarUrl}
-                                    theme={theme}
-                                    style={style}
-                                    stats={stats}
-                                    roundedCorners={corners === 'rounded'}
-                                    gradient={gradient}
+                                <div className="flex-1">
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Display Name</label>
+                                    <input
+                                        type="text"
+                                        value={displayName}
+                                        onChange={(e) => setDisplayName(e.target.value)}
+                                        className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Handle</label>
+                                    <div className="flex items-center rounded-lg border border-gray-200 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400">
+                                        <span className="pl-3 text-sm text-gray-400">@</span>
+                                        <input
+                                            type="text"
+                                            value={handle}
+                                            onChange={(e) => setHandle(e.target.value)}
+                                            className="w-full rounded-r-lg px-1 py-1.5 text-sm focus:outline-none border-none"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Controls */}
+                            <div className="flex flex-wrap items-end gap-3 mb-6">
+                                <SelectDropdown
+                                    label="Style"
+                                    options={[
+                                        { label: 'Basic', value: 'basic' as Style },
+                                        { label: 'Minimal', value: 'minimal' as Style },
+                                        { label: 'Detailed', value: 'detailed' as Style },
+                                    ]}
+                                    value={style}
+                                    onChange={setStyle}
                                 />
+                                <ToggleGroup
+                                    options={[
+                                        { label: 'Light', value: 'light' as Theme },
+                                        { label: 'Dark', value: 'dark' as Theme },
+                                    ]}
+                                    value={theme}
+                                    onChange={setTheme}
+                                />
+                                {style !== 'basic' && (
+                                    <ToggleGroup
+                                        options={[
+                                            { label: 'Rounded', value: 'rounded' as Corners },
+                                            { label: 'Square', value: 'square' as Corners },
+                                        ]}
+                                        value={corners}
+                                        onChange={setCorners}
+                                    />
+                                )}
+                                {style !== 'basic' && (
+                                    <GradientPicker gradient={gradient} onChange={setGradient} />
+                                )}
+                                {style === 'detailed' && <StatsEditor stats={stats} onChange={setStats} />}
+                            </div>
+
+                            {/* Preview */}
+                            <div className="flex items-center justify-center gap-3">
+                                {/* Left chevron */}
+                                {posts.length > 1 ? (
+                                    <button
+                                        onClick={() => setCurrentPostIndex((i) => Math.max(0, i - 1))}
+                                        disabled={currentPostIndex === 0}
+                                        className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronLeft size={22} />
+                                    </button>
+                                ) : null}
+
+                                {/* Card + badge */}
+                                <div className="relative">
+                                    {posts.length > 1 && (
+                                        <div className="absolute -top-3 right-3 z-10 rounded-full bg-black/70 px-2.5 py-0.5 text-xs font-medium text-white shadow-sm">
+                                            Post {currentPostIndex + 1} of {posts.length}
+                                        </div>
+                                    )}
+                                    <div ref={previewRef}>
+                                        <VisualPreview
+                                            content={posts[currentPostIndex]}
+                                            displayName={displayName}
+                                            handle={handle}
+                                            avatarUrl={avatarUrl}
+                                            theme={theme}
+                                            style={style}
+                                            stats={stats}
+                                            roundedCorners={corners === 'rounded'}
+                                            gradient={gradient}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Right chevron */}
+                                {posts.length > 1 ? (
+                                    <button
+                                        onClick={() => setCurrentPostIndex((i) => Math.min(posts.length - 1, i + 1))}
+                                        disabled={currentPostIndex === posts.length - 1}
+                                        className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronRight size={22} />
+                                    </button>
+                                ) : null}
+                            </div>
+                        </>
+                    ) : (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Caption / Description</label>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                rows={14}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                placeholder="Add a description for when this visual is posted..."
+                            />
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <span className="text-xs text-gray-400">{description.length} characters</span>
+                                <span className="text-xs text-gray-300">·</span>
+                                {PLATFORM_LIMITS.map(({ name, limit }) => {
+                                    const over = description.length > limit;
+                                    return (
+                                        <span
+                                            key={name}
+                                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                                over
+                                                    ? 'bg-red-50 text-red-600 border border-red-200'
+                                                    : 'bg-green-50 text-green-600 border border-green-200'
+                                            }`}
+                                        >
+                                            {name} {description.length}/{limit}
+                                        </span>
+                                    );
+                                })}
                             </div>
                         </div>
-
-                        {/* Right chevron */}
-                        {posts.length > 1 ? (
-                            <button
-                                onClick={() => setCurrentPostIndex((i) => Math.min(posts.length - 1, i + 1))}
-                                disabled={currentPostIndex === posts.length - 1}
-                                className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            >
-                                <ChevronRight size={22} />
-                            </button>
-                        ) : null}
-                    </div>
-
-                    {/* Description */}
-                    <div className="mt-6">
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Description / Caption</label>
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            rows={3}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
-                            placeholder="Add a description for when this visual is posted..."
-                        />
-                        <p className="mt-1 text-xs text-gray-400">{description.length} characters</p>
-                    </div>
-
+                    )}
                 </div>
 
                 {/* Footer */}
