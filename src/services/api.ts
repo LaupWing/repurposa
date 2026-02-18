@@ -119,16 +119,18 @@ export async function generateOutline(
     });
 }
 
+export type BlogGenerationMode = 'quick' | 'researched' | 'citations';
+
 export async function generateBlog(
     topic: string,
     outline: OutlineSection[],
-    options?: { target_audience?: string; include_citations?: boolean }
+    options?: { target_audience?: string; mode?: BlogGenerationMode }
 ): Promise<GenerateBlogResponse> {
     return apiRequest<GenerateBlogResponse>('/blog/generate-blog', {
         topic,
         outline,
         target_audience: options?.target_audience,
-        include_citations: options?.include_citations,
+        mode: options?.mode || 'quick',
     });
 }
 
