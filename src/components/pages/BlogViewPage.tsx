@@ -314,8 +314,8 @@ function RegenerateModal({
     );
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationMode, setGenerationMode] = useState<BlogGenerationMode>('quick');
-    const [openSections, setOpenSections] = useState<Record<string, boolean>>({ info: true, outline: true, mode: true });
-    const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+    const [openSection, setOpenSection] = useState<string | null>('info');
+    const toggleSection = (key: string) => setOpenSection(prev => prev === key ? null : key);
 
     // Topic generation
     const [isGeneratingTopics, setIsGeneratingTopics] = useState(false);
@@ -489,13 +489,13 @@ function RegenerateModal({
                         >
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-semibold text-gray-900">Main Info</span>
-                                {!openSections.info && topic && (
+                                {!openSection === 'info' && topic && (
                                     <span className="text-xs text-gray-400 truncate max-w-[200px]">{topic}</span>
                                 )}
                             </div>
-                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openSections.info ? 'rotate-180' : ''}`} />
+                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openSection === 'info' ? 'rotate-180' : ''}`} />
                         </button>
-                        {openSections.info && (
+                        {openSection === 'info' && (
                             <div className="px-6 pb-4 space-y-4">
                                 {/* Topic */}
                                 <div className="relative">
@@ -588,9 +588,9 @@ function RegenerateModal({
                                     <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">{outline.length} sections</span>
                                 )}
                             </div>
-                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openSections.outline ? 'rotate-180' : ''}`} />
+                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openSection === 'outline' ? 'rotate-180' : ''}`} />
                         </button>
-                        {openSections.outline && (
+                        {openSection === 'outline' && (
                             <div className="px-6 pb-4 space-y-4">
                                 {/* Step Tabs */}
                                 <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
@@ -735,7 +735,7 @@ function RegenerateModal({
                         >
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-semibold text-gray-900">Generation Mode</span>
-                                {!openSections.mode && (
+                                {!openSection === 'mode' && (
                                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
                                         generationMode === 'quick'
                                             ? 'bg-gray-100 text-gray-600'
@@ -745,9 +745,9 @@ function RegenerateModal({
                                     </span>
                                 )}
                             </div>
-                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openSections.mode ? 'rotate-180' : ''}`} />
+                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openSection === 'mode' ? 'rotate-180' : ''}`} />
                         </button>
-                        {openSections.mode && (
+                        {openSection === 'mode' && (
                             <div className="px-6 pb-4">
                                 <div className="grid grid-cols-3 gap-2">
                                     {([
