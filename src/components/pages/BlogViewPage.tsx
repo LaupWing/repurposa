@@ -315,6 +315,7 @@ function RegenerateModal({
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationMode, setGenerationMode] = useState<BlogGenerationMode>('quick');
     const [openSection, setOpenSection] = useState<string | null>('info');
+    const [showConfirm, setShowConfirm] = useState(false);
     const toggleSection = (key: string) => setOpenSection(prev => prev === key ? null : key);
 
     // Topic generation
@@ -748,40 +749,48 @@ function RegenerateModal({
                             <ChevronDown size={16} className={`text-gray-400 transition-transform ${openSection === 'mode' ? 'rotate-180' : ''}`} />
                         </button>
                         {openSection === 'mode' && (
-                            <div className="px-6 pb-4">
-                                <div className="grid grid-cols-3 gap-2">
-                                    {([
-                                        { id: 'quick' as const, label: 'Quick', description: 'Pure AI, no web search', icon: Zap },
-                                        { id: 'researched' as const, label: 'Researched', description: 'With web search for data', icon: Search, badge: 'Takes longer' },
-                                        { id: 'citations' as const, label: 'Citations', description: 'Web search + source links', icon: BookOpen, badge: 'Takes longer' },
-                                    ]).map((mode) => {
-                                        const Icon = mode.icon;
-                                        const isSelected = generationMode === mode.id;
-                                        return (
-                                            <button
-                                                key={mode.id}
-                                                onClick={() => setGenerationMode(mode.id)}
-                                                className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition-colors ${
-                                                    isSelected
-                                                        ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-200'
-                                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                                }`}
-                                            >
-                                                <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${
-                                                    isSelected ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
-                                                }`}>
-                                                    <Icon size={14} />
+                            <div className="px-6 pb-4 space-y-2.5">
+                                {([
+                                    { id: 'quick' as const, label: 'Quick', description: 'Pure AI generation. Best for opinion pieces, personal stories, and how-to guides.', icon: Zap },
+                                    { id: 'researched' as const, label: 'Researched', description: 'Uses web search for real statistics and examples to back up your content.', icon: Search, badge: 'Takes longer' },
+                                    { id: 'citations' as const, label: 'Researched + Citations', description: 'Web search plus inline citations with a Sources section. Great for authority-building.', icon: BookOpen, badge: 'Takes longer' },
+                                ]).map((mode) => {
+                                    const Icon = mode.icon;
+                                    const isSelected = generationMode === mode.id;
+                                    return (
+                                        <button
+                                            key={mode.id}
+                                            onClick={() => setGenerationMode(mode.id)}
+                                            className={`w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-colors ${
+                                                isSelected
+                                                    ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-200'
+                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                                                isSelected ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
+                                            }`}>
+                                                <Icon size={16} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-sm font-medium ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>{mode.label}</span>
+                                                    {mode.badge && (
+                                                        <span className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                                                            {mode.badge}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <span className={`text-xs font-medium ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>{mode.label}</span>
-                                                {mode.badge && (
-                                                    <span className="text-[9px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5">
-                                                        {mode.badge}
-                                                    </span>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                                <p className="text-xs text-gray-500 mt-0.5">{mode.description}</p>
+                                            </div>
+                                            <div className={`mt-1 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                                                isSelected ? 'border-blue-600' : 'border-gray-300'
+                                            }`}>
+                                                {isSelected && <div className="h-2 w-2 rounded-full bg-blue-600" />}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -797,7 +806,7 @@ function RegenerateModal({
                         Cancel
                     </button>
                     <button
-                        onClick={handleRegenerate}
+                        onClick={isGenerating ? undefined : () => setShowConfirm(true)}
                         disabled={isGenerating || !topic.trim()}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                     >
@@ -814,6 +823,39 @@ function RegenerateModal({
                         )}
                     </button>
                 </div>
+
+                {/* Confirm Dialog */}
+                {showConfirm && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl">
+                        <div className="absolute inset-0 bg-black/40 rounded-xl" onClick={() => setShowConfirm(false)} />
+                        <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm mx-6 overflow-hidden">
+                            <div className="px-5 py-5">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                                        <AlertCircle size={20} className="text-amber-600" />
+                                    </div>
+                                    <h3 className="text-base font-semibold text-gray-900">Regenerate Blog?</h3>
+                                </div>
+                                <p className="text-sm text-gray-600">This will regenerate your entire blog post. Your current version will be saved to version history so you can restore it anytime.</p>
+                            </div>
+                            <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-gray-200 bg-gray-50">
+                                <button
+                                    onClick={() => setShowConfirm(false)}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => { setShowConfirm(false); handleRegenerate(); }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    <Sparkles size={16} />
+                                    Yes, Regenerate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
