@@ -909,9 +909,9 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onE
     return (
         <div className="mb-4 rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
             {/* Header */}
-            <button
+            <div
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full px-4 pt-4 pb-4 flex items-start gap-3 text-left hover:bg-gray-50"
+                className="w-full px-4 pt-4 pb-4 flex items-start gap-3 text-left hover:bg-gray-50 cursor-pointer"
             >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600">
                     {index + 1}
@@ -937,7 +937,7 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onE
                         </span>
                     </div>
                     {isEditingHook ? (
-                        <div className="py-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="py-2" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                             <AITextPopup textareaRef={editHookRef} value={editHookContent} onChange={setEditHookContent} />
                             <textarea
                                 ref={editHookRef}
@@ -973,7 +973,7 @@ function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onE
                         </p>
                     )}
                 </div>
-            </button>
+            </div>
 
             {/* Metadata - always visible */}
             <div className="flex items-center justify-between px-4 pb-3 pt-3 mx-4 border-t border-gray-100 -mt-1">
