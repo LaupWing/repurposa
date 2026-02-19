@@ -4,7 +4,7 @@
  * Shows AI-generated outline sections that can be edited, reordered, or deleted.
  */
 
-import { useState } from '@wordpress/element';
+import { useState, useRef } from '@wordpress/element';
 import {
     DndContext,
     closestCenter,
@@ -22,9 +22,10 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Lightbulb, Pencil, Trash2 } from 'lucide-react';
+import { GripVertical, Lightbulb, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Tooltip } from '@wordpress/components';
 import type { OutlineSection } from '../../BlogWizard';
+import { AITextPopup } from '../../AITextPopup';
 
 // ============================================
 // SORTABLE SECTION COMPONENT
@@ -38,8 +39,9 @@ interface SortableSectionProps {
 }
 
 function SortableSection({ section, index, onRemove, onEdit }: SortableSectionProps) {
-    const [isEditing, setIsEditing] = useState(false);
+    const [isEditing, setIsEditing] = useState(!section.title);
     const [editTitle, setEditTitle] = useState(section.title);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const {
         attributes,
@@ -78,13 +80,19 @@ function SortableSection({ section, index, onRemove, onEdit }: SortableSectionPr
                         {index + 1}
                     </span>
                     <div className="flex-1 space-y-3">
-                        <input
-                            type="text"
+                        <textarea
+                            ref={textareaRef}
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-full resize-none rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             placeholder="Section title"
+                            rows={1}
                             autoFocus
+                        />
+                        <AITextPopup
+                            textareaRef={textareaRef}
+                            value={editTitle}
+                            onChange={setEditTitle}
                         />
                         <div className="flex justify-end gap-2">
                             <button
@@ -198,6 +206,13 @@ export default function Step3GeneratedOutline({
         );
     };
 
+    const addSection = () => {
+        onOutlineChange([
+            ...outline,
+            { id: crypto.randomUUID(), title: '', purpose: '' },
+        ]);
+    };
+
     return (
         <div className="space-y-4">
             {/* Topic Header */}
@@ -229,6 +244,15 @@ export default function Step3GeneratedOutline({
                     </div>
                 </SortableContext>
             </DndContext>
+
+            <button
+                type="button"
+                onClick={addSection}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 py-3 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+            >
+                <Plus size={16} />
+                Add section
+            </button>
 
             {/* Tip */}
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
