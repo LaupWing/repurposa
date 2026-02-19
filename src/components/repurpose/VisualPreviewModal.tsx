@@ -134,10 +134,8 @@ function useFitText(
         const container = inner?.parentElement as HTMLElement | null;
         if (!inner || !container) return;
 
-        const cs = getComputedStyle(container);
-        const availableHeight = container.clientHeight
-            - parseFloat(cs.paddingTop)
-            - parseFloat(cs.paddingBottom);
+        const paddingTop = parseFloat(getComputedStyle(container).paddingTop);
+        const clipEdge = container.clientHeight;
 
         let result: TextSize = TEXT_SCALE[end];
 
@@ -145,7 +143,7 @@ function useFitText(
             TEXT_SCALE.forEach(cls => inner.classList.remove(cls));
             inner.classList.add(TEXT_SCALE[i]);
 
-            if (inner.offsetHeight <= availableHeight) {
+            if (paddingTop + inner.offsetHeight <= clipEdge) {
                 result = TEXT_SCALE[i];
                 break;
             }
@@ -161,20 +159,8 @@ function useFitText(
         const inner = innerRef.current;
         const container = inner?.parentElement as HTMLElement | null;
         if (!inner || !container) return;
-        const cs = getComputedStyle(container);
-        const paddingTop = parseFloat(cs.paddingTop);
-        // Content starts after paddingTop and gets clipped at clientHeight,
-        // so it can extend into the bottom padding without being cut off.
-        const overflows = paddingTop + inner.offsetHeight > container.clientHeight;
-        console.log('[useFitText] overflow check', {
-            override,
-            paddingTop,
-            innerOffsetHeight: inner.offsetHeight,
-            contentEnd: paddingTop + inner.offsetHeight,
-            containerClientHeight: container.clientHeight,
-            overflows,
-        });
-        setIsOverflowing(overflows);
+        const paddingTop = parseFloat(getComputedStyle(container).paddingTop);
+        setIsOverflowing(paddingTop + inner.offsetHeight > container.clientHeight);
     }, [override, content, style]);
 
     return { textClass: override || textClass, isOverflowing };
@@ -882,9 +868,21 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                             >
                                                 <Minus size={12} />
                                             </button>
-                                            <span className="text-[10px] font-bold text-gray-700 min-w-[28px] text-center">
+                                            <button
+                                                onClick={() => {
+                                                    if (textSizes[currentPostIndex]) {
+                                                        setTextSizes(prev => {
+                                                            const next = { ...prev };
+                                                            delete next[currentPostIndex];
+                                                            return next;
+                                                        });
+                                                    }
+                                                }}
+                                                className={`text-[10px] font-bold min-w-[28px] text-center ${textSizes[currentPostIndex] ? 'text-blue-600 hover:text-blue-800 cursor-pointer' : 'text-gray-700'}`}
+                                                title={textSizes[currentPostIndex] ? 'Click to reset to Auto' : ''}
+                                            >
                                                 {TEXT_SIZE_LABELS[textSizes[currentPostIndex]] || 'Auto'}
-                                            </span>
+                                            </button>
                                             <button
                                                 onClick={() => {
                                                     const current = textSizes[currentPostIndex] || TEXT_SCALE[STYLE_RANGE[style].start];

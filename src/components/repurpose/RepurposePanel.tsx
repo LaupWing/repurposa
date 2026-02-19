@@ -206,7 +206,7 @@ function ImageGrid({
     );
 }
 
-function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, autoEdit }: {
+function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, autoEdit, hasVisual }: {
     pattern: ShortPostPattern;
     index: number;
     blogId?: number;
@@ -224,6 +224,7 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
     onReorderCtaImages: (from: number, to: number) => void;
     onVisualSaved?: (visual: Visual) => void;
     autoEdit?: boolean;
+    hasVisual?: boolean;
 }) {
     const [copied, setCopied] = useState(false);
     const [copiedCta, setCopiedCta] = useState(false);
@@ -338,6 +339,12 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
                             {emotion}
                         </span>
                     ))}
+                    {hasVisual && (
+                        <span className="rounded-full border border-violet-200 bg-violet-50 text-violet-600 px-2 py-0.5 text-[10px] flex items-center gap-1">
+                            <Image size={10} />
+                            Visual
+                        </span>
+                    )}
                 </div>
 
                 {/* Content */}
@@ -2108,6 +2115,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                         onSwitchTab?.('visuals');
                                     }}
                                     autoEdit={pattern.id === editShortPostId}
+                                    hasVisual={visuals.some(v => v.source_type === 'short_post' && v.source_id === pattern.id)}
                                 />
                             ))}
                         </div>
