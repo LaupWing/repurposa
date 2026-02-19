@@ -22,7 +22,8 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Pencil, Trash2 } from 'lucide-react';
+import { GripVertical, Lightbulb, Pencil, Trash2 } from 'lucide-react';
+import { Tooltip } from '@wordpress/components';
 import type { OutlineSection } from '../../BlogWizard';
 
 // ============================================
@@ -33,13 +34,12 @@ interface SortableSectionProps {
     section: OutlineSection;
     index: number;
     onRemove: () => void;
-    onEdit: (title: string, purpose: string) => void;
+    onEdit: (title: string) => void;
 }
 
 function SortableSection({ section, index, onRemove, onEdit }: SortableSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(section.title);
-    const [editPurpose, setEditPurpose] = useState(section.purpose);
 
     const {
         attributes,
@@ -57,13 +57,12 @@ function SortableSection({ section, index, onRemove, onEdit }: SortableSectionPr
     };
 
     const handleSave = () => {
-        onEdit(editTitle, editPurpose);
+        onEdit(editTitle);
         setIsEditing(false);
     };
 
     const handleCancel = () => {
         setEditTitle(section.title);
-        setEditPurpose(section.purpose);
         setIsEditing(false);
     };
 
@@ -86,13 +85,6 @@ function SortableSection({ section, index, onRemove, onEdit }: SortableSectionPr
                             className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             placeholder="Section title"
                             autoFocus
-                        />
-                        <textarea
-                            value={editPurpose}
-                            onChange={(e) => setEditPurpose(e.target.value)}
-                            className="w-full resize-none rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="What this section covers..."
-                            rows={2}
                         />
                         <div className="flex justify-end gap-2">
                             <button
@@ -135,8 +127,13 @@ function SortableSection({ section, index, onRemove, onEdit }: SortableSectionPr
                     {index + 1}
                 </span>
                 <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900" style={{ margin: 0, marginBottom: '0.125rem' }}>{section.title}</h4>
-                    <p className="text-sm text-gray-500" style={{ margin: 0 }}>{section.purpose}</p>
+                    <h4 className="font-semibold text-gray-900" style={{ margin: 0, marginBottom: '0.25rem' }}>{section.title}</h4>
+                    <Tooltip text={section.purpose} delay={0} placement="top">
+                        <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
+                            <Lightbulb size={14} />
+                            Why this works
+                        </button>
+                    </Tooltip>
                 </div>
                 <div className="flex shrink-0 gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
@@ -195,9 +192,9 @@ export default function Step3GeneratedOutline({
         onOutlineChange(outline.filter((s) => s.id !== id));
     };
 
-    const updateSection = (id: string, title: string, purpose: string) => {
+    const updateSection = (id: string, title: string) => {
         onOutlineChange(
-            outline.map((s) => (s.id === id ? { ...s, title, purpose } : s))
+            outline.map((s) => (s.id === id ? { ...s, title } : s))
         );
     };
 
@@ -226,7 +223,7 @@ export default function Step3GeneratedOutline({
                                 section={section}
                                 index={index}
                                 onRemove={() => removeSection(section.id)}
-                                onEdit={(title, purpose) => updateSection(section.id, title, purpose)}
+                                onEdit={(title) => updateSection(section.id, title)}
                             />
                         ))}
                     </div>
