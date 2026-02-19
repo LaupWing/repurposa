@@ -117,7 +117,7 @@ function SortableSection({ section, index, onRemove, onEdit }: SortableSectionPr
             <div className="flex items-start gap-3">
                 <button
                     type="button"
-                    className="mt-0.5 cursor-grab touch-none text-gray-400 transition-colors hover:text-gray-600 active:cursor-grabbing"
+                    className="mt-1 cursor-grab touch-none text-gray-400 transition-colors hover:text-gray-600 active:cursor-grabbing"
                     {...attributes}
                     {...listeners}
                 >
@@ -126,8 +126,8 @@ function SortableSection({ section, index, onRemove, onEdit }: SortableSectionPr
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
                     {index + 1}
                 </span>
-                <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900" style={{ margin: 0, marginBottom: '0.25rem' }}>{section.title}</h4>
+                <div className="flex-1 -mt-1">
+                    <h4 className="text-base font-semibold text-gray-900" style={{ margin: 0, marginBottom: '0.25rem' }}>{section.title}</h4>
                     <Tooltip text={section.purpose} delay={0} placement="top">
                         <button type="button" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 cursor-default transition-colors bg-transparent border-none p-0">
                             <Lightbulb size={14} />
