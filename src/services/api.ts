@@ -197,6 +197,7 @@ export interface ShortPost {
     media: string[] | null;
     metadata: ShortPostMetadata;
     scheduled_post?: ShortPostSchedule | null;
+    visuals?: Visual[];
 }
 
 export interface GenerateShortPostsResponse {

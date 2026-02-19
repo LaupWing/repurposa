@@ -60,6 +60,7 @@ interface ShortPostPattern {
     scheduled_post?: ShortPostSchedule | null;
     media: string[];
     cta_media: string[];
+    visualCount: number;
 }
 
 function shortPostToPattern(sp: ShortPost): ShortPostPattern {
@@ -73,6 +74,7 @@ function shortPostToPattern(sp: ShortPost): ShortPostPattern {
         scheduled_post: sp.scheduled_post || null,
         media: (sp.media || []).filter((m): m is string => typeof m === 'string'),
         cta_media: sp.cta_content?.media?.filter((m): m is string => typeof m === 'string') || [],
+        visualCount: sp.visuals?.length || 0,
     };
 }
 
@@ -206,7 +208,7 @@ function ImageGrid({
     );
 }
 
-function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, autoEdit }: {
+function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, onViewVisuals, autoEdit }: {
     pattern: ShortPostPattern;
     index: number;
     blogId?: number;
@@ -223,6 +225,7 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
     onRemoveCtaImage: (imageIndex: number) => void;
     onReorderCtaImages: (from: number, to: number) => void;
     onVisualSaved?: (visual: Visual) => void;
+    onViewVisuals?: () => void;
     autoEdit?: boolean;
 }) {
     const [copied, setCopied] = useState(false);
@@ -325,6 +328,18 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
                         </button>
                     );
                 })()}
+
+                {/* Visual count badge - top right */}
+                {pattern.visualCount > 0 && (
+                    <button
+                        onClick={onViewVisuals}
+                        className="absolute -top-2 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-violet-600 bg-violet-50 border-violet-200 hover:bg-violet-100"
+                        style={{ right: pattern.scheduled_post ? '7rem' : '0.5rem' }}
+                    >
+                        <Image size={10} />
+                        {pattern.visualCount} {pattern.visualCount === 1 ? 'Visual' : 'Visuals'}
+                    </button>
+                )}
 
                 {/* Emotions */}
                 <div className="mt-1 mb-3 flex flex-wrap items-center gap-1.5">
@@ -1961,6 +1976,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             why_it_works: 'Manually created post',
             media: [],
             cta_media: [],
+            visualCount: 0,
         };
         setShortPosts(prev => [...prev, newPost]);
         toast.success('Short post added');
@@ -2104,7 +2120,13 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     }}
                                     onVisualSaved={(visual) => {
                                         setVisuals(prev => [...prev, visual]);
+                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, visualCount: p.visualCount + 1 } : p));
                                         onVisualCreated?.(visual);
+                                        onSwitchTab?.('visuals');
+                                    }}
+                                    onViewVisuals={() => {
+                                        const firstVisual = visuals.find(v => v.source_type === 'short_post' && v.source_id === pattern.id);
+                                        if (firstVisual) setHighlightVisualId(firstVisual.id);
                                         onSwitchTab?.('visuals');
                                     }}
                                     autoEdit={pattern.id === editShortPostId}
@@ -2165,6 +2187,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                         why_it_works: thread.metadata.why_it_works,
                                         media: [],
                                         cta_media: [],
+                                        visualCount: 0,
                                     });
                                 }}
                                 onDelete={() => setThreads(prev => prev.filter(t => t.id !== thread.id))}
@@ -2483,10 +2506,13 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                                                 id: visual.source_id,
                                                                 content: text,
                                                                 emotions: [],
+                                                                structure: '',
+                                                                why_it_works: '',
                                                                 media: [],
                                                                 cta_content: '',
                                                                 cta_media: [],
                                                                 scheduled_post: null,
+                                                                visualCount: 0,
                                                             });
                                                         }}
                                                         className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-blue-50 hover:text-blue-500"
