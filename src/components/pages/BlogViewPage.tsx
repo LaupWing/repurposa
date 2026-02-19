@@ -40,7 +40,7 @@ import {
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
 import ImagePickerModal from '../ImagePickerModal';
-import { getBlog, updateBlog, deleteBlog, generateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion, refineText } from '../../services/api';
+import { getBlog, updateBlog, deleteBlog, regenerateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion, refineText } from '../../services/api';
 import type { TopicSuggestion, BlogGenerationMode } from '../../services/api';
 import type { BlogPost, OutlineSection, PostVersion } from '../../services/api';
 import { useProfile } from '../../context/ProfileContext';
@@ -431,14 +431,11 @@ function RegenerateModal({
                 .filter(s => s.title.trim())
                 .map(s => ({ title: s.title, purpose: s.purpose }));
 
-            const response = await generateBlog(topic, outlineForApi, {
+            const response = await regenerateBlog(post.id, {
+                topic,
+                outline: outlineForApi,
                 target_audience: targetAudience || undefined,
                 mode: generationMode,
-            });
-
-            await updateBlog(post.id, {
-                title: response.title,
-                content: response.content,
             });
 
             onRegenerated(response.title, response.content);

@@ -134,6 +134,23 @@ export async function generateBlog(
     });
 }
 
+export async function regenerateBlog(
+    postId: number,
+    options: {
+        topic: string;
+        outline: OutlineSection[];
+        target_audience?: string;
+        mode?: BlogGenerationMode;
+    }
+): Promise<GenerateBlogResponse> {
+    return apiRequest<GenerateBlogResponse>(`/blog/${postId}/regenerate`, {
+        topic: options.topic,
+        outline: options.outline,
+        target_audience: options.target_audience,
+        mode: options.mode || 'quick',
+    });
+}
+
 export interface RefineTextResponse {
     text: string;
 }
