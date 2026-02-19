@@ -312,7 +312,7 @@ export async function getVisuals(blogId: number): Promise<Visual[]> {
 export async function createVisual(blogId: number, data: {
     source_type: 'short_post' | 'thread';
     source_id: number;
-    content: string | string[];
+    content: string[];
     description?: string;
     settings: VisualSettings;
 }): Promise<Visual> {
@@ -320,7 +320,7 @@ export async function createVisual(blogId: number, data: {
 }
 
 export async function updateVisual(visualId: number, data: {
-    content?: string | string[];
+    content?: string[];
     description?: string;
     settings?: VisualSettings;
 }): Promise<Visual> {

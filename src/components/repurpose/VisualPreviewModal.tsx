@@ -610,15 +610,17 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                 ...(style === 'detailed' && { stats }),
             };
 
+            const contentArray = Array.isArray(content) ? content : [content];
+
             let visual: import('../../services/api').Visual;
             if (isEditing) {
-                visual = await updateVisual(visualId, { content, description, settings });
+                visual = await updateVisual(visualId, { content: contentArray, description, settings });
             } else {
                 if (!blogId || !sourceType || !sourceId) return;
                 visual = await createVisual(blogId, {
                     source_type: sourceType,
                     source_id: sourceId,
-                    content,
+                    content: contentArray,
                     description,
                     settings,
                 });
