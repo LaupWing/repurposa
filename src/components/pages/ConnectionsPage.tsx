@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef } from "@wordpress/element";
 import { toast } from "sonner";
 import { Check, ExternalLink, Save, Loader2 } from "lucide-react";
+import { TimezonePicker } from "../TimezonePicker";
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from "react-icons/ri";
 import { useProfile } from "../../context/ProfileContext";
 import type { ProfileData } from "../../context/ProfileContext";
@@ -293,6 +294,21 @@ export default function ConnectionsPage() {
               <option value="en">English</option>
               <option value="nl">Nederlands</option>
             </select>
+          </div>
+
+          {/* Timezone */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Timezone
+            </label>
+            <TimezonePicker
+              value={profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone}
+              onChange={(tz) =>
+                setProfile((prev) =>
+                  prev ? { ...prev, timezone: tz } : null
+                )
+              }
+            />
           </div>
         </div>
 
