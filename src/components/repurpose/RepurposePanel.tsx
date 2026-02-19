@@ -208,7 +208,7 @@ function ImageGrid({
     );
 }
 
-function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, onViewVisuals, autoEdit }: {
+function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, cardVisuals, onGoToVisual, autoEdit }: {
     pattern: ShortPostPattern;
     index: number;
     blogId?: number;
@@ -225,7 +225,8 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
     onRemoveCtaImage: (imageIndex: number) => void;
     onReorderCtaImages: (from: number, to: number) => void;
     onVisualSaved?: (visual: Visual) => void;
-    onViewVisuals?: () => void;
+    cardVisuals?: Visual[];
+    onGoToVisual?: (visualId: number) => void;
     autoEdit?: boolean;
 }) {
     const [copied, setCopied] = useState(false);
@@ -246,6 +247,7 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
     const [showImagePicker, setShowImagePicker] = useState(false);
     const [showCtaImagePicker, setShowCtaImagePicker] = useState(false);
     const [showVisualModal, setShowVisualModal] = useState(false);
+    const [showVisualsPopover, setShowVisualsPopover] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
     const editCtaTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -331,14 +333,53 @@ function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta
 
                 {/* Visual count badge - top right */}
                 {pattern.visualCount > 0 && (
-                    <button
-                        onClick={onViewVisuals}
-                        className="absolute -top-2 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-violet-600 bg-violet-50 border-violet-200 hover:bg-violet-100"
-                        style={{ right: pattern.scheduled_post ? '7rem' : '0.5rem' }}
-                    >
-                        <Image size={10} />
-                        {pattern.visualCount} {pattern.visualCount === 1 ? 'Visual' : 'Visuals'}
-                    </button>
+                    <div className="absolute -top-2" style={{ right: pattern.scheduled_post ? '7rem' : '0.5rem' }}>
+                        <button
+                            onClick={() => setShowVisualsPopover(!showVisualsPopover)}
+                            className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-violet-600 bg-violet-50 border-violet-200 hover:bg-violet-100"
+                        >
+                            <Image size={10} />
+                            {pattern.visualCount} {pattern.visualCount === 1 ? 'Visual' : 'Visuals'}
+                        </button>
+                        {showVisualsPopover && cardVisuals && cardVisuals.length > 0 && (
+                            <>
+                                <div className="fixed inset-0 z-10" onClick={() => setShowVisualsPopover(false)} />
+                                <div className="absolute right-0 top-full mt-2 bg-white rounded-xl border border-gray-200 shadow-lg z-20 p-3 w-[280px]">
+                                    <p className="text-xs font-medium text-gray-500 mb-2">Visuals from this post</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {cardVisuals.map((visual) => {
+                                            const settings = visual.settings;
+                                            const previewGradient = GRADIENT_PRESETS.find(g => g.id === settings?.gradient_id) || GRADIENT_PRESETS[0];
+                                            return (
+                                                <button
+                                                    key={visual.id}
+                                                    onClick={() => {
+                                                        setShowVisualsPopover(false);
+                                                        onGoToVisual?.(visual.id);
+                                                    }}
+                                                    className="w-[80px] h-[80px] rounded-lg overflow-hidden border border-gray-200 hover:border-violet-400 hover:shadow-md transition-all cursor-pointer flex-shrink-0"
+                                                >
+                                                    <div style={{ transform: 'scale(0.16)', transformOrigin: 'top left', width: '500px', height: '500px' }}>
+                                                        <VisualPreview
+                                                            content={Array.isArray(visual.content) ? visual.content[0] : visual.content}
+                                                            displayName={settings?.display_name || 'Name'}
+                                                            handle={settings?.handle || 'handle'}
+                                                            avatarUrl={settings?.avatar_url}
+                                                            theme={settings?.theme || 'light'}
+                                                            style={settings?.style || 'detailed'}
+                                                            stats={settings?.stats || { views: 0, reposts: 0, quotes: 0, likes: 0, bookmarks: 0 }}
+                                                            roundedCorners={settings?.corners === 'rounded'}
+                                                            gradient={previewGradient}
+                                                        />
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 )}
 
                 {/* Emotions */}
@@ -2124,9 +2165,9 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                         onVisualCreated?.(visual);
                                         onSwitchTab?.('visuals');
                                     }}
-                                    onViewVisuals={() => {
-                                        const firstVisual = visuals.find(v => v.source_type === 'short_post' && v.source_id === pattern.id);
-                                        if (firstVisual) setHighlightVisualId(firstVisual.id);
+                                    cardVisuals={visuals.filter(v => v.source_type === 'short_post' && v.source_id === pattern.id)}
+                                    onGoToVisual={(visualId) => {
+                                        setHighlightVisualId(visualId);
                                         onSwitchTab?.('visuals');
                                     }}
                                     autoEdit={pattern.id === editShortPostId}
