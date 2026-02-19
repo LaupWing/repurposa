@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { getPublishingSchedule, savePublishingSchedule, getScheduledPosts, deleteScheduledPost } from '../../services/api';
 import type { ScheduledPost as ApiScheduledPost } from '../../services/api';
 import { useProfile } from '../../context/ProfileContext';
+import { TimezonePicker } from '../TimezonePicker';
 
 // ============================================
 // TYPES
@@ -636,7 +637,7 @@ function DayRow({
 // ============================================
 
 export default function SchedulePage() {
-    const { socialConnections } = useProfile();
+    const { socialConnections, profile, saveProfile } = useProfile();
     const [activeTab, setActiveTab] = useState<TabType>('queue');
     const [posts, setPosts] = useState<ScheduledPost[]>([]);
     const [isLoadingPosts, setIsLoadingPosts] = useState(true);
@@ -1155,6 +1156,28 @@ export default function SchedulePage() {
                                     Daily at 9 AM, 12:30 PM &amp; 5 PM
                                 </p>
                             </button>
+                        </div>
+                    </div>
+
+                    {/* Timezone */}
+                    <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div className="px-6 py-4 border-b border-gray-200">
+                            <h2 className="text-lg font-semibold text-gray-900">
+                                Time<em className="font-serif font-normal italic">zone</em>
+                            </h2>
+                            <p className="text-sm text-gray-500 mt-1">
+                                All publishing times use this timezone
+                            </p>
+                        </div>
+                        <div className="px-6 py-4">
+                            <TimezonePicker
+                                value={profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone}
+                                onChange={(tz) => {
+                                    if (profile) {
+                                        saveProfile({ ...profile, timezone: tz });
+                                    }
+                                }}
+                            />
                         </div>
                     </div>
                 </div>
