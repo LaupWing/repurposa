@@ -1748,11 +1748,11 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                     )}
 
                     {activeTab === 'short' && (
-                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} publishedPostUrl={post.published_post_url} editShortPostId={shortPostId} onSwitchTab={setActiveTab} onVisualCreated={(visual) => { setPost(prev => prev ? { ...prev, visuals: [...(prev.visuals || []), visual] } : prev); setHighlightVisualId(visual.id); }} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
+                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} publishedPostUrl={post.published_post_url} editShortPostId={shortPostId} onSwitchTab={setActiveTab} onVisualCreated={(visual) => { setPost(prev => prev ? { ...prev, visuals: [...(prev.visuals || []), visual] } : prev); setHighlightVisualId(visual.id); }} onHighlightVisual={setHighlightVisualId} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
                     )}
 
                     {activeTab === 'threads' && (
-                        <RepurposePanel initialTab="threads" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} onVisualCreated={(visual) => { setPost(prev => prev ? { ...prev, visuals: [...(prev.visuals || []), visual] } : prev); setHighlightVisualId(visual.id); }} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
+                        <RepurposePanel initialTab="threads" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} onVisualCreated={(visual) => { setPost(prev => prev ? { ...prev, visuals: [...(prev.visuals || []), visual] } : prev); setHighlightVisualId(visual.id); }} onHighlightVisual={setHighlightVisualId} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
                     )}
 
                     {activeTab === 'visuals' && (

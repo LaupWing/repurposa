@@ -1968,13 +1968,14 @@ interface RepurposePanelProps {
     editShortPostId?: number;
     onSwitchTab?: (tab: TabType) => void;
     onVisualCreated?: (visual: Visual) => void;
+    onHighlightVisual?: (visualId: number) => void;
     initialHighlightVisualId?: number | null;
     initialShortPosts?: ShortPost[];
     initialThreads?: ThreadItem[];
     initialVisuals?: Visual[];
 }
 
-export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab, onVisualCreated, initialHighlightVisualId, initialShortPosts, initialThreads, initialVisuals }: RepurposePanelProps) {
+export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab, onVisualCreated, onHighlightVisual, initialHighlightVisualId, initialShortPosts, initialThreads, initialVisuals }: RepurposePanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>(() =>
@@ -2167,7 +2168,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     }}
                                     cardVisuals={visuals.filter(v => v.source_type === 'short_post' && v.source_id === pattern.id)}
                                     onGoToVisual={(visualId) => {
-                                        setHighlightVisualId(visualId);
+                                        onHighlightVisual?.(visualId);
                                         onSwitchTab?.('visuals');
                                     }}
                                     autoEdit={pattern.id === editShortPostId}
