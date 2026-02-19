@@ -21,6 +21,10 @@ import {
     ChevronRight,
     Image,
     FileText,
+    Minus,
+    Plus,
+    Type,
+    AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfile } from '../../context/ProfileContext';
@@ -95,6 +99,17 @@ interface BaseVisualPreviewModalProps {
 const TEXT_SCALE = ['!text-4xl', '!text-3xl', '!text-2xl', '!text-xl', '!text-lg', '!text-base', '!text-sm', '!text-xs'] as const;
 type TextSize = typeof TEXT_SCALE[number];
 
+const TEXT_SIZE_LABELS: Record<string, string> = {
+    '!text-4xl': '4XL',
+    '!text-3xl': '3XL',
+    '!text-2xl': '2XL',
+    '!text-xl': 'XL',
+    '!text-lg': 'LG',
+    '!text-base': 'MD',
+    '!text-sm': 'SM',
+    '!text-xs': 'XS',
+};
+
 const STYLE_RANGE: Record<Style, { start: number; end: number }> = {
     basic:    { start: 1, end: 6 },  // text-3xl → text-sm
     minimal:  { start: 2, end: 7 },  // text-2xl → text-xs
@@ -105,11 +120,16 @@ function useFitText(
     innerRef: React.RefObject<HTMLDivElement | null>,
     content: string,
     style: Style,
-): TextSize {
+    override?: TextSize | null,
+): { textClass: TextSize; isOverflowing: boolean } {
     const { start, end } = STYLE_RANGE[style];
     const [textClass, setTextClass] = useState<TextSize>(TEXT_SCALE[start]);
+    const [isOverflowing, setIsOverflowing] = useState(false);
 
+    // Auto-fit: runs before paint to avoid flicker
     useLayoutEffect(() => {
+        if (override) return;
+
         const inner = innerRef.current;
         const container = inner?.parentElement as HTMLElement | null;
         if (!inner || !container) return;
@@ -132,9 +152,32 @@ function useFitText(
         }
 
         setTextClass(result);
-    }, [content, style, start, end]);
+        setIsOverflowing(false);
+    }, [content, style, start, end, override]);
 
-    return textClass;
+    // Overflow check: runs after paint when layout is fully settled
+    useEffect(() => {
+        if (!override) return;
+        const inner = innerRef.current;
+        const container = inner?.parentElement as HTMLElement | null;
+        if (!inner || !container) return;
+        const cs = getComputedStyle(container);
+        const paddingTop = parseFloat(cs.paddingTop);
+        // Content starts after paddingTop and gets clipped at clientHeight,
+        // so it can extend into the bottom padding without being cut off.
+        const overflows = paddingTop + inner.offsetHeight > container.clientHeight;
+        console.log('[useFitText] overflow check', {
+            override,
+            paddingTop,
+            innerOffsetHeight: inner.offsetHeight,
+            contentEnd: paddingTop + inner.offsetHeight,
+            containerClientHeight: container.clientHeight,
+            overflows,
+        });
+        setIsOverflowing(overflows);
+    }, [override, content, style]);
+
+    return { textClass: override || textClass, isOverflowing };
 }
 
 // ============================================
@@ -151,6 +194,8 @@ export function VisualPreview({
     stats,
     roundedCorners,
     gradient,
+    textSize,
+    onOverflowChange,
 }: {
     content: string;
     displayName: string;
@@ -161,6 +206,8 @@ export function VisualPreview({
     stats: EngagementStats;
     roundedCorners: boolean;
     gradient: GradientPreset;
+    textSize?: TextSize | null;
+    onOverflowChange?: (isOverflowing: boolean) => void;
 }) {
     const isDark = theme === 'dark';
     const isBasic = style === 'basic';
@@ -169,7 +216,12 @@ export function VisualPreview({
 
     const innerRef = useRef<HTMLDivElement>(null);
 
-    const textClass = useFitText(innerRef, content, style);
+    const { textClass, isOverflowing } = useFitText(innerRef, content, style, textSize);
+
+    useEffect(() => {
+        onOverflowChange?.(isOverflowing);
+    }, [isOverflowing, onOverflowChange]);
+
 
     const paragraphs = content.split('\n\n');
 
@@ -538,6 +590,8 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const [stats, setStats] = useState<EngagementStats>(generateRandomStats);
     const [downloading, setDownloading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [textSizes, setTextSizes] = useState<Record<number, TextSize>>({});
+    const [isCurrentPostOverflowing, setIsCurrentPostOverflowing] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string | undefined>(xConnection?.profilePicture || undefined);
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const defaultDescription = Array.isArray(content) ? content.join('\n\n') : content;
@@ -548,6 +602,13 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     useEffect(() => {
         if (!isOpen) return;
         setCurrentPostIndex(0);
+        setTextSizes(
+            initialSettings?.text_sizes
+                ? Object.fromEntries(
+                    Object.entries(initialSettings.text_sizes).map(([k, v]) => [Number(k), v as TextSize])
+                )
+                : {}
+        );
         setModalTab('visual');
         setTheme(initialSettings?.theme ?? 'light');
         setStyle(initialSettings?.style ?? 'detailed');
@@ -608,6 +669,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                 handle,
                 avatar_url: avatarUrl,
                 ...(style === 'detailed' && { stats }),
+                ...(Object.keys(textSizes).length > 0 && { text_sizes: textSizes }),
             };
 
             const contentArray = Array.isArray(content) ? content : [content];
@@ -633,7 +695,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         } finally {
             setSaving(false);
         }
-    }, [blogId, sourceType, sourceId, visualId, isEditing, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, stats, content, description, onSaved]);
+    }, [blogId, sourceType, sourceId, visualId, isEditing, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, stats, textSizes, content, description, onSaved]);
 
     if (!isOpen) return null;
 
@@ -782,7 +844,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                     </button>
                                 ) : null}
 
-                                {/* Card + badge */}
+                                {/* Card + badge + text size */}
                                 <div className="relative">
                                     {posts.length > 1 && (
                                         <div className="absolute -top-3 right-3 z-10 rounded-full bg-black/70 px-2.5 py-0.5 text-xs font-medium text-white shadow-sm">
@@ -800,7 +862,47 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                             stats={stats}
                                             roundedCorners={corners === 'rounded'}
                                             gradient={gradient}
+                                            textSize={textSizes[currentPostIndex] || null}
+                                            onOverflowChange={setIsCurrentPostOverflowing}
                                         />
+                                    </div>
+                                    {/* Text size toggle */}
+                                    <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full bg-white border shadow-sm px-2 py-1 ${isCurrentPostOverflowing ? 'border-amber-300' : 'border-gray-200'}`}>
+                                        <Type size={12} className="text-gray-400" />
+                                        <span className="text-[10px] font-medium text-gray-500">Font size</span>
+                                        <div className="flex items-center gap-0.5 ml-0.5">
+                                            <button
+                                                onClick={() => {
+                                                    const current = textSizes[currentPostIndex] || TEXT_SCALE[STYLE_RANGE[style].start];
+                                                    const idx = TEXT_SCALE.indexOf(current as TextSize);
+                                                    if (idx < STYLE_RANGE[style].end) setTextSizes(prev => ({ ...prev, [currentPostIndex]: TEXT_SCALE[idx + 1] }));
+                                                }}
+                                                className="h-5 w-5 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                                                title="Decrease font size"
+                                            >
+                                                <Minus size={12} />
+                                            </button>
+                                            <span className="text-[10px] font-bold text-gray-700 min-w-[28px] text-center">
+                                                {TEXT_SIZE_LABELS[textSizes[currentPostIndex]] || 'Auto'}
+                                            </span>
+                                            <button
+                                                onClick={() => {
+                                                    const current = textSizes[currentPostIndex] || TEXT_SCALE[STYLE_RANGE[style].start];
+                                                    const idx = TEXT_SCALE.indexOf(current as TextSize);
+                                                    if (idx > STYLE_RANGE[style].start) setTextSizes(prev => ({ ...prev, [currentPostIndex]: TEXT_SCALE[idx - 1] }));
+                                                }}
+                                                className="h-5 w-5 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                                                title="Increase font size"
+                                            >
+                                                <Plus size={12} />
+                                            </button>
+                                        </div>
+                                        {isCurrentPostOverflowing && (
+                                            <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 ml-0.5" title="Text is too large for the card">
+                                                <AlertTriangle size={11} />
+                                                Overflowing
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 

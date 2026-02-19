@@ -290,6 +290,7 @@ export interface VisualSettings {
         likes: number;
         bookmarks: number;
     };
+    text_sizes?: Record<number, string>;
 }
 
 export interface Visual {
