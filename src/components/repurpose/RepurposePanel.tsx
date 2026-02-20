@@ -1748,6 +1748,16 @@ function SchedulePostModal({
                         <p className="text-sm text-gray-700 line-clamp-3 whitespace-pre-wrap">{post.content}</p>
                     </div>
 
+                    {/* Instagram warning for text-only content */}
+                    {(contentType === 'short_post' || contentType === 'thread') && (
+                        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-amber-300 bg-amber-50">
+                            <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                            <p className="text-xs text-amber-700">
+                                Instagram is not available for {contentType === 'short_post' ? 'short posts' : 'threads'}. Use <strong>Visuals</strong> to schedule to Instagram.
+                            </p>
+                        </div>
+                    )}
+
                     {/* Upcoming slots from schedule */}
                     {loadingSlots ? (
                         <div className="flex items-center justify-center py-4 text-sm text-gray-400">
@@ -1811,40 +1821,43 @@ function SchedulePostModal({
                                                         const active = isSelected && selectedPlatforms.includes(p.id);
                                                         const connected = connectedPlatformIds.includes(p.id);
                                                         const unsupported = getUnsupportedReason(p.id, contentType);
-                                                        const btn = (
+                                                        if (unsupported) {
+                                                            return (
+                                                                <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
+                                                                    <div className="relative inline-flex items-center justify-center w-7 h-7 rounded-md border border-amber-400 text-amber-400 cursor-not-allowed">
+                                                                        {p.icon}
+                                                                        <AlertTriangle size={10} className="absolute -top-1.5 -right-1.5 text-amber-500 fill-amber-100" />
+                                                                    </div>
+                                                                </Tooltip>
+                                                            );
+                                                        }
+                                                        return (
                                                             <button
                                                                 key={p.id}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    if (isTaken || unsupported) return;
+                                                                    if (isTaken) return;
                                                                     if (!isSelected) handleSelectSlot(absoluteIdx);
                                                                     togglePlatform(p.id);
                                                                 }}
-                                                                disabled={isTaken || !!unsupported}
+                                                                disabled={isTaken}
                                                                 className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
-                                                                    unsupported
-                                                                        ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
-                                                                        : isTaken
-                                                                            ? 'bg-gray-100 text-gray-200 cursor-not-allowed'
-                                                                            : !connected
-                                                                                ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
-                                                                                : isSelected
-                                                                                    ? active
-                                                                                        ? `${p.bg} text-white`
-                                                                                        : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
-                                                                                    : inSlot
-                                                                                        ? `${p.bg} text-white`
-                                                                                        : 'bg-gray-100 text-gray-300'
+                                                                    isTaken
+                                                                        ? 'bg-gray-100 text-gray-200 cursor-not-allowed'
+                                                                        : !connected
+                                                                            ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
+                                                                            : isSelected
+                                                                                ? active
+                                                                                    ? `${p.bg} text-white`
+                                                                                    : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
+                                                                                : inSlot
+                                                                                    ? `${p.bg} text-white`
+                                                                                    : 'bg-gray-100 text-gray-300'
                                                                 }`}
                                                             >
                                                                 {p.icon}
                                                             </button>
                                                         );
-                                                        return unsupported ? (
-                                                            <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
-                                                                {btn}
-                                                            </Tooltip>
-                                                        ) : btn;
                                                     })}
                                                 </div>
                                             </div>
@@ -1900,29 +1913,33 @@ function SchedulePostModal({
                                         const active = selectedPlatforms.includes(p.id);
                                         const connected = connectedPlatformIds.includes(p.id);
                                         const unsupported = getUnsupportedReason(p.id, contentType);
-                                        const btn = (
+                                        if (unsupported) {
+                                            return (
+                                                <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-amber-400 text-amber-500 cursor-not-allowed">
+                                                        {p.icon}
+                                                        {p.name}
+                                                        <AlertTriangle size={14} />
+                                                    </div>
+                                                </Tooltip>
+                                            );
+                                        }
+                                        return (
                                             <button
                                                 key={p.id}
-                                                onClick={() => !unsupported && togglePlatform(p.id)}
+                                                onClick={() => togglePlatform(p.id)}
                                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                                    unsupported
+                                                    !connected
                                                         ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                                                        : !connected
-                                                            ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                                                            : active
-                                                                ? `${p.bg} text-white`
-                                                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                                                        : active
+                                                            ? `${p.bg} text-white`
+                                                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
                                                 }`}
                                             >
                                                 {p.icon}
                                                 {p.name}
                                             </button>
                                         );
-                                        return unsupported ? (
-                                            <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
-                                                {btn}
-                                            </Tooltip>
-                                        ) : <span key={p.id}>{btn}</span>;
                                     })}
                                 </div>
                             </div>
