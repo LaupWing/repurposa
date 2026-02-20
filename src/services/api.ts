@@ -14,7 +14,7 @@ declare global {
     }
 }
 
-const getConfig = () => window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
+const getConfig = () => window.wbrpConfig || { apiUrl: 'https://ai-blog-tool.test', token: '' };
 
 // ============================================
 // TYPES

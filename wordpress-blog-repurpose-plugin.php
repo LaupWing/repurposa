@@ -111,7 +111,7 @@ function wbrp_add_admin_menu() {
 
         // Pass config to React (Sanctum token + Laravel API URL)
         wp_localize_script('wbrp-admin', 'wbrpConfig', [
-            'apiUrl' => defined('WBRP_API_URL') ? WBRP_API_URL : 'http://127.0.0.1:8000',
+            'apiUrl' => defined('WBRP_API_URL') ? WBRP_API_URL : 'https://ai-blog-tool.test',
             'token' => get_option('wbrp_auth_token', ''),
         ]);
 
