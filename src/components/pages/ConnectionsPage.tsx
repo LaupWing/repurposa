@@ -63,7 +63,6 @@ const platforms: SocialPlatform[] = [
     icon: <RiInstagramFill size={20} />,
     connected: false,
     color: "bg-gradient-to-br from-purple-600 to-pink-500",
-    comingSoon: true,
   },
   {
     id: "facebook",
