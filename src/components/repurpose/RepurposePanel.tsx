@@ -1463,6 +1463,8 @@ function AddShortPostModal({
 
 type SchedulePlatform = 'x' | 'linkedin' | 'threads' | 'instagram' | 'facebook';
 
+type ScheduleContentType = 'short_post' | 'thread' | 'visual';
+
 const SCHEDULE_PLATFORMS: { id: SchedulePlatform; name: string; icon: React.ReactNode; bg: string }[] = [
     { id: 'x', name: 'X', icon: <RiTwitterXFill size={14} />, bg: 'bg-black' },
     { id: 'linkedin', name: 'LinkedIn', icon: <RiLinkedinFill size={14} />, bg: 'bg-blue-700' },
@@ -1470,6 +1472,14 @@ const SCHEDULE_PLATFORMS: { id: SchedulePlatform; name: string; icon: React.Reac
     { id: 'instagram', name: 'Instagram', icon: <RiInstagramFill size={14} />, bg: 'bg-pink-600' },
     { id: 'facebook', name: 'Facebook', icon: <RiFacebookFill size={14} />, bg: 'bg-blue-600' },
 ];
+
+// Platforms that are unsupported for certain content types
+function getUnsupportedReason(platformId: SchedulePlatform, contentType: ScheduleContentType): string | null {
+    if (platformId === 'instagram' && (contentType === 'short_post' || contentType === 'thread')) {
+        return 'Instagram requires an image — use Visuals instead';
+    }
+    return null;
+}
 
 const API_TO_UI_PLATFORM: Record<string, SchedulePlatform> = { twitter: 'x', linkedin: 'linkedin', threads: 'threads', instagram: 'instagram', facebook: 'facebook' };
 const UI_TO_API_PLATFORM: Record<SchedulePlatform, string> = { x: 'twitter', linkedin: 'linkedin', threads: 'threads', instagram: 'instagram', facebook: 'facebook' };
@@ -1549,12 +1559,14 @@ function SchedulePostModal({
     isOpen,
     post,
     blogId,
+    contentType = 'short_post',
     onClose,
     onScheduled,
 }: {
     isOpen: boolean;
     post: ShortPostPattern | null;
     blogId?: number;
+    contentType?: ScheduleContentType;
     onClose: () => void;
     onScheduled: () => void;
 }) {
@@ -1596,11 +1608,12 @@ function SchedulePostModal({
                         const slotTime = slot.date.getTime();
                         return !scheduled.some((sp) => Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000);
                     });
+                    const filterSupported = (ids: SchedulePlatform[]) => ids.filter((id) => !getUnsupportedReason(id, contentType));
                     if (firstAvailable !== -1) {
                         setSelectedSlotIndex(firstAvailable);
-                        setSelectedPlatforms(slots[firstAvailable].platforms);
+                        setSelectedPlatforms(filterSupported(slots[firstAvailable].platforms));
                     } else if (slots.length > 0) {
-                        setSelectedPlatforms(slots[0].platforms);
+                        setSelectedPlatforms(filterSupported(slots[0].platforms));
                     } else {
                         setSelectedPlatforms(['x']);
                     }
@@ -1630,6 +1643,8 @@ function SchedulePostModal({
     };
 
     const togglePlatform = (id: SchedulePlatform) => {
+        const unsupported = getUnsupportedReason(id, contentType);
+        if (unsupported) return;
         if (!connectedPlatformIds.includes(id)) {
             const name = SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name || id;
             toast.error(`Connect ${name} first`, {
@@ -1653,7 +1668,7 @@ function SchedulePostModal({
     const handleSelectSlot = (absoluteIndex: number) => {
         setSelectedSlotIndex(absoluteIndex);
         setUseCustom(false);
-        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms);
+        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType)));
     };
 
     const handleUseCustom = () => {
@@ -1795,33 +1810,41 @@ function SchedulePostModal({
                                                         const inSlot = slot.platforms.includes(p.id);
                                                         const active = isSelected && selectedPlatforms.includes(p.id);
                                                         const connected = connectedPlatformIds.includes(p.id);
-                                                        return (
+                                                        const unsupported = getUnsupportedReason(p.id, contentType);
+                                                        const btn = (
                                                             <button
                                                                 key={p.id}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    if (isTaken) return;
+                                                                    if (isTaken || unsupported) return;
                                                                     if (!isSelected) handleSelectSlot(absoluteIdx);
                                                                     togglePlatform(p.id);
                                                                 }}
-                                                                disabled={isTaken}
+                                                                disabled={isTaken || !!unsupported}
                                                                 className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
-                                                                    isTaken
-                                                                        ? 'bg-gray-100 text-gray-200 cursor-not-allowed'
-                                                                        : !connected
-                                                                            ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
-                                                                            : isSelected
-                                                                                ? active
-                                                                                    ? `${p.bg} text-white`
-                                                                                    : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
-                                                                                : inSlot
-                                                                                    ? `${p.bg} text-white`
-                                                                                    : 'bg-gray-100 text-gray-300'
+                                                                    unsupported
+                                                                        ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
+                                                                        : isTaken
+                                                                            ? 'bg-gray-100 text-gray-200 cursor-not-allowed'
+                                                                            : !connected
+                                                                                ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
+                                                                                : isSelected
+                                                                                    ? active
+                                                                                        ? `${p.bg} text-white`
+                                                                                        : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
+                                                                                    : inSlot
+                                                                                        ? `${p.bg} text-white`
+                                                                                        : 'bg-gray-100 text-gray-300'
                                                                 }`}
                                                             >
                                                                 {p.icon}
                                                             </button>
                                                         );
+                                                        return unsupported ? (
+                                                            <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
+                                                                {btn}
+                                                            </Tooltip>
+                                                        ) : btn;
                                                     })}
                                                 </div>
                                             </div>
@@ -1876,22 +1899,30 @@ function SchedulePostModal({
                                     {SCHEDULE_PLATFORMS.map((p) => {
                                         const active = selectedPlatforms.includes(p.id);
                                         const connected = connectedPlatformIds.includes(p.id);
-                                        return (
+                                        const unsupported = getUnsupportedReason(p.id, contentType);
+                                        const btn = (
                                             <button
                                                 key={p.id}
-                                                onClick={() => togglePlatform(p.id)}
+                                                onClick={() => !unsupported && togglePlatform(p.id)}
                                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                                    !connected
+                                                    unsupported
                                                         ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                                                        : active
-                                                            ? `${p.bg} text-white`
-                                                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                                                        : !connected
+                                                            ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                            : active
+                                                                ? `${p.bg} text-white`
+                                                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
                                                 }`}
                                             >
                                                 {p.icon}
                                                 {p.name}
                                             </button>
                                         );
+                                        return unsupported ? (
+                                            <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
+                                                {btn}
+                                            </Tooltip>
+                                        ) : <span key={p.id}>{btn}</span>;
                                     })}
                                 </div>
                             </div>
@@ -1984,6 +2015,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [schedulingPost, setSchedulingPost] = useState<ShortPostPattern | null>(null);
+    const [schedulingContentType, setSchedulingContentType] = useState<ScheduleContentType>('short_post');
     const [threads, setThreads] = useState<ThreadItem[]>(initialThreads || []);
     const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
     const [visuals, setVisuals] = useState<Visual[]>(initialVisuals || []);
@@ -2129,7 +2161,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                         setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p));
                                         updateShortPost(pattern.id, { cta_content: { content, media: pattern.cta_media.length > 0 ? pattern.cta_media : null } }).catch(() => toast.error('Failed to save'));
                                     }}
-                                    onSchedule={() => setSchedulingPost(pattern)}
+                                    onSchedule={() => { setSchedulingPost(pattern); setSchedulingContentType('short_post'); }}
                                     onAddImage={(imageUrl) => {
                                         const newMedia = [...pattern.media, imageUrl].slice(0, 4);
                                         setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, media: newMedia } : p));
@@ -2221,6 +2253,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     ));
                                 }}
                                 onSchedule={() => {
+                                    setSchedulingContentType('thread');
                                     setSchedulingPost({
                                         id: thread.id,
                                         content: thread.posts.map(p => p.content).join('\n\n---\n\n'),
@@ -2544,6 +2577,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                                     <button
                                                         onClick={() => {
                                                             const text = Array.isArray(visual.content) ? visual.content.join('\n\n---\n\n') : visual.content;
+                                                            setSchedulingContentType('visual');
                                                             setSchedulingPost({
                                                                 id: visual.source_id,
                                                                 content: text,
@@ -2659,6 +2693,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 isOpen={!!schedulingPost}
                 post={schedulingPost}
                 blogId={blogId}
+                contentType={schedulingContentType}
                 onClose={() => setSchedulingPost(null)}
                 onScheduled={handleScheduled}
             />
