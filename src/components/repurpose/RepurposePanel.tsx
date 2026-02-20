@@ -37,7 +37,7 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { generateShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost, generateThreads, deleteVisual } from '../../services/api';
+import { generateShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost, generateThreads, deleteVisual, publishNow } from '../../services/api';
 import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType, ThreadItem, Visual } from '../../services/api';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
@@ -2069,13 +2069,54 @@ function PublishNowModal({
     const handlePublish = async () => {
         if (selectedPlatforms.length === 0) return;
         setIsPublishing(true);
-        // TODO: wire up actual publish API
-        const platformNames = selectedPlatforms
-            .map((id) => SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name)
-            .filter(Boolean)
-            .join(', ');
-        toast.success('Publishing!', { description: `Sending to ${platformNames}...` });
-        onClose();
+
+        try {
+            const accountIds = selectedPlatforms
+                .map((platformId) => {
+                    const apiPlatform = UI_TO_API_PLATFORM[platformId];
+                    return socialAccounts.find((a) => a.platform === apiPlatform)?.id;
+                })
+                .filter((id): id is number => id !== undefined);
+
+            if (accountIds.length === 0) {
+                toast.error('No connected accounts for selected platforms');
+                return;
+            }
+
+            const response = await publishNow({
+                social_account_ids: accountIds,
+                content: post.content,
+                schedulable_type: contentType,
+                schedulable_id: post.id,
+                ...(post.media.length > 0 && { media: post.media }),
+            });
+
+            const succeeded = response.results.filter((r) => r.status === 'published');
+            const failed = response.results.filter((r) => r.status === 'failed');
+
+            if (succeeded.length > 0) {
+                const names = succeeded.map((r) => {
+                    const uiId = API_TO_UI_PLATFORM[r.platform] || r.platform;
+                    return SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || r.platform;
+                }).join(', ');
+                toast.success('Published!', { description: names });
+            }
+            if (failed.length > 0) {
+                const names = failed.map((r) => {
+                    const uiId = API_TO_UI_PLATFORM[r.platform] || r.platform;
+                    return SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || r.platform;
+                }).join(', ');
+                toast.error(`Failed on ${names}`, { description: failed[0].error || 'Please try again.' });
+            }
+
+            onClose();
+        } catch (error) {
+            toast.error('Failed to publish', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsPublishing(false);
+        }
     };
 
     return (

@@ -517,6 +517,31 @@ export async function deleteScheduledPost(id: number): Promise<void> {
 }
 
 // ============================================
+// PUBLISH NOW API
+// ============================================
+
+export interface PublishNowResult {
+    platform: string;
+    status: 'published' | 'failed';
+    error?: string;
+}
+
+export interface PublishNowResponse {
+    results: PublishNowResult[];
+}
+
+export async function publishNow(data: {
+    social_account_ids: number[];
+    content: string;
+    post_id?: number;
+    schedulable_type?: 'short_post' | 'thread' | 'visual';
+    schedulable_id?: number;
+    media?: string[];
+}): Promise<PublishNowResponse> {
+    return apiRequest<PublishNowResponse>('/social/publish', data as Record<string, unknown>);
+}
+
+// ============================================
 // PUBLISHING SCHEDULE API
 // ============================================
 
