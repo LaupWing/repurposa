@@ -70,7 +70,6 @@ const platforms: SocialPlatform[] = [
     icon: <RiFacebookFill size={20} />,
     connected: false,
     color: "bg-blue-600",
-    comingSoon: true,
   },
 ];
 
