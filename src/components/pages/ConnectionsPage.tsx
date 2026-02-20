@@ -56,7 +56,6 @@ const platforms: SocialPlatform[] = [
     icon: <RiThreadsFill size={20} />,
     connected: false,
     color: "bg-gray-900",
-    comingSoon: true,
   },
   {
     id: "instagram",
