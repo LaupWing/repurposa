@@ -1824,9 +1824,9 @@ function SchedulePostModal({
                                                         if (unsupported) {
                                                             return (
                                                                 <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
-                                                                    <div className="relative inline-flex items-center justify-center w-7 h-7 rounded-md border border-amber-400 text-amber-400 cursor-not-allowed">
+                                                                    <div className="relative inline-flex items-center justify-center w-7 h-7 rounded-md border border-amber-400 text-gray-300 cursor-not-allowed">
                                                                         {p.icon}
-                                                                        <AlertTriangle size={10} className="absolute -top-1.5 -right-1.5 text-amber-500 fill-amber-100" />
+                                                                        <AlertTriangle size={12} className="absolute -top-1.5 -right-1.5 text-amber-500 fill-amber-100" />
                                                                     </div>
                                                                 </Tooltip>
                                                             );
@@ -1916,10 +1916,10 @@ function SchedulePostModal({
                                         if (unsupported) {
                                             return (
                                                 <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
-                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-amber-400 text-amber-500 cursor-not-allowed">
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-amber-400 text-gray-300 cursor-not-allowed">
                                                         {p.icon}
                                                         {p.name}
-                                                        <AlertTriangle size={14} />
+                                                        <AlertTriangle size={14} className="text-amber-500" />
                                                     </div>
                                                 </Tooltip>
                                             );
