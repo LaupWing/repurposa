@@ -15,12 +15,7 @@ import ConnectionsPage from './components/pages/ConnectionsPage';
 import LoginModal from './components/LoginModal';
 import OnboardingModal from './components/OnboardingModal';
 import type { WizardData } from './components/BlogWizard';
-
-// ============================================
-// TYPES
-// ============================================
-
-type PageType = 'create' | 'blogs' | 'blog-view' | 'schedule' | 'settings';
+import type { PageType } from './types';
 
 interface AppProps {
     initialPage: PageType;
@@ -77,7 +72,7 @@ function AppContent({ initialPage, postId }: AppProps) {
                 return <BlogViewPage postId={postId} />;
             case 'schedule':
                 return <SchedulePage />;
-            case 'settings':
+            case 'connections':
                 return <ConnectionsPage />;
             default:
                 return <BlogWizard onComplete={handleWizardComplete} />;

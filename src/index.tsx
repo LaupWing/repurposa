@@ -5,9 +5,7 @@
 import { createRoot } from "@wordpress/element";
 import App from "./App";
 import "./styles/main.css";
-
-// Get page type from data attribute
-type PageType = "create" | "blogs" | "blog-view" | "schedule" | "connections";
+import type { PageType } from "./types";
 
 function mountApp(): void {
     const container = document.getElementById("wbrp-app");
