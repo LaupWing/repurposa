@@ -46,8 +46,22 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
             onAutoEditHandled?.();
         }
     }, [autoEdit]);
+
     const [copied, setCopied] = useState(false);
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const [postMenuOpen, setPostMenuOpen] = useState(false);
+    const postMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!postMenuOpen) return;
+        const handleClick = (e: MouseEvent) => {
+            if (postMenuRef.current && !postMenuRef.current.contains(e.target as Node)) {
+                setPostMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [postMenuOpen]);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(post.content);
@@ -127,42 +141,54 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
                             </div>
                             <div className="flex items-center gap-1">
                                 <button
-                                    onClick={handleCopy}
-                                    className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                                >
-                                    {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                                </button>
-                                <button
                                     onClick={() => setIsEditing(true)}
                                     className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                                 >
                                     <Pencil size={14} />
                                 </button>
-                                <Tooltip
-                                    text={isPublished ? 'Create CTA' : 'Publish the blog first to generate a CTA'}
-                                    delay={0}
-                                    placement="top"
-                                >
-                                    <span className="inline-flex">
-                                        <button
-                                            onClick={isPublished ? onCreateCta : undefined}
-                                            disabled={!isPublished}
-                                            className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${
-                                                isPublished
-                                                    ? 'text-gray-400 hover:bg-blue-50 hover:text-blue-500'
-                                                    : 'text-gray-300 cursor-not-allowed'
-                                            }`}
-                                        >
-                                            <Link2 size={14} />
-                                        </button>
-                                    </span>
-                                </Tooltip>
-                                <button
-                                    onClick={onDelete}
-                                    className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
+                                <div className="relative" ref={postMenuRef}>
+                                    <button
+                                        onClick={() => setPostMenuOpen(!postMenuOpen)}
+                                        className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${
+                                            postMenuOpen ? 'bg-gray-100 text-gray-600' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                                        }`}
+                                    >
+                                        <MoreHorizontal size={14} />
+                                    </button>
+                                    {postMenuOpen && (
+                                        <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-10">
+                                            <button
+                                                onClick={() => { handleCopy(); setPostMenuOpen(false); }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            >
+                                                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                                                {copied ? 'Copied!' : 'Copy'}
+                                            </button>
+                                            <button
+                                                onClick={() => { toast.info('Image support coming soon'); setPostMenuOpen(false); }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            >
+                                                <ImagePlus size={14} />
+                                                Add Image
+                                            </button>
+                                            <button
+                                                onClick={() => { if (isPublished) { onCreateCta?.(); } else { toast.info('Publish the blog first to generate a CTA'); } setPostMenuOpen(false); }}
+                                                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${isPublished ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400'}`}
+                                            >
+                                                <Link2 size={14} />
+                                                Create CTA
+                                            </button>
+                                            <div className="border-t border-gray-100 my-1" />
+                                            <button
+                                                onClick={() => { onDelete(); setPostMenuOpen(false); }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                            >
+                                                <Trash2 size={14} />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </>
