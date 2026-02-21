@@ -11,6 +11,7 @@ import { OTPInput, SlotProps } from 'input-otp';
 import { ArrowLeft, Loader2, Mail } from 'lucide-react';
 import { RiGoogleFill, RiTwitterXFill, RiLinkedinFill } from 'react-icons/ri';
 import logoUrl from '../assets/logo.svg';
+import { useSocialPopup } from '../hooks/useSocialPopup';
 
 type Step = 'social' | 'email' | 'code';
 
@@ -44,11 +45,9 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
     const [sending, setSending] = useState(false);
     const [verifying, setVerifying] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [loadingPlatform, setLoadingPlatform] = useState<string | null>(null);
 
     const saveTokenAndConnect = async (token: string) => {
         try {
-            // Clear stale onboarding step from any previous session
             try { localStorage.removeItem('onboarding-step'); } catch { /* ignore */ }
 
             await apiFetch({
@@ -63,36 +62,19 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
         }
     };
 
+    const { connectingPlatform: loadingPlatform, openPopup } = useSocialPopup({
+        messageType: 'wbrp-auth',
+        onSuccess: (_platformId, eventData) => {
+            if (eventData.token) {
+                saveTokenAndConnect(eventData.token);
+            }
+        },
+    });
+
     const openSocialLogin = (platform: string) => {
         const { apiUrl } = getConfig();
         const origin = window.location.origin;
-        const popupUrl = `${apiUrl}/social/${platform}/login?origin=${encodeURIComponent(origin)}&source=wordpress`;
-        setLoadingPlatform(platform);
-
-        const popup = window.open(popupUrl, 'wbrp-auth', 'width=600,height=700,scrollbars=yes');
-
-        const handleMessage = async (event: MessageEvent) => {
-            if (event.data?.type !== 'wbrp-auth') return;
-
-            window.removeEventListener('message', handleMessage);
-            clearInterval(checkClosed);
-            setLoadingPlatform(null);
-
-            const { token } = event.data;
-            if (token) {
-                await saveTokenAndConnect(token);
-            }
-        };
-
-        window.addEventListener('message', handleMessage);
-
-        const checkClosed = setInterval(() => {
-            if (popup?.closed) {
-                clearInterval(checkClosed);
-                window.removeEventListener('message', handleMessage);
-                setLoadingPlatform(null);
-            }
-        }, 500);
+        openPopup(`${apiUrl}/social/${platform}/login?origin=${encodeURIComponent(origin)}&source=wordpress`, platform);
     };
 
     const handleSendCode = async () => {

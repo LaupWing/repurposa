@@ -10,6 +10,7 @@
 
 import { useState, useEffect } from '@wordpress/element';
 import { useProfile } from '../../context/ProfileContext';
+import { useSocialPopup } from '../../hooks/useSocialPopup';
 import WelcomeStep from './WelcomeStep';
 import ProfileStep from './ProfileStep';
 import EmailStep from './EmailStep';
@@ -55,7 +56,6 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     const [name, setName] = useState(user?.name ?? '');
     const [email, setEmail] = useState('');
     const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
-    const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         niche: '',
         target_audience: '',
@@ -94,34 +94,17 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
         }
     };
 
+    const { connectingPlatform, openPopup } = useSocialPopup({
+        messageType: 'social-connected',
+        onSuccess: (platformId) => {
+            setConnectedPlatforms((prev) => [...prev, platformId]);
+        },
+    });
+
     const handleConnectPlatform = (platformId: string) => {
         const { apiUrl } = getConfig();
         const origin = window.location.origin;
-        setConnectingPlatform(platformId);
-
-        const popup = window.open(
-            `${apiUrl}/social/${platformId}/connect?origin=${encodeURIComponent(origin)}`,
-            'wbrp-social-auth',
-            'width=600,height=700,scrollbars=yes'
-        );
-
-        const handleMessage = (event: MessageEvent) => {
-            if (event.data?.type !== 'social-connected') return;
-            window.removeEventListener('message', handleMessage);
-            clearInterval(checkClosed);
-            setConnectedPlatforms((prev) => [...prev, platformId]);
-            setConnectingPlatform(null);
-        };
-
-        window.addEventListener('message', handleMessage);
-
-        const checkClosed = setInterval(() => {
-            if (popup?.closed) {
-                clearInterval(checkClosed);
-                window.removeEventListener('message', handleMessage);
-                setConnectingPlatform(null);
-            }
-        }, 500);
+        openPopup(`${apiUrl}/social/${platformId}/connect?origin=${encodeURIComponent(origin)}`, platformId);
     };
 
     const handleComplete = async () => {
