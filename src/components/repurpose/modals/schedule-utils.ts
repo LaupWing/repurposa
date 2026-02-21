@@ -32,15 +32,33 @@ export const PLATFORM_CHAR_LIMITS: Record<SchedulePlatform, number> = {
     facebook: 63206,
 };
 
+export const THREAD_NATIVE_PLATFORMS: Set<SchedulePlatform> = new Set(['x', 'threads']);
+
 const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 
 // ============================================
 // HELPERS
 // ============================================
 
-export function getUnsupportedReason(platformId: SchedulePlatform, contentType: ScheduleContentType, contentLength?: number): string | null {
+export function getUnsupportedReason(platformId: SchedulePlatform, contentType: ScheduleContentType, contentLength?: number, threadPosts?: string[] | null): string | null {
     if (platformId === 'instagram' && (contentType === 'short_post' || contentType === 'thread')) {
         return 'Instagram requires an image — use Visuals instead';
+    }
+    if (contentType === 'thread' && threadPosts && threadPosts.length > 0) {
+        const limit = PLATFORM_CHAR_LIMITS[platformId];
+        const name = SCHEDULE_PLATFORMS.find(p => p.id === platformId)?.name || platformId;
+        if (THREAD_NATIVE_PLATFORMS.has(platformId)) {
+            const overIndex = threadPosts.findIndex(p => p.length > limit);
+            if (overIndex !== -1) {
+                return `Post ${overIndex + 1} exceeds ${name}'s ${limit.toLocaleString()} char limit (${threadPosts[overIndex].length.toLocaleString()} chars)`;
+            }
+        } else {
+            const totalLength = threadPosts.reduce((sum, p) => sum + p.length, 0);
+            if (totalLength > limit) {
+                return `Combined thread exceeds ${name}'s ${limit.toLocaleString()} char limit`;
+            }
+        }
+        return null;
     }
     if (contentLength !== undefined) {
         const limit = PLATFORM_CHAR_LIMITS[platformId];

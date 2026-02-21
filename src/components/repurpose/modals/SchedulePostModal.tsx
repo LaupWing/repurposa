@@ -25,6 +25,7 @@ import {
     API_TO_UI_PLATFORM,
     UI_TO_API_PLATFORM,
     PLATFORM_CHAR_LIMITS,
+    THREAD_NATIVE_PLATFORMS,
     getUnsupportedReason,
     getUpcomingSlots,
     getDefaultDate,
@@ -37,6 +38,7 @@ interface SchedulePostModalProps {
     blogId?: number;
     contentType?: ScheduleContentType;
     visual?: Visual | null;
+    threadPosts?: string[] | null;
     onClose: () => void;
     onScheduled: () => void;
 }
@@ -47,6 +49,7 @@ export default function SchedulePostModal({
     blogId,
     contentType = 'short_post',
     visual,
+    threadPosts,
     onClose,
     onScheduled,
 }: SchedulePostModalProps) {
@@ -89,7 +92,7 @@ export default function SchedulePostModal({
                         const slotTime = slot.date.getTime();
                         return !scheduled.some((sp) => Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000);
                     });
-                    const filterSupported = (ids: SchedulePlatform[]) => ids.filter((id) => !getUnsupportedReason(id, contentType, post?.content.length));
+                    const filterSupported = (ids: SchedulePlatform[]) => ids.filter((id) => !getUnsupportedReason(id, contentType, post?.content.length, threadPosts));
                     if (firstAvailable !== -1) {
                         setSelectedSlotIndex(firstAvailable);
                         setSelectedPlatforms(filterSupported(slots[firstAvailable].platforms));
@@ -112,6 +115,16 @@ export default function SchedulePostModal({
     if (!isOpen || !post) return null;
 
     const contentLength = post.content.length;
+    const overLimitPlatformNames = SCHEDULE_PLATFORMS.filter((p) => {
+        const limit = PLATFORM_CHAR_LIMITS[p.id];
+        if (threadPosts && contentType === 'thread') {
+            if (THREAD_NATIVE_PLATFORMS.has(p.id)) {
+                return threadPosts.some(t => t.length > limit);
+            }
+            return threadPosts.reduce((sum, t) => sum + t.length, 0) > limit;
+        }
+        return contentLength > limit;
+    }).map((p) => p.name);
     const connectedPlatformIds = socialAccounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
 
     // Check if a slot time is already taken by an existing scheduled post
@@ -124,7 +137,7 @@ export default function SchedulePostModal({
     };
 
     const togglePlatform = (id: SchedulePlatform) => {
-        const unsupported = getUnsupportedReason(id, contentType, contentLength);
+        const unsupported = getUnsupportedReason(id, contentType, contentLength, threadPosts);
         if (unsupported) return;
         if (!connectedPlatformIds.includes(id)) {
             const name = SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name || id;
@@ -149,7 +162,7 @@ export default function SchedulePostModal({
     const handleSelectSlot = (absoluteIndex: number) => {
         setSelectedSlotIndex(absoluteIndex);
         setUseCustom(false);
-        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType, contentLength)));
+        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType, contentLength, threadPosts)));
     };
 
     const handleUseCustom = () => {
@@ -271,11 +284,31 @@ export default function SchedulePostModal({
                     <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                         <p className="text-sm text-gray-700 line-clamp-3 whitespace-pre-wrap">{post.content}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            <span className="text-xs text-gray-400">{contentLength} chars</span>
+                            <span className="text-xs text-gray-400">
+                                {threadPosts && contentType === 'thread'
+                                    ? `${threadPosts.length} posts`
+                                    : `${contentLength} chars`}
+                            </span>
                             <span className="text-xs text-gray-300">·</span>
                             {SCHEDULE_PLATFORMS.map((p) => {
                                 const limit = PLATFORM_CHAR_LIMITS[p.id];
-                                const over = contentLength > limit;
+                                let displayLength: number;
+                                let over: boolean;
+                                if (threadPosts && contentType === 'thread') {
+                                    if (THREAD_NATIVE_PLATFORMS.has(p.id)) {
+                                        displayLength = Math.max(...threadPosts.map(t => t.length));
+                                        over = threadPosts.some(t => t.length > limit);
+                                    } else {
+                                        displayLength = threadPosts.reduce((sum, t) => sum + t.length, 0);
+                                        over = displayLength > limit;
+                                    }
+                                } else {
+                                    displayLength = contentLength;
+                                    over = contentLength > limit;
+                                }
+                                const label = threadPosts && contentType === 'thread' && THREAD_NATIVE_PLATFORMS.has(p.id)
+                                    ? `longest ${displayLength.toLocaleString()}`
+                                    : displayLength.toLocaleString();
                                 return (
                                     <span
                                         key={p.id}
@@ -285,7 +318,7 @@ export default function SchedulePostModal({
                                                 : 'bg-green-50 text-green-600 border border-green-200'
                                         }`}
                                     >
-                                        {p.name} {contentLength}/{limit.toLocaleString()}
+                                        {p.name} {label}/{limit.toLocaleString()}
                                     </span>
                                 );
                             })}
@@ -303,17 +336,12 @@ export default function SchedulePostModal({
                     )}
 
                     {/* Character limit warning */}
-                    {SCHEDULE_PLATFORMS.some((p) => contentLength > PLATFORM_CHAR_LIMITS[p.id]) && (
+                    {overLimitPlatformNames.length > 0 && (
                         <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-amber-300 bg-amber-50">
                             <AlertTriangle size={16} className="text-amber-500 shrink-0" />
                             <p className="text-xs text-amber-700">
                                 Your text exceeds the character limit for{' '}
-                                <strong>
-                                    {SCHEDULE_PLATFORMS
-                                        .filter((p) => contentLength > PLATFORM_CHAR_LIMITS[p.id])
-                                        .map((p) => p.name)
-                                        .join(', ')}
-                                </strong>
+                                <strong>{overLimitPlatformNames.join(', ')}</strong>
                                 . To post there, shorten the {contentType === 'visual' ? 'description of the visual' : contentType === 'thread' ? 'thread' : 'short post'} first.
                             </p>
                         </div>
@@ -381,7 +409,7 @@ export default function SchedulePostModal({
                                                         const inSlot = slot.platforms.includes(p.id);
                                                         const active = isSelected && selectedPlatforms.includes(p.id);
                                                         const connected = connectedPlatformIds.includes(p.id);
-                                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength);
+                                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts);
                                                         if (unsupported) {
                                                             return (
                                                                 <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
@@ -473,7 +501,7 @@ export default function SchedulePostModal({
                                     {SCHEDULE_PLATFORMS.map((p) => {
                                         const active = selectedPlatforms.includes(p.id);
                                         const connected = connectedPlatformIds.includes(p.id);
-                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength);
+                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts);
                                         if (unsupported) {
                                             return (
                                                 <Tooltip key={p.id} text={unsupported} delay={0} placement="top">

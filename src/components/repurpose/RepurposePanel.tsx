@@ -87,6 +87,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [schedulingPost, setSchedulingPost] = useState<ShortPostPattern | null>(null);
     const [schedulingContentType, setSchedulingContentType] = useState<ScheduleContentType>('short_post');
     const [schedulingVisual, setSchedulingVisual] = useState<Visual | null>(null);
+    const [schedulingThreadPosts, setSchedulingThreadPosts] = useState<string[] | null>(null);
     const [publishingPost, setPublishingPost] = useState<ShortPostPattern | null>(null);
     const [publishingContentType, setPublishingContentType] = useState<ScheduleContentType>('short_post');
     const [threads, setThreads] = useState<ThreadItem[]>(initialThreads || []);
@@ -163,6 +164,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const handleScheduled = () => {
         setSchedulingPost(null);
         setSchedulingVisual(null);
+        setSchedulingThreadPosts(null);
     };
 
     const handleGenerateThreads = async () => {
@@ -329,6 +331,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                 }}
                                 onSchedule={() => {
                                     setSchedulingContentType('thread');
+                                    setSchedulingThreadPosts(thread.posts.map(p => p.content));
                                     setSchedulingPost({
                                         id: thread.id,
                                         content: thread.posts.map(p => p.content).join('\n\n---\n\n'),
@@ -784,7 +787,8 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 blogId={blogId}
                 contentType={schedulingContentType}
                 visual={schedulingVisual}
-                onClose={() => { setSchedulingPost(null); setSchedulingVisual(null); }}
+                threadPosts={schedulingThreadPosts}
+                onClose={() => { setSchedulingPost(null); setSchedulingVisual(null); setSchedulingThreadPosts(null); }}
                 onScheduled={handleScheduled}
             />
             <PublishNowModal
