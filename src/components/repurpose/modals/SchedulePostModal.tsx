@@ -114,8 +114,13 @@ export default function SchedulePostModal({
 
     if (!isOpen || !post) return null;
 
+    // Structural block only (e.g. Instagram can't post text-only), ignoring char limits
+    const platformIsStructurallyUnsupported = (id: SchedulePlatform, ct: ScheduleContentType) =>
+        id === 'instagram' && (ct === 'short_post' || ct === 'thread');
+
     const contentLength = post.content.length;
     const overLimitPlatformNames = SCHEDULE_PLATFORMS.filter((p) => {
+        if (platformIsStructurallyUnsupported(p.id, contentType)) return false;
         const limit = PLATFORM_CHAR_LIMITS[p.id];
         if (threadPosts && contentType === 'thread') {
             if (THREAD_NATIVE_PLATFORMS.has(p.id)) {
@@ -285,7 +290,7 @@ export default function SchedulePostModal({
                                     : `${contentLength} chars`}
                             </span>
                             <span className="text-xs text-gray-300">·</span>
-                            {SCHEDULE_PLATFORMS.map((p) => {
+                            {SCHEDULE_PLATFORMS.filter((p) => !(platformIsStructurallyUnsupported(p.id, contentType))).map((p) => {
                                 const limit = PLATFORM_CHAR_LIMITS[p.id];
                                 let displayLength: number;
                                 let over: boolean;
