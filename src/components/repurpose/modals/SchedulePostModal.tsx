@@ -1,0 +1,476 @@
+import { useState, useEffect } from '@wordpress/element';
+import {
+    Check,
+    Calendar,
+    Clock,
+    ChevronLeft,
+    ChevronRight,
+    AlertTriangle,
+    X,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Tooltip } from '@wordpress/components';
+import { getPublishingSchedule, createScheduledPost, getScheduledPosts } from '../../../services/scheduleApi';
+import { getSocialAccounts } from '../../../services/profileApi';
+import type { SocialAccount, ScheduledPost as ScheduledPostType } from '../../../types';
+import type { ShortPostPattern } from '../ShortPostCard';
+import {
+    type SchedulePlatform,
+    type ScheduleContentType,
+    type UpcomingSlot,
+    SCHEDULE_PLATFORMS,
+    API_TO_UI_PLATFORM,
+    UI_TO_API_PLATFORM,
+    getUnsupportedReason,
+    getUpcomingSlots,
+    getDefaultDate,
+    getDefaultTime,
+} from './schedule-utils';
+
+interface SchedulePostModalProps {
+    isOpen: boolean;
+    post: ShortPostPattern | null;
+    blogId?: number;
+    contentType?: ScheduleContentType;
+    onClose: () => void;
+    onScheduled: () => void;
+}
+
+export default function SchedulePostModal({
+    isOpen,
+    post,
+    blogId,
+    contentType = 'short_post',
+    onClose,
+    onScheduled,
+}: SchedulePostModalProps) {
+    const [selectedPlatforms, setSelectedPlatforms] = useState<SchedulePlatform[]>([]);
+    const [date, setDate] = useState(getDefaultDate);
+    const [time, setTime] = useState(getDefaultTime);
+    const [upcomingSlots, setUpcomingSlots] = useState<UpcomingSlot[]>([]);
+    const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
+    const [existingScheduled, setExistingScheduled] = useState<ScheduledPostType[]>([]);
+    const [loadingSlots, setLoadingSlots] = useState(false);
+    const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
+    const [useCustom, setUseCustom] = useState(false);
+    const [slotPage, setSlotPage] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const slotsPerPage = 6;
+
+    // Fetch schedule + social accounts when modal opens
+    useEffect(() => {
+        if (!isOpen) return;
+        setSelectedPlatforms([]);
+        setDate(getDefaultDate());
+        setTime(getDefaultTime());
+        setSelectedSlotIndex(null);
+        setUseCustom(false);
+        setSlotPage(0);
+        setIsSubmitting(false);
+
+        setLoadingSlots(true);
+        Promise.all([getPublishingSchedule(), getSocialAccounts(), getScheduledPosts({ status: 'pending' })])
+            .then(([scheduleData, accounts, scheduled]) => {
+                setSocialAccounts(accounts);
+                setExistingScheduled(scheduled);
+
+                if (scheduleData.schedule) {
+                    const slots = getUpcomingSlots(scheduleData.schedule, 60);
+                    setUpcomingSlots(slots);
+                    // Auto-select the first available (non-taken) slot
+                    const firstAvailable = slots.findIndex((slot) => {
+                        const slotTime = slot.date.getTime();
+                        return !scheduled.some((sp) => Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000);
+                    });
+                    const filterSupported = (ids: SchedulePlatform[]) => ids.filter((id) => !getUnsupportedReason(id, contentType));
+                    if (firstAvailable !== -1) {
+                        setSelectedSlotIndex(firstAvailable);
+                        setSelectedPlatforms(filterSupported(slots[firstAvailable].platforms));
+                    } else if (slots.length > 0) {
+                        setSelectedPlatforms(filterSupported(slots[0].platforms));
+                    } else {
+                        setSelectedPlatforms(['x']);
+                    }
+                } else {
+                    setUpcomingSlots([]);
+                    setSelectedPlatforms(['x']);
+                }
+            })
+            .catch(() => {
+                setUpcomingSlots([]);
+            })
+            .finally(() => setLoadingSlots(false));
+    }, [isOpen]);
+
+    if (!isOpen || !post) return null;
+
+    const connectedPlatformIds = socialAccounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
+
+    // Check if a slot time is already taken by an existing scheduled post
+    const getSlotOccupant = (slot: UpcomingSlot): ScheduledPostType | null => {
+        const slotTime = slot.date.getTime();
+        return existingScheduled.find((sp) => {
+            const spTime = new Date(sp.scheduled_at).getTime();
+            return Math.abs(spTime - slotTime) < 60000;
+        }) || null;
+    };
+
+    const togglePlatform = (id: SchedulePlatform) => {
+        const unsupported = getUnsupportedReason(id, contentType);
+        if (unsupported) return;
+        if (!connectedPlatformIds.includes(id)) {
+            const name = SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name || id;
+            toast.error(`Connect ${name} first`, {
+                description: 'Go to Settings → Connected Accounts to link your account.',
+            });
+            return;
+        }
+        setSelectedPlatforms((prev) => {
+            if (prev.includes(id)) {
+                if (prev.length === 1) return prev;
+                return prev.filter((p) => p !== id);
+            }
+            return [...prev, id];
+        });
+    };
+
+    const pageStart = slotPage * slotsPerPage;
+    const pageSlots = upcomingSlots.slice(pageStart, pageStart + slotsPerPage);
+    const totalPages = Math.ceil(upcomingSlots.length / slotsPerPage);
+
+    const handleSelectSlot = (absoluteIndex: number) => {
+        setSelectedSlotIndex(absoluteIndex);
+        setUseCustom(false);
+        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType)));
+    };
+
+    const handleUseCustom = () => {
+        setUseCustom(true);
+        setSelectedSlotIndex(null);
+    };
+
+    const handleSchedule = async () => {
+        if (selectedPlatforms.length === 0) return;
+
+        const scheduledAt = selectedSlotIndex !== null && !useCustom
+            ? upcomingSlots[selectedSlotIndex].date.toISOString()
+            : new Date(`${date}T${time}`).toISOString();
+
+        setIsSubmitting(true);
+        try {
+            const promises = selectedPlatforms.map((platformId) => {
+                const apiPlatform = UI_TO_API_PLATFORM[platformId];
+                const account = socialAccounts.find((a) => a.platform === apiPlatform);
+                if (!account) return Promise.resolve(null);
+                return createScheduledPost({
+                    social_account_id: account.id,
+                    content: post.content,
+                    scheduled_at: scheduledAt,
+                    schedulable_type: 'short_post',
+                    schedulable_id: post.id,
+                    ...(blogId && { post_id: blogId }),
+                    ...(post.media.length > 0 && { media: post.media }),
+                });
+            });
+
+            await Promise.all(promises);
+
+            const platformNames = selectedPlatforms
+                .map((id) => SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name)
+                .filter(Boolean)
+                .join(', ');
+            const dt = new Date(scheduledAt);
+            const formattedTime = dt.toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+            });
+            toast.success('Post scheduled!', {
+                description: `${platformNames} · ${formattedTime}`,
+            });
+            onScheduled();
+        } catch (error) {
+            toast.error('Failed to schedule post', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+            <div className={"relative bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 overflow-hidden"}>
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                    <h2 className="text-base font-semibold text-gray-900">Schedule <em className="font-serif font-normal italic">Post</em></h2>
+                    <button
+                        onClick={onClose}
+                        className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="px-5 py-4 space-y-5">
+                    {/* Post preview */}
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                        <p className="text-sm text-gray-700 line-clamp-3 whitespace-pre-wrap">{post.content}</p>
+                    </div>
+
+                    {/* Instagram warning for text-only content */}
+                    {(contentType === 'short_post' || contentType === 'thread') && (
+                        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-amber-300 bg-amber-50">
+                            <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                            <p className="text-xs text-amber-700">
+                                Instagram is not available for {contentType === 'short_post' ? 'short posts' : 'threads'}. Use <strong>Visuals</strong> to schedule to Instagram.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Upcoming slots from schedule */}
+                    {loadingSlots ? (
+                        <div className="flex items-center justify-center py-4 text-sm text-gray-400">
+                            Loading your schedule...
+                        </div>
+                    ) : upcomingSlots.length === 0 ? (
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                            <Calendar size={16} className="text-gray-400 shrink-0" />
+                            <p className="text-xs text-gray-500">
+                                No publishing schedule set up yet. <a href="admin.php?page=blog-repurpose-schedule" className="text-blue-600 hover:underline">Configure your times</a> to see quick-pick slots here.
+                            </p>
+                        </div>
+                    ) : (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Next available slots</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {pageSlots.map((slot, idx) => {
+                                    const absoluteIdx = pageStart + idx;
+                                    const isSelected = selectedSlotIndex === absoluteIdx && !useCustom;
+                                    const occupant = getSlotOccupant(slot);
+                                    const isTaken = !!occupant;
+                                    return (
+                                        <Tooltip
+                                            key={absoluteIdx}
+                                            text={isTaken ? `Already taken: "${occupant.content.slice(0, 80)}${occupant.content.length > 80 ? '...' : ''}"` : ''}
+                                            delay={0}
+                                            placement="top"
+                                        >
+                                            <div
+                                                onClick={() => !isTaken && handleSelectSlot(absoluteIdx)}
+                                                className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                                                    isTaken
+                                                        ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-50'
+                                                        : isSelected
+                                                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 cursor-pointer'
+                                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
+                                                }`}
+                                            >
+                                                {/* Radio check */}
+                                                <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
+                                                    isTaken
+                                                        ? 'border-gray-200 bg-gray-100'
+                                                        : isSelected
+                                                            ? 'border-blue-600 bg-blue-600'
+                                                            : 'border-gray-300 bg-white'
+                                                }`}>
+                                                    {isSelected && !isTaken && <Check size={12} className="text-white" />}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className={`text-sm font-medium ${isTaken ? 'text-gray-400' : 'text-gray-900'}`}>{slot.dateLabel}</div>
+                                                    <div className={`text-xs mt-0.5 ${isTaken ? 'text-gray-300' : 'text-gray-500'}`}>{slot.timeLabel}</div>
+                                                    {isTaken && (
+                                                        <div className="text-[10px] text-gray-400 mt-1 line-clamp-1">
+                                                            Taken by: {occupant.content.slice(0, 40)}{occupant.content.length > 40 ? '...' : ''}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    {SCHEDULE_PLATFORMS.map((p) => {
+                                                        const inSlot = slot.platforms.includes(p.id);
+                                                        const active = isSelected && selectedPlatforms.includes(p.id);
+                                                        const connected = connectedPlatformIds.includes(p.id);
+                                                        const unsupported = getUnsupportedReason(p.id, contentType);
+                                                        if (unsupported) {
+                                                            return (
+                                                                <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
+                                                                    <div className="relative inline-flex items-center justify-center w-7 h-7 rounded-md border border-amber-400 text-gray-300 cursor-not-allowed">
+                                                                        {p.icon}
+                                                                        <AlertTriangle size={12} className="absolute -top-1.5 -right-1.5 text-amber-500 fill-amber-100" />
+                                                                    </div>
+                                                                </Tooltip>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <button
+                                                                key={p.id}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (isTaken) return;
+                                                                    if (!isSelected) handleSelectSlot(absoluteIdx);
+                                                                    togglePlatform(p.id);
+                                                                }}
+                                                                disabled={isTaken}
+                                                                className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
+                                                                    isTaken
+                                                                        ? 'bg-gray-100 text-gray-200 cursor-not-allowed'
+                                                                        : !connected
+                                                                            ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
+                                                                            : isSelected
+                                                                                ? active
+                                                                                    ? `${p.bg} text-white`
+                                                                                    : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
+                                                                                : inSlot
+                                                                                    ? `${p.bg} text-white`
+                                                                                    : 'bg-gray-100 text-gray-300'
+                                                                }`}
+                                                            >
+                                                                {p.icon}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </Tooltip>
+                                    );
+                                })}
+                            </div>
+                            {/* Pagination + Custom time */}
+                            <div className="mt-3 flex items-center justify-between">
+                                <button
+                                    onClick={handleUseCustom}
+                                    className={`text-left px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                                        useCustom
+                                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 text-blue-700'
+                                            : 'border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700'
+                                    }`}
+                                >
+                                    Pick a custom date &amp; time
+                                </button>
+                                {totalPages > 1 && (
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => setSlotPage((p) => Math.max(0, p - 1))}
+                                            disabled={slotPage === 0}
+                                            className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <ChevronLeft size={16} />
+                                        </button>
+                                        <span className="text-xs text-gray-400 px-2">
+                                            {slotPage + 1} / {totalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setSlotPage((p) => Math.min(totalPages - 1, p + 1))}
+                                            disabled={slotPage === totalPages - 1}
+                                            className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Custom date/time picker - show when no schedule or custom selected */}
+                    {(useCustom || upcomingSlots.length === 0) && !loadingSlots && (
+                        <div className="space-y-4">
+                            {/* Platform selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Platforms</label>
+                                <div className="flex items-center gap-2">
+                                    {SCHEDULE_PLATFORMS.map((p) => {
+                                        const active = selectedPlatforms.includes(p.id);
+                                        const connected = connectedPlatformIds.includes(p.id);
+                                        const unsupported = getUnsupportedReason(p.id, contentType);
+                                        if (unsupported) {
+                                            return (
+                                                <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-amber-400 text-gray-300 cursor-not-allowed">
+                                                        {p.icon}
+                                                        {p.name}
+                                                        <AlertTriangle size={14} className="text-amber-500" />
+                                                    </div>
+                                                </Tooltip>
+                                            );
+                                        }
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => togglePlatform(p.id)}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                    !connected
+                                                        ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                        : active
+                                                            ? `${p.bg} text-white`
+                                                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                                                }`}
+                                            >
+                                                {p.icon}
+                                                {p.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Date & Time */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        <span className="flex items-center gap-1.5">
+                                            <Calendar size={14} className="text-gray-400" />
+                                            Date
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        min={getDefaultDate()}
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        <span className="flex items-center gap-1.5">
+                                            <Clock size={14} className="text-gray-400" />
+                                            Time
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="time"
+                                        value={time}
+                                        onChange={(e) => setTime(e.target.value)}
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-gray-200 bg-gray-50">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSchedule}
+                        disabled={isSubmitting || selectedPlatforms.length === 0}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        <Calendar size={14} />
+                        {isSubmitting ? 'Scheduling...' : 'Schedule'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
