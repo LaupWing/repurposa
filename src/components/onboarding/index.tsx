@@ -54,6 +54,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
 
     const [step, setStep] = useState<Step>(getInitialStep);
     const [name, setName] = useState(user?.name ?? '');
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar ?? null);
     const [email, setEmail] = useState('');
     const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
     const [formData, setFormData] = useState({
@@ -156,7 +157,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             case 'welcome':
                 return <WelcomeStep onNext={() => setStep(nextAfterWelcome)} />;
             case 'setup-profile':
-                return <ProfileStep name={name} setName={setName} onSave={saveStepData} onNext={() => setStep('setup-connect')} />;
+                return <ProfileStep name={name} setName={setName} email={user?.email ?? ''} avatarUrl={avatarUrl} onAvatarChange={setAvatarUrl} onSave={saveStepData} onNext={() => setStep('setup-connect')} />;
             case 'setup-email':
                 return <EmailStep email={email} setEmail={setEmail} errors={errors} onSave={saveStepData} onNext={() => setStep('setup-business')} />;
             case 'setup-connect':
