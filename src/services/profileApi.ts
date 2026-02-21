@@ -9,6 +9,10 @@ export async function disconnectSocialAccount(platform: string): Promise<void> {
     await apiRequest<{ success: boolean }>(`/social/${platform}/disconnect`, {}, 'DELETE');
 }
 
+export async function updateUser(data: { name?: string; email?: string }): Promise<void> {
+    await apiRequest('/profile', data, 'PUT');
+}
+
 export async function uploadAvatar(file: File): Promise<string> {
     const { apiUrl, token } = getConfig();
     const formData = new FormData();

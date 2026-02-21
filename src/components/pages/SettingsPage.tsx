@@ -5,13 +5,15 @@
  * Centered layout matching BlogWizard design.
  */
 
-import { useState } from "@wordpress/element";
+import { useState, useRef } from "@wordpress/element";
+import { Spinner } from "@wordpress/components";
 import { toast } from "sonner";
-import { Check, ExternalLink, Save, Loader2 } from "lucide-react";
+import Avatar from "boring-avatars";
+import { Check, ExternalLink, Save, Loader2, Pencil } from "lucide-react";
 import { TimezonePicker } from "../TimezonePicker";
 import { useProfile } from "../../context/ProfileContext";
 import type { ProfileData } from "../../context/ProfileContext";
-import { disconnectSocialAccount } from "../../services/profileApi";
+import { disconnectSocialAccount, uploadAvatar, updateUser } from "../../services/profileApi";
 import { useSocialPopup } from "../../hooks/useSocialPopup";
 import { CONNECT_PLATFORMS } from "../../constants/platforms";
 
@@ -22,11 +24,45 @@ const BRAND_VOICES = ["conversational", "professional", "bold"] as const;
 // ============================================
 
 export default function SettingsPage() {
-  const { profile: contextProfile, socialConnections, isLoading, saveProfile, refreshProfile } = useProfile();
+  const { user, profile: contextProfile, socialConnections, isLoading, saveProfile, refreshProfile } = useProfile();
   const [localProfile, setLocalProfile] = useState<ProfileData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState<string | null>(null);
+  const [userName, setUserName] = useState(user?.name ?? '');
+  const [userEmail, setUserEmail] = useState(user?.email ?? '');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar ?? null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [savingUser, setSavingUser] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (file: File) => {
+    setUploadingAvatar(true);
+    try {
+      const url = await uploadAvatar(file);
+      setAvatarUrl(url + '?t=' + Date.now());
+      toast.success('Avatar updated!');
+    } catch {
+      toast.error('Failed to upload avatar');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const hasUserChanges = userName !== (user?.name ?? '') || userEmail !== (user?.email ?? '');
+
+  const handleSaveUser = async () => {
+    setSavingUser(true);
+    try {
+      await updateUser({ name: userName, email: userEmail });
+      await refreshProfile();
+      toast.success('Account updated!');
+    } catch (error) {
+      toast.error('Failed to update account');
+    } finally {
+      setSavingUser(false);
+    }
+  };
 
   // Sync context profile to local state for editing
   if (contextProfile && !initialized) {
@@ -104,6 +140,109 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto mt-6 space-y-6">
+      {/* Account Card */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Account
+          </h2>
+        </div>
+
+        <div className="px-6 py-6 flex items-start gap-6">
+          {/* Avatar */}
+          <div className="flex flex-col items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              className="group relative rounded-full"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Avatar"
+                  className="h-16 w-16 rounded-full object-cover"
+                />
+              ) : (
+                <Avatar
+                  size={64}
+                  name={user?.email || 'user'}
+                  variant="beam"
+                  colors={['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#60a5fa']}
+                />
+              )}
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 transition-colors group-hover:bg-black/40">
+                <Pencil size={14} className="text-white opacity-0 transition-opacity group-hover:opacity-100" />
+              </div>
+              {uploadingAvatar && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+                  <Spinner />
+                </div>
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleAvatarUpload(file);
+                e.target.value = '';
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors bg-transparent border-none cursor-pointer p-0"
+            >
+              Change
+            </button>
+          </div>
+
+          {/* Name + Email fields */}
+          <div className="flex-1 space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Name</label>
+              <input
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Your name"
+                className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <input
+                type="email"
+                value={userEmail}
+                onChange={(e) => setUserEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+
+        {hasUserChanges && (
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+            <button
+              onClick={handleSaveUser}
+              disabled={savingUser || !userName.trim() || !userEmail.trim()}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {savingUser ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Save size={16} />
+              )}
+              {savingUser ? "Saving..." : "Save"}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Profile Settings Card */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {/* Header */}
