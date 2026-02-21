@@ -380,12 +380,6 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                 {/* Right - Actions */}
                 <div className="flex items-center gap-1">
                     <button
-                        onClick={() => setIsEditingHook(true)}
-                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                    >
-                        <Pencil size={14} />
-                    </button>
-                    <button
                         onClick={onSchedule}
                         className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                     >
@@ -409,13 +403,6 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                 >
                                     {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
                                     {copied ? 'Copied!' : 'Copy All'}
-                                </button>
-                                <button
-                                    onClick={() => { setMenuOpen(false); }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                    <ImagePlus size={14} />
-                                    Add Image
                                 </button>
                                 <button
                                     onClick={() => { onPublishNow(); setMenuOpen(false); }}
