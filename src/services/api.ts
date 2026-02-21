@@ -566,7 +566,7 @@ export async function savePublishingSchedule(
 
 export async function sendLoginCode(email: string): Promise<void> {
     const { apiUrl } = getConfig();
-    const response = await fetch(`${apiUrl}/auth/email/send-code`, {
+    const response = await fetch(`${apiUrl}/api/auth/email/send-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ email, source: 'wordpress' }),
@@ -580,7 +580,7 @@ export async function sendLoginCode(email: string): Promise<void> {
 
 export async function verifyLoginCode(email: string, code: string): Promise<{ token: string }> {
     const { apiUrl } = getConfig();
-    const response = await fetch(`${apiUrl}/auth/email/verify-code`, {
+    const response = await fetch(`${apiUrl}/api/auth/email/verify-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ email, code, source: 'wordpress' }),

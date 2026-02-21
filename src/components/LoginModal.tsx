@@ -83,7 +83,7 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
         setErrors({});
 
         try {
-            const response = await fetch(`${apiUrl}/auth/email/send-code`, {
+            const response = await fetch(`${apiUrl}/api/auth/email/send-code`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
                 body: JSON.stringify({ email, source: 'wordpress' }),
@@ -116,7 +116,7 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
         setErrors({});
 
         try {
-            const response = await fetch(`${apiUrl}/auth/email/verify-code`, {
+            const response = await fetch(`${apiUrl}/api/auth/email/verify-code`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
                 body: JSON.stringify({ email, code, source: 'wordpress' }),
