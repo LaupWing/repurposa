@@ -47,12 +47,14 @@ export default function ConnectStep({ connectedPlatforms, connectingPlatform, on
                 })}
             </div>
 
-            <button
-                onClick={onNext}
-                className="text-sm text-gray-500 cursor-pointer hover:text-gray-900 transition-colors"
-            >
-                {connectedPlatforms.length > 0 ? 'Continue' : 'Skip for now'}
-            </button>
+            {connectedPlatforms.length > 0 && (
+                <button
+                    onClick={onNext}
+                    className="px-6 h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 transition-colors"
+                >
+                    Continue
+                </button>
+            )}
         </div>
     );
 }
