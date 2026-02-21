@@ -77,7 +77,7 @@ const platforms: SocialPlatform[] = [
 // COMPONENT
 // ============================================
 
-export default function ConnectionsPage() {
+export default function SettingsPage() {
   const { profile: contextProfile, socialConnections, isLoading, saveProfile, refreshProfile } = useProfile();
   const [localProfile, setLocalProfile] = useState<ProfileData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
