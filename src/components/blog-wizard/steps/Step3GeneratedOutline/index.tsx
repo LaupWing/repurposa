@@ -25,7 +25,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Lightbulb, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Tooltip } from '@wordpress/components';
 import type { OutlineSection } from '../../BlogWizard';
-import { AITextPopup } from '../../AITextPopup';
+import { AITextPopup } from '../../../AITextPopup';
 
 // ============================================
 // SORTABLE SECTION COMPONENT

@@ -23,7 +23,7 @@ import {
 } from '@dnd-kit/sortable';
 import { FileText, Plus } from 'lucide-react';
 import SortableItem from './SortableItem';
-import { AITextPopup } from '../../AITextPopup';
+import { AITextPopup } from '../../../AITextPopup';
 
 // ============================================
 // TYPES

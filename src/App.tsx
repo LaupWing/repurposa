@@ -7,14 +7,14 @@
 
 import { Toaster, toast } from 'sonner';
 import { ProfileProvider, useProfile } from './context/ProfileContext';
-import BlogWizard from './components/BlogWizard';
+import BlogWizard from './components/blog-wizard/BlogWizard';
 import BlogsPage from './components/pages/BlogsPage';
 import BlogViewPage from './components/pages/BlogViewPage';
 import SchedulePage from './components/pages/SchedulePage';
 import SettingsPage from './components/pages/SettingsPage';
 import LoginModal from './components/LoginModal';
 import OnboardingModal from './components/onboarding';
-import type { WizardData } from './components/BlogWizard';
+import type { WizardData } from './components/blog-wizard/BlogWizard';
 import type { PageType } from './types';
 
 interface AppProps {
