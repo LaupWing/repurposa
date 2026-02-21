@@ -1,4 +1,4 @@
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import {
     Check,
     Calendar,
@@ -8,12 +8,15 @@ import {
     AlertTriangle,
     X,
 } from 'lucide-react';
+import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
 import { getPublishingSchedule, createScheduledPost, getScheduledPosts } from '../../../services/scheduleApi';
 import { getSocialAccounts } from '../../../services/profileApi';
-import type { SocialAccount, ScheduledPost as ScheduledPostType } from '../../../types';
+import { renderVisual } from '../../../services/repurposeApi';
+import type { SocialAccount, ScheduledPost as ScheduledPostType, Visual } from '../../../types';
 import type { ShortPostPattern } from '../cards/ShortPostCard';
+import { VisualPreview, GRADIENT_PRESETS } from './VisualPreviewModal';
 import {
     type SchedulePlatform,
     type ScheduleContentType,
@@ -32,6 +35,7 @@ interface SchedulePostModalProps {
     post: ShortPostPattern | null;
     blogId?: number;
     contentType?: ScheduleContentType;
+    visual?: Visual | null;
     onClose: () => void;
     onScheduled: () => void;
 }
@@ -41,6 +45,7 @@ export default function SchedulePostModal({
     post,
     blogId,
     contentType = 'short_post',
+    visual,
     onClose,
     onScheduled,
 }: SchedulePostModalProps) {
@@ -55,6 +60,7 @@ export default function SchedulePostModal({
     const [useCustom, setUseCustom] = useState(false);
     const [slotPage, setSlotPage] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
     const slotsPerPage = 6;
 
     // Fetch schedule + social accounts when modal opens
@@ -149,6 +155,10 @@ export default function SchedulePostModal({
         setSelectedSlotIndex(null);
     };
 
+    // Computed visual data for offscreen rendering
+    const visualSlides = visual ? (Array.isArray(visual.content) ? visual.content : [visual.content]) : [];
+    const gradientPreset = visual ? (GRADIENT_PRESETS.find(g => g.id === visual.settings.gradient_id) || GRADIENT_PRESETS[0]) : GRADIENT_PRESETS[0];
+
     const handleSchedule = async () => {
         if (selectedPlatforms.length === 0) return;
 
@@ -158,6 +168,25 @@ export default function SchedulePostModal({
 
         setIsSubmitting(true);
         try {
+            let mediaUrls: string[] = post.media.length > 0 ? post.media : [];
+
+            // For visuals: capture offscreen slides as PNGs and upload
+            if (contentType === 'visual' && visual) {
+                const blobs: Blob[] = [];
+                for (let i = 0; i < slideRefs.current.length; i++) {
+                    const el = slideRefs.current[i];
+                    if (!el) continue;
+                    const dataUrl = await toPng(el, { quality: 1, pixelRatio: 2 });
+                    const res = await fetch(dataUrl);
+                    blobs.push(await res.blob());
+                }
+                if (blobs.length === 0) {
+                    throw new Error('Failed to render visual slides');
+                }
+                const { images } = await renderVisual(visual.id, blobs);
+                mediaUrls = images;
+            }
+
             const promises = selectedPlatforms.map((platformId) => {
                 const apiPlatform = UI_TO_API_PLATFORM[platformId];
                 const account = socialAccounts.find((a) => a.platform === apiPlatform);
@@ -166,10 +195,10 @@ export default function SchedulePostModal({
                     social_account_id: account.id,
                     content: post.content,
                     scheduled_at: scheduledAt,
-                    schedulable_type: 'short_post',
+                    schedulable_type: contentType,
                     schedulable_id: post.id,
                     ...(blogId && { post_id: blogId }),
-                    ...(post.media.length > 0 && { media: post.media }),
+                    ...(mediaUrls.length > 0 && { media: mediaUrls }),
                 });
             });
 
@@ -201,6 +230,27 @@ export default function SchedulePostModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Offscreen visual slide rendering for PNG capture */}
+            {visual && (
+                <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+                    {visualSlides.map((text, i) => (
+                        <div key={i} ref={(el) => { slideRefs.current[i] = el; }}>
+                            <VisualPreview
+                                content={text}
+                                displayName={visual.settings.display_name}
+                                handle={visual.settings.handle}
+                                avatarUrl={visual.settings.avatar_url}
+                                theme={visual.settings.theme}
+                                style={visual.settings.style}
+                                stats={visual.settings.stats || { views: 0, reposts: 0, quotes: 0, likes: 0, bookmarks: 0 }}
+                                roundedCorners={visual.settings.corners === 'rounded'}
+                                gradient={gradientPreset}
+                                textSize={(visual.settings.text_sizes?.[i] as any) || null}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
             <div className="absolute inset-0 bg-black/50" onClick={onClose} />
             <div className={"relative bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 overflow-hidden"}>
                 {/* Header */}
@@ -467,7 +517,7 @@ export default function SchedulePostModal({
                         className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
                     >
                         <Calendar size={14} />
-                        {isSubmitting ? 'Scheduling...' : 'Schedule'}
+                        {isSubmitting ? (visual ? 'Rendering & Scheduling...' : 'Scheduling...') : 'Schedule'}
                     </button>
                 </div>
             </div>

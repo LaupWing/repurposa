@@ -14,7 +14,7 @@ export async function createScheduledPost(data: {
     content: string;
     scheduled_at: string;
     post_id?: number;
-    schedulable_type?: 'short_post' | 'visual';
+    schedulable_type?: 'short_post' | 'thread' | 'visual';
     schedulable_id?: number;
     media?: string[];
 }): Promise<ScheduledPost> {

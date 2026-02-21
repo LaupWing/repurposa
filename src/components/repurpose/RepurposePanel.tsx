@@ -86,6 +86,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [showAddModal, setShowAddModal] = useState(false);
     const [schedulingPost, setSchedulingPost] = useState<ShortPostPattern | null>(null);
     const [schedulingContentType, setSchedulingContentType] = useState<ScheduleContentType>('short_post');
+    const [schedulingVisual, setSchedulingVisual] = useState<Visual | null>(null);
     const [publishingPost, setPublishingPost] = useState<ShortPostPattern | null>(null);
     const [publishingContentType, setPublishingContentType] = useState<ScheduleContentType>('short_post');
     const [threads, setThreads] = useState<ThreadItem[]>(initialThreads || []);
@@ -161,6 +162,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
 
     const handleScheduled = () => {
         setSchedulingPost(null);
+        setSchedulingVisual(null);
     };
 
     const handleGenerateThreads = async () => {
@@ -664,9 +666,10 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                                         onClick={() => {
                                                             const text = Array.isArray(visual.content) ? visual.content.join('\n\n---\n\n') : visual.content;
                                                             setSchedulingContentType('visual');
+                                                            setSchedulingVisual(visual);
                                                             setSchedulingPost({
-                                                                id: visual.source_id,
-                                                                content: text,
+                                                                id: visual.id,
+                                                                content: visual.description || text,
                                                                 emotions: [],
                                                                 structure: '',
                                                                 why_it_works: '',
@@ -780,7 +783,8 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 post={schedulingPost}
                 blogId={blogId}
                 contentType={schedulingContentType}
-                onClose={() => setSchedulingPost(null)}
+                visual={schedulingVisual}
+                onClose={() => { setSchedulingPost(null); setSchedulingVisual(null); }}
                 onScheduled={handleScheduled}
             />
             <PublishNowModal

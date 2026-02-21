@@ -1,4 +1,4 @@
-import { apiRequest } from './client';
+import { apiRequest, getConfig } from './client';
 import type {
     ShortPost,
     GenerateShortPostsResponse,
@@ -86,6 +86,30 @@ export async function updateVisual(visualId: number, data: {
 
 export async function deleteVisual(visualId: number): Promise<void> {
     await apiRequest<void>(`/visuals/${visualId}`, {}, 'DELETE');
+}
+
+export async function renderVisual(visualId: number, images: Blob[]): Promise<{ images: string[] }> {
+    const { apiUrl, token } = getConfig();
+    const formData = new FormData();
+    images.forEach((blob, i) => {
+        formData.append('slides[]', blob, `slide-${i + 1}.png`);
+    });
+
+    const response = await fetch(`${apiUrl}/api/visuals/${visualId}/render`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || `API error: ${response.status}`);
+    }
+
+    return response.json();
 }
 
 // ============================================
