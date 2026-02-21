@@ -13,7 +13,7 @@ import BlogViewPage from './components/pages/BlogViewPage';
 import SchedulePage from './components/pages/SchedulePage';
 import SettingsPage from './components/pages/SettingsPage';
 import LoginModal from './components/LoginModal';
-import OnboardingModal from './components/OnboardingModal';
+import OnboardingModal from './components/onboarding';
 import type { WizardData } from './components/BlogWizard';
 import type { PageType } from './types';
 

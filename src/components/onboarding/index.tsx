@@ -1,0 +1,232 @@
+/**
+ * Onboarding Modal
+ *
+ * Full-screen forced modal shown after login when onboarding is not complete.
+ * Steps are dynamic based on signup provider:
+ *   - Google/LinkedIn: welcome → business → preferences
+ *   - Twitter: welcome → email → business → preferences
+ *   - Email: welcome → profile (name) → connect → business → preferences
+ */
+
+import { useState, useEffect } from '@wordpress/element';
+import { useProfile } from '../../context/ProfileContext';
+import WelcomeStep from './WelcomeStep';
+import ProfileStep from './ProfileStep';
+import EmailStep from './EmailStep';
+import ConnectStep from './ConnectStep';
+import BusinessStep from './BusinessStep';
+import PreferencesStep from './PreferencesStep';
+
+type Step = 'welcome' | 'setup-profile' | 'setup-email' | 'setup-connect' | 'setup-business' | 'setup-preferences';
+
+const STORAGE_KEY = 'onboarding-step';
+
+const getConfig = () => window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
+
+function getStepsForProvider(provider?: string): Step[] {
+    switch (provider) {
+        case 'twitter':
+            return ['welcome', 'setup-email', 'setup-business', 'setup-preferences'];
+        case 'email':
+            return ['welcome', 'setup-profile', 'setup-connect', 'setup-business', 'setup-preferences'];
+        default:
+            return ['welcome', 'setup-business', 'setup-preferences'];
+    }
+}
+
+interface OnboardingModalProps {
+    onComplete: () => void;
+}
+
+export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
+    const { user, refreshProfile } = useProfile();
+    const provider = user?.signup_provider;
+    const steps = getStepsForProvider(provider);
+
+    const getInitialStep = (): Step => {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY) as Step | null;
+            if (saved && steps.includes(saved)) return saved;
+        } catch { /* ignore */ }
+        return 'welcome';
+    };
+
+    const [step, setStep] = useState<Step>(getInitialStep);
+    const [name, setName] = useState(user?.name ?? '');
+    const [email, setEmail] = useState('');
+    const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
+    const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
+    const [formData, setFormData] = useState({
+        niche: '',
+        target_audience: '',
+        brand_voice: 'conversational',
+        content_lang: 'en',
+    });
+    const [sending, setSending] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        try { localStorage.setItem(STORAGE_KEY, step); } catch { /* ignore */ }
+    }, [step]);
+
+    const currentStepIndex = steps.indexOf(step);
+
+    const nextAfterWelcome: Step = provider === 'twitter'
+        ? 'setup-email'
+        : provider === 'email'
+          ? 'setup-profile'
+          : 'setup-business';
+
+    const saveStepData = async (data: Record<string, unknown>) => {
+        const { apiUrl, token } = getConfig();
+        try {
+            await fetch(`${apiUrl}/api/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(data),
+            });
+        } catch {
+            // silent — incremental save is best-effort
+        }
+    };
+
+    const handleConnectPlatform = (platformId: string) => {
+        const { apiUrl } = getConfig();
+        const origin = window.location.origin;
+        setConnectingPlatform(platformId);
+
+        const popup = window.open(
+            `${apiUrl}/social/${platformId}/connect?origin=${encodeURIComponent(origin)}`,
+            'wbrp-social-auth',
+            'width=600,height=700,scrollbars=yes'
+        );
+
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type !== 'social-connected') return;
+            window.removeEventListener('message', handleMessage);
+            clearInterval(checkClosed);
+            setConnectedPlatforms((prev) => [...prev, platformId]);
+            setConnectingPlatform(null);
+        };
+
+        window.addEventListener('message', handleMessage);
+
+        const checkClosed = setInterval(() => {
+            if (popup?.closed) {
+                clearInterval(checkClosed);
+                window.removeEventListener('message', handleMessage);
+                setConnectingPlatform(null);
+            }
+        }, 500);
+    };
+
+    const handleComplete = async () => {
+        setSending(true);
+        setErrors({});
+
+        const payload = {
+            brand_voice: formData.brand_voice,
+            content_lang: formData.content_lang,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            onboarding_completed: true,
+        };
+        const { apiUrl, token } = getConfig();
+        try {
+            const response = await fetch(`${apiUrl}/api/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                const errs: Record<string, string> = {};
+                if (data.errors) {
+                    for (const [key, val] of Object.entries(data.errors)) {
+                        errs[key] = Array.isArray(val) ? val[0] : (val as string);
+                    }
+                }
+                setErrors(errs);
+                setSending(false);
+                return;
+            }
+
+            try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+            await refreshProfile();
+            onComplete();
+        } catch {
+            setSending(false);
+            setErrors({ general: 'Something went wrong. Please try again.' });
+        }
+    };
+
+    const renderStep = () => {
+        switch (step) {
+            case 'welcome':
+                return <WelcomeStep onNext={() => setStep(nextAfterWelcome)} />;
+            case 'setup-profile':
+                return <ProfileStep name={name} setName={setName} onSave={saveStepData} onNext={() => setStep('setup-connect')} />;
+            case 'setup-email':
+                return <EmailStep email={email} setEmail={setEmail} errors={errors} onSave={saveStepData} onNext={() => setStep('setup-business')} />;
+            case 'setup-connect':
+                return <ConnectStep connectedPlatforms={connectedPlatforms} connectingPlatform={connectingPlatform} onConnect={handleConnectPlatform} onNext={() => setStep('setup-business')} />;
+            case 'setup-business':
+                return (
+                    <BusinessStep
+                        formData={{ niche: formData.niche, target_audience: formData.target_audience }}
+                        setFormData={(data) => setFormData({ ...formData, ...data })}
+                        onSave={saveStepData}
+                        onNext={() => setStep('setup-preferences')}
+                    />
+                );
+            case 'setup-preferences':
+                return (
+                    <PreferencesStep
+                        brandVoice={formData.brand_voice}
+                        contentLang={formData.content_lang}
+                        setBrandVoice={(voice) => setFormData({ ...formData, brand_voice: voice })}
+                        setContentLang={(lang) => setFormData({ ...formData, content_lang: lang })}
+                        errors={errors}
+                        sending={sending}
+                        onComplete={handleComplete}
+                    />
+                );
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+            <div className="relative overflow-hidden border border-gray-200 bg-white/95 shadow-[0_4px_24px_rgba(0,0,0,0.08)] backdrop-blur rounded-xl w-full max-w-xl mx-4 aspect-[5/4]">
+                <div className="pointer-events-none absolute -top-20 left-1/2 h-40 w-[400px] -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400/20 via-violet-400/20 to-fuchsia-400/20 blur-3xl" />
+
+                <div className="relative flex h-full flex-col items-center justify-center gap-8">
+                    {renderStep()}
+
+                    {currentStepIndex >= 1 && (
+                        <div className="flex justify-center gap-2 pt-2">
+                            {steps.map((_, i) => (
+                                <div key={i} className="h-1.5 w-8 overflow-hidden rounded-full bg-gray-200">
+                                    <div
+                                        className={`h-full rounded-full bg-blue-500 transition-all duration-500 ease-out ${
+                                            currentStepIndex >= i ? 'w-full' : 'w-0'
+                                        }`}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
