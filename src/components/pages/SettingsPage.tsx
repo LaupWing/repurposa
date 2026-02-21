@@ -6,7 +6,6 @@
  */
 
 import { useState, useRef } from "@wordpress/element";
-import { Spinner } from "@wordpress/components";
 import { toast } from "sonner";
 import Avatar from "boring-avatars";
 import { Check, ExternalLink, Save, Loader2, Pencil } from "lucide-react";
@@ -32,33 +31,42 @@ export default function SettingsPage() {
   const [userName, setUserName] = useState(user?.name ?? '');
   const [userEmail, setUserEmail] = useState(user?.email ?? '');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar ?? null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [savingUser, setSavingUser] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAvatarUpload = async (file: File) => {
-    setUploadingAvatar(true);
-    try {
-      const url = await uploadAvatar(file);
-      setAvatarUrl(url + '?t=' + Date.now());
-      toast.success('Avatar updated!');
-    } catch {
-      toast.error('Failed to upload avatar');
-    } finally {
-      setUploadingAvatar(false);
-    }
+  const handleAvatarSelect = (file: File) => {
+    setPendingAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
   };
 
-  const hasUserChanges = userName !== (user?.name ?? '') || userEmail !== (user?.email ?? '');
+  const displayAvatar = avatarPreview || avatarUrl;
+  const hasUserChanges =
+    userName !== (user?.name ?? '') ||
+    userEmail !== (user?.email ?? '') ||
+    pendingAvatarFile !== null;
 
   const handleSaveUser = async () => {
     setSavingUser(true);
     try {
+      // Upload avatar first if changed
+      if (pendingAvatarFile) {
+        const url = await uploadAvatar(pendingAvatarFile);
+        setAvatarUrl(url + '?t=' + Date.now());
+        setPendingAvatarFile(null);
+        if (avatarPreview) {
+          URL.revokeObjectURL(avatarPreview);
+          setAvatarPreview(null);
+        }
+      }
+
+      // Save name/email
       await updateUser({ name: userName, email: userEmail });
       await refreshProfile();
       toast.success('Account updated!');
-    } catch (error) {
-      toast.error('Failed to update account');
+    } catch {
+      toast.error('Failed to save account');
     } finally {
       setSavingUser(false);
     }
@@ -139,13 +147,16 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto mt-6 space-y-6">
-      {/* Account Card */}
+    <div className="max-w-3xl mx-auto mt-6 pb-12 space-y-6">
+      {/* Account Settings Card */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
-            Account
+            Account <em className="font-serif font-normal italic">Settings</em>
           </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Your login info and how you appear on social posts
+          </p>
         </div>
 
         <div className="px-6 py-6 flex items-start gap-6">
@@ -155,11 +166,10 @@ export default function SettingsPage() {
               type="button"
               className="group relative rounded-full"
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingAvatar}
             >
-              {avatarUrl ? (
+              {displayAvatar ? (
                 <img
-                  src={avatarUrl}
+                  src={displayAvatar}
                   alt="Avatar"
                   className="h-16 w-16 rounded-full object-cover"
                 />
@@ -174,11 +184,6 @@ export default function SettingsPage() {
               <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 transition-colors group-hover:bg-black/40">
                 <Pencil size={14} className="text-white opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
-              {uploadingAvatar && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
-                  <Spinner />
-                </div>
-              )}
             </button>
             <input
               ref={fileInputRef}
@@ -187,7 +192,7 @@ export default function SettingsPage() {
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleAvatarUpload(file);
+                if (file) handleAvatarSelect(file);
                 e.target.value = '';
               }}
             />
@@ -225,22 +230,20 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {hasUserChanges && (
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-            <button
-              onClick={handleSaveUser}
-              disabled={savingUser || !userName.trim() || !userEmail.trim()}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {savingUser ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Save size={16} />
-              )}
-              {savingUser ? "Saving..." : "Save"}
-            </button>
-          </div>
-        )}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+          <button
+            onClick={handleSaveUser}
+            disabled={savingUser || !hasUserChanges || !userName.trim() || !userEmail.trim()}
+            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {savingUser ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Save size={16} />
+            )}
+            {savingUser ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
       </div>
 
       {/* Profile Settings Card */}
