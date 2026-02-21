@@ -14,6 +14,7 @@ export function useSocialPopup({ messageType, onSuccess }: SocialPopupOptions) {
     }, []);
 
     const openPopup = (url: string, platformId: string) => {
+        console.log('[SocialPopup] Opening:', url);
         setConnectingPlatform(platformId);
 
         const popup = window.open(url, 'wbrp-social-auth', 'width=600,height=700,scrollbars=yes');

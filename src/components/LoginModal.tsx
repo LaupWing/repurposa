@@ -8,7 +8,7 @@
 import { useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { OTPInput, SlotProps } from 'input-otp';
-import { ArrowLeft, Loader2, Mail } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, Minus } from 'lucide-react';
 import { RiGoogleFill, RiTwitterXFill, RiLinkedinFill } from 'react-icons/ri';
 import logoUrl from '../assets/logo.svg';
 import { useSocialPopup } from '../hooks/useSocialPopup';
@@ -20,14 +20,14 @@ const getConfig = () => window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000', 
 function OTPSlot({ char, hasFakeCaret, isActive }: SlotProps) {
     return (
         <div
-            className={`relative flex h-12 w-10 items-center justify-center border-y border-r border-gray-300 text-lg font-semibold transition-all first:rounded-l-lg first:border-l last:rounded-r-lg ${
-                isActive ? 'z-10 ring-2 ring-blue-500 border-blue-500' : ''
+            className={`relative flex h-9 w-9 items-center justify-center border-y border-r border-gray-300 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md ${
+                isActive ? 'z-10 ring-1 ring-blue-500 border-blue-500' : ''
             }`}
         >
             {char}
             {hasFakeCaret && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <div className="h-5 w-px animate-pulse bg-gray-900" />
+                    <div className="h-4 w-px animate-pulse bg-gray-900 duration-1000" />
                 </div>
             )}
         </div>
@@ -300,16 +300,20 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
                                             setVerifying(true);
                                             setTimeout(() => handleVerifyCode(), 400);
                                         }}
-                                        containerClassName="flex items-center gap-2"
+                                        containerClassName="flex items-center gap-2 has-[:disabled]:opacity-50"
                                         render={({ slots }) => (
-                                            <div className="flex items-center gap-1">
-                                                {slots.slice(0, 3).map((slot, i) => (
-                                                    <OTPSlot key={i} {...slot} />
-                                                ))}
-                                                <span className="mx-1 text-gray-400">-</span>
-                                                {slots.slice(3).map((slot, i) => (
-                                                    <OTPSlot key={i + 3} {...slot} />
-                                                ))}
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex items-center">
+                                                    {slots.slice(0, 3).map((slot, i) => (
+                                                        <OTPSlot key={i} {...slot} />
+                                                    ))}
+                                                </div>
+                                                <Minus className="text-gray-400" size={16} />
+                                                <div className="flex items-center">
+                                                    {slots.slice(3).map((slot, i) => (
+                                                        <OTPSlot key={i + 3} {...slot} />
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
                                     />
