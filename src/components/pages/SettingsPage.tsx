@@ -9,70 +9,13 @@ import { useState } from "@wordpress/element";
 import { toast } from "sonner";
 import { Check, ExternalLink, Save, Loader2 } from "lucide-react";
 import { TimezonePicker } from "../TimezonePicker";
-import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from "react-icons/ri";
 import { useProfile } from "../../context/ProfileContext";
 import type { ProfileData } from "../../context/ProfileContext";
 import { disconnectSocialAccount } from "../../services/api";
 import { useSocialPopup } from "../../hooks/useSocialPopup";
-
-// ============================================
-// TYPES
-// ============================================
-
-interface SocialPlatform {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  connected: boolean;
-  username?: string;
-  profilePicture?: string | null;
-  color: string;
-  comingSoon?: boolean;
-}
-
-// ============================================
-// CONSTANTS
-// ============================================
+import { CONNECT_PLATFORMS } from "../../constants/platforms";
 
 const BRAND_VOICES = ["conversational", "professional", "bold"] as const;
-
-const platforms: SocialPlatform[] = [
-  {
-    id: "twitter",
-    name: "X",
-    icon: <RiTwitterXFill size={20} />,
-    connected: false,
-    color: "bg-black",
-  },
-  {
-    id: "linkedin",
-    name: "LinkedIn",
-    icon: <RiLinkedinFill size={20} />,
-    connected: false,
-    color: "bg-blue-700",
-  },
-  {
-    id: "threads",
-    name: "Threads",
-    icon: <RiThreadsFill size={20} />,
-    connected: false,
-    color: "bg-gray-900",
-  },
-  {
-    id: "instagram",
-    name: "Instagram",
-    icon: <RiInstagramFill size={20} />,
-    connected: false,
-    color: "bg-gradient-to-br from-purple-600 to-pink-500",
-  },
-  {
-    id: "facebook",
-    name: "Facebook",
-    icon: <RiFacebookFill size={20} />,
-    connected: false,
-    color: "bg-blue-600",
-  },
-];
 
 // ============================================
 // COMPONENT
@@ -95,12 +38,12 @@ export default function SettingsPage() {
   const setProfile = setLocalProfile;
 
   // Merge social connections into platforms
-  const mergedPlatforms = platforms.map((platform) => {
+  const mergedPlatforms = CONNECT_PLATFORMS.map((platform) => {
     const connection = socialConnections.find((c) => c.platform === platform.id);
     if (connection) {
-      return { ...platform, connected: true, username: connection.username, profilePicture: connection.profilePicture };
+      return { ...platform, connected: true as const, username: connection.username, profilePicture: connection.profilePicture };
     }
-    return platform;
+    return { ...platform, connected: false as const, username: undefined, profilePicture: undefined };
   });
 
   const handleSaveProfile = async () => {
@@ -311,14 +254,14 @@ export default function SettingsPage() {
           {mergedPlatforms.map((platform) => (
             <div
               key={platform.id}
-              className={`flex items-center justify-between py-4 first:pt-0 last:pb-0 ${platform.comingSoon ? 'opacity-50' : ''}`}
+              className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
             >
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <div
-                    className={`w-10 h-10 ${platform.comingSoon ? 'bg-gray-300' : platform.color} text-white rounded-lg flex items-center justify-center`}
+                    className={`w-10 h-10 ${platform.bgColor} text-white rounded-lg flex items-center justify-center`}
                   >
-                    {platform.icon}
+                    <platform.Icon size={20} />
                   </div>
                   {platform.connected && platform.profilePicture && (
                     <img
@@ -330,9 +273,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h3 className="font-medium text-gray-900">{platform.name}</h3>
-                  {platform.comingSoon ? (
-                    <p className="text-sm text-gray-400">Coming soon</p>
-                  ) : platform.connected ? (
+                  {platform.connected ? (
                     <p className="text-sm text-green-600 flex items-center gap-1">
                       <Check size={14} />
                       Connected as @{platform.username}
@@ -343,11 +284,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {platform.comingSoon ? (
-                <span className="px-3 py-1.5 text-xs font-medium text-gray-400 bg-gray-100 rounded-lg">
-                  Coming soon
-                </span>
-              ) : platform.connected ? (
+              {platform.connected ? (
                 <button
                   onClick={() => handleDisconnect(platform.id)}
                   disabled={disconnectingPlatform === platform.id}

@@ -1,13 +1,5 @@
 import { Loader2, Check } from 'lucide-react';
-import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
-
-const CONNECT_PLATFORMS = [
-    { id: 'twitter', name: 'X / Twitter', Icon: RiTwitterXFill, color: '', comingSoon: false },
-    { id: 'linkedin', name: 'LinkedIn', Icon: RiLinkedinFill, color: 'text-[#0A66C2]', comingSoon: false },
-    { id: 'threads', name: 'Threads', Icon: RiThreadsFill, color: '', comingSoon: true },
-    { id: 'instagram', name: 'Instagram', Icon: RiInstagramFill, color: 'text-[#E4405F]', comingSoon: true },
-    { id: 'facebook', name: 'Facebook', Icon: RiFacebookFill, color: 'text-[#1877F2]', comingSoon: true },
-] as const;
+import { CONNECT_PLATFORMS } from '../../constants/platforms';
 
 interface ConnectStepProps {
     connectedPlatforms: string[];
@@ -34,27 +26,20 @@ export default function ConnectStep({ connectedPlatforms, connectingPlatform, on
                     return (
                         <button
                             key={platform.id}
-                            disabled={platform.comingSoon || isConnected || isConnecting}
+                            disabled={isConnected || isConnecting}
                             onClick={() => onConnect(platform.id)}
                             className={`relative flex flex-col items-center gap-2.5 py-5 rounded-lg border text-xs font-medium transition-colors ${
-                                platform.comingSoon
-                                    ? 'opacity-40 cursor-default border-gray-200'
-                                    : isConnected
-                                      ? 'border-green-300 bg-green-50'
-                                      : 'border-gray-300 cursor-pointer hover:bg-gray-100'
+                                isConnected
+                                    ? 'border-green-300 bg-green-50'
+                                    : 'border-gray-300 cursor-pointer hover:bg-gray-100'
                             } disabled:cursor-default`}
                         >
-                            {platform.comingSoon && (
-                                <span className="absolute -top-2 right-1 z-10 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
-                                    Soon
-                                </span>
-                            )}
                             {isConnecting ? (
                                 <Loader2 size={24} className="animate-spin text-gray-400" />
                             ) : isConnected ? (
                                 <Check size={24} className="text-green-600" />
                             ) : (
-                                <platform.Icon size={24} className={platform.color} />
+                                <platform.Icon size={24} className={platform.textColor} />
                             )}
                             <span className="text-gray-700">{platform.name}</span>
                         </button>
