@@ -220,13 +220,19 @@ export interface ScheduledPost {
     id: number;
     social_account_id: number;
     post_id: number | null;
-    content: string;
-    media: string[] | null;
     platform: string;
     scheduled_at: string;
     status: 'pending' | 'publishing' | 'published' | 'failed';
     schedulable_type?: string;
     schedulable_id?: number;
+    schedulable?: {
+        id: number;
+        content?: string;
+        media?: string[] | null;
+        hook?: string;
+        posts?: { content: string; media: unknown }[];
+        description?: string;
+    } | null;
     social_account?: { id: number; platform: string; platform_username: string };
     post?: { id: number; title: string } | null;
     created_at: string;

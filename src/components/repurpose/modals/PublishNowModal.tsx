@@ -97,10 +97,8 @@ export default function PublishNowModal({
 
             const response = await publishNow({
                 social_account_ids: accountIds,
-                content: post.content,
                 schedulable_type: contentType,
                 schedulable_id: post.id,
-                ...(post.media.length > 0 && { media: post.media }),
             });
 
             const succeeded = response.results.filter((r) => r.status === 'published');

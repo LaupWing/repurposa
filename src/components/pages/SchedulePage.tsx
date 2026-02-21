@@ -166,13 +166,22 @@ const MOCK_PUBLISHED: ScheduledPost[] = [
 // API → UI MAPPING
 // ============================================
 
+function getSchedulableContent(apiPost: ApiScheduledPost): string {
+    const s = apiPost.schedulable;
+    if (!s) return '';
+    if (apiPost.schedulable_type === 'thread') return s.hook || s.posts?.[0]?.content || '';
+    if (apiPost.schedulable_type === 'visual') return s.description || '';
+    return s.content || '';
+}
+
 function mapApiPost(apiPost: ApiScheduledPost): ScheduledPost {
     const uiPlatform = API_TO_UI_PLATFORM[apiPost.platform] || apiPost.platform as Platform;
     return {
         id: apiPost.id,
-        content: apiPost.content,
+        content: getSchedulableContent(apiPost),
         platform: uiPlatform,
-        postType: 'short',
+        postType: (apiPost.schedulable_type === 'thread' ? 'thread' : 'short') as PostType,
+        threadCount: apiPost.schedulable_type === 'thread' ? apiPost.schedulable?.posts?.length : undefined,
         scheduledAt: apiPost.scheduled_at,
         status: apiPost.status,
         blogTitle: apiPost.post?.title,

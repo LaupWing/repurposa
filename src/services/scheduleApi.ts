@@ -11,12 +11,10 @@ import type {
 
 export async function createScheduledPost(data: {
     social_account_id: number;
-    content: string;
     scheduled_at: string;
     post_id?: number;
-    schedulable_type?: 'short_post' | 'thread' | 'visual';
-    schedulable_id?: number;
-    media?: string[];
+    schedulable_type: 'short_post' | 'thread' | 'visual';
+    schedulable_id: number;
 }): Promise<ScheduledPost> {
     return apiRequest<ScheduledPost>('/scheduled-posts', data as Record<string, unknown>);
 }
@@ -49,11 +47,9 @@ export async function deleteScheduledPost(id: number): Promise<void> {
 
 export async function publishNow(data: {
     social_account_ids: number[];
-    content: string;
     post_id?: number;
-    schedulable_type?: 'short_post' | 'thread' | 'visual';
-    schedulable_id?: number;
-    media?: string[];
+    schedulable_type: 'short_post' | 'thread' | 'visual';
+    schedulable_id: number;
 }): Promise<PublishNowResponse> {
     return apiRequest<PublishNowResponse>('/social/publish', data as Record<string, unknown>);
 }

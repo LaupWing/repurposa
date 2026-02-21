@@ -183,8 +183,6 @@ export default function SchedulePostModal({
 
         setIsSubmitting(true);
         try {
-            let mediaUrls: string[] = post.media.length > 0 ? post.media : [];
-
             // For visuals: capture offscreen slides as PNGs and upload
             if (contentType === 'visual' && visual) {
                 const blobs: Blob[] = [];
@@ -198,8 +196,7 @@ export default function SchedulePostModal({
                 if (blobs.length === 0) {
                     throw new Error('Failed to render visual slides');
                 }
-                const { images } = await renderVisual(visual.id, blobs);
-                mediaUrls = images;
+                await renderVisual(visual.id, blobs);
             }
 
             const promises = selectedPlatforms.map((platformId) => {
@@ -208,12 +205,10 @@ export default function SchedulePostModal({
                 if (!account) return Promise.resolve(null);
                 return createScheduledPost({
                     social_account_id: account.id,
-                    content: post.content,
                     scheduled_at: scheduledAt,
                     schedulable_type: contentType,
                     schedulable_id: post.id,
                     ...(blogId && { post_id: blogId }),
-                    ...(mediaUrls.length > 0 && { media: mediaUrls }),
                 });
             });
 
@@ -371,7 +366,7 @@ export default function SchedulePostModal({
                                     return (
                                         <Tooltip
                                             key={absoluteIdx}
-                                            text={isTaken ? `Already taken: "${occupant.content.slice(0, 80)}${occupant.content.length > 80 ? '...' : ''}"` : ''}
+                                            text={isTaken ? `Already taken: "${(occupant.schedulable?.content || occupant.schedulable?.hook || '').slice(0, 80)}${(occupant.schedulable?.content || occupant.schedulable?.hook || '').length > 80 ? '...' : ''}"` : ''}
                                             delay={0}
                                             placement="top"
                                         >
@@ -400,7 +395,7 @@ export default function SchedulePostModal({
                                                     <div className={`text-xs mt-0.5 ${isTaken ? 'text-gray-300' : 'text-gray-500'}`}>{slot.timeLabel}</div>
                                                     {isTaken && (
                                                         <div className="text-[10px] text-gray-400 mt-1 line-clamp-1">
-                                                            Taken by: {occupant.content.slice(0, 40)}{occupant.content.length > 40 ? '...' : ''}
+                                                            Taken by: {(occupant.schedulable?.content || occupant.schedulable?.hook || '').slice(0, 40)}{(occupant.schedulable?.content || occupant.schedulable?.hook || '').length > 40 ? '...' : ''}
                                                         </div>
                                                     )}
                                                 </div>
