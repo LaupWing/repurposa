@@ -25,9 +25,9 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { generateShortPosts, updateShortPost, generateThreads, deleteVisual } from '../../services/repurposeApi';
 import type { ShortPost, ShortPostSchedule, ThreadItem, Visual } from '../../types';
 import { GeneratingOverlay } from '../GeneratingOverlay';
-import { VisualShortPostPreviewModal, VisualThreadPreviewModal, VisualPreview, GRADIENT_PRESETS } from './VisualPreviewModal';
-import ShortPostCard, { type ShortPostPattern } from './ShortPostCard';
-import ThreadCard from './ThreadCard';
+import { VisualShortPostPreviewModal, VisualThreadPreviewModal, VisualPreview, GRADIENT_PRESETS } from './modals/VisualPreviewModal';
+import ShortPostCard, { type ShortPostPattern } from './cards/ShortPostCard';
+import ThreadCard from './cards/ThreadCard';
 import { ConfirmGenerateModal, AddShortPostModal, SchedulePostModal, PublishNowModal, type ScheduleContentType } from './modals';
 
 // ============================================

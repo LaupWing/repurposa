@@ -27,10 +27,10 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useProfile } from '../../context/ProfileContext';
-import { createVisual, updateVisual } from '../../services/repurposeApi';
-import { AITextPopup } from '../AITextPopup';
-import type { VisualSettings } from '../../types';
+import { useProfile } from '../../../context/ProfileContext';
+import { createVisual, updateVisual } from '../../../services/repurposeApi';
+import { AITextPopup } from '../../AITextPopup';
+import type { VisualSettings } from '../../../types';
 
 // ============================================
 // CONSTANTS

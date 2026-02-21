@@ -16,9 +16,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import type { ThreadItem, Visual } from '../../types';
-import { AITextPopup } from '../AITextPopup';
-import { VisualThreadPreviewModal } from './VisualPreviewModal';
+import type { ThreadItem, Visual } from '../../../types';
+import { AITextPopup } from '../../AITextPopup';
+import { VisualThreadPreviewModal } from '../modals/VisualPreviewModal';
 import { emotionColors } from './ShortPostCard';
 
 // ============================================

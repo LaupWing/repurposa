@@ -13,7 +13,7 @@ import { Tooltip } from '@wordpress/components';
 import { getPublishingSchedule, createScheduledPost, getScheduledPosts } from '../../../services/scheduleApi';
 import { getSocialAccounts } from '../../../services/profileApi';
 import type { SocialAccount, ScheduledPost as ScheduledPostType } from '../../../types';
-import type { ShortPostPattern } from '../ShortPostCard';
+import type { ShortPostPattern } from '../cards/ShortPostCard';
 import {
     type SchedulePlatform,
     type ScheduleContentType,

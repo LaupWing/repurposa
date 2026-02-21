@@ -2,7 +2,7 @@ import { useState, useEffect } from '@wordpress/element';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSwipes } from '../../../services/repurposeApi';
-import { emotionColors } from '../ShortPostCard';
+import { emotionColors } from '../cards/ShortPostCard';
 import type { Swipe } from '../../../types';
 
 interface AddShortPostModalProps {

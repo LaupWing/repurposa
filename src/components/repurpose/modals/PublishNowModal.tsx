@@ -10,7 +10,7 @@ import { Tooltip } from '@wordpress/components';
 import { getSocialAccounts } from '../../../services/profileApi';
 import { publishNow } from '../../../services/scheduleApi';
 import type { SocialAccount } from '../../../types';
-import type { ShortPostPattern } from '../ShortPostCard';
+import type { ShortPostPattern } from '../cards/ShortPostCard';
 import {
     type SchedulePlatform,
     type ScheduleContentType,

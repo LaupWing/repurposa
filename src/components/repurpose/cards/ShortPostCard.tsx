@@ -21,10 +21,10 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { ShortPostSchedule, Visual } from '../../types';
-import { AITextPopup } from '../AITextPopup';
-import ImagePickerModal from '../ImagePickerModal';
-import { VisualShortPostPreviewModal, VisualPreview, GRADIENT_PRESETS } from './VisualPreviewModal';
+import type { ShortPostSchedule, Visual } from '../../../types';
+import { AITextPopup } from '../../AITextPopup';
+import ImagePickerModal from '../../ImagePickerModal';
+import { VisualShortPostPreviewModal, VisualPreview, GRADIENT_PRESETS } from '../modals/VisualPreviewModal';
 
 // ============================================
 // TYPES
