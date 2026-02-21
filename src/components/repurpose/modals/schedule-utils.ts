@@ -24,15 +24,30 @@ export const SCHEDULE_PLATFORMS: { id: SchedulePlatform; name: string; icon: Rea
 export const API_TO_UI_PLATFORM: Record<string, SchedulePlatform> = { twitter: 'x', linkedin: 'linkedin', threads: 'threads', instagram: 'instagram', facebook: 'facebook' };
 export const UI_TO_API_PLATFORM: Record<SchedulePlatform, string> = { x: 'twitter', linkedin: 'linkedin', threads: 'threads', instagram: 'instagram', facebook: 'facebook' };
 
+export const PLATFORM_CHAR_LIMITS: Record<SchedulePlatform, number> = {
+    x: 280,
+    linkedin: 3000,
+    threads: 500,
+    instagram: 2200,
+    facebook: 63206,
+};
+
 const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 
 // ============================================
 // HELPERS
 // ============================================
 
-export function getUnsupportedReason(platformId: SchedulePlatform, contentType: ScheduleContentType): string | null {
+export function getUnsupportedReason(platformId: SchedulePlatform, contentType: ScheduleContentType, contentLength?: number): string | null {
     if (platformId === 'instagram' && (contentType === 'short_post' || contentType === 'thread')) {
         return 'Instagram requires an image — use Visuals instead';
+    }
+    if (contentLength !== undefined) {
+        const limit = PLATFORM_CHAR_LIMITS[platformId];
+        if (contentLength > limit) {
+            const name = SCHEDULE_PLATFORMS.find(p => p.id === platformId)?.name || platformId;
+            return `Exceeds ${name}'s ${limit.toLocaleString()} character limit`;
+        }
     }
     return null;
 }

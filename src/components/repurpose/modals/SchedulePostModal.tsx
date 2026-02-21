@@ -24,6 +24,7 @@ import {
     SCHEDULE_PLATFORMS,
     API_TO_UI_PLATFORM,
     UI_TO_API_PLATFORM,
+    PLATFORM_CHAR_LIMITS,
     getUnsupportedReason,
     getUpcomingSlots,
     getDefaultDate,
@@ -88,7 +89,7 @@ export default function SchedulePostModal({
                         const slotTime = slot.date.getTime();
                         return !scheduled.some((sp) => Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000);
                     });
-                    const filterSupported = (ids: SchedulePlatform[]) => ids.filter((id) => !getUnsupportedReason(id, contentType));
+                    const filterSupported = (ids: SchedulePlatform[]) => ids.filter((id) => !getUnsupportedReason(id, contentType, post?.content.length));
                     if (firstAvailable !== -1) {
                         setSelectedSlotIndex(firstAvailable);
                         setSelectedPlatforms(filterSupported(slots[firstAvailable].platforms));
@@ -110,6 +111,7 @@ export default function SchedulePostModal({
 
     if (!isOpen || !post) return null;
 
+    const contentLength = post.content.length;
     const connectedPlatformIds = socialAccounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
 
     // Check if a slot time is already taken by an existing scheduled post
@@ -122,7 +124,7 @@ export default function SchedulePostModal({
     };
 
     const togglePlatform = (id: SchedulePlatform) => {
-        const unsupported = getUnsupportedReason(id, contentType);
+        const unsupported = getUnsupportedReason(id, contentType, contentLength);
         if (unsupported) return;
         if (!connectedPlatformIds.includes(id)) {
             const name = SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name || id;
@@ -147,7 +149,7 @@ export default function SchedulePostModal({
     const handleSelectSlot = (absoluteIndex: number) => {
         setSelectedSlotIndex(absoluteIndex);
         setUseCustom(false);
-        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType)));
+        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType, contentLength)));
     };
 
     const handleUseCustom = () => {
@@ -268,6 +270,26 @@ export default function SchedulePostModal({
                     {/* Post preview */}
                     <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                         <p className="text-sm text-gray-700 line-clamp-3 whitespace-pre-wrap">{post.content}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs text-gray-400">{contentLength} chars</span>
+                            <span className="text-xs text-gray-300">·</span>
+                            {SCHEDULE_PLATFORMS.map((p) => {
+                                const limit = PLATFORM_CHAR_LIMITS[p.id];
+                                const over = contentLength > limit;
+                                return (
+                                    <span
+                                        key={p.id}
+                                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                            over
+                                                ? 'bg-red-50 text-red-600 border border-red-200'
+                                                : 'bg-green-50 text-green-600 border border-green-200'
+                                        }`}
+                                    >
+                                        {p.name} {contentLength}/{limit.toLocaleString()}
+                                    </span>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {/* Instagram warning for text-only content */}
@@ -276,6 +298,23 @@ export default function SchedulePostModal({
                             <AlertTriangle size={16} className="text-amber-500 shrink-0" />
                             <p className="text-xs text-amber-700">
                                 Instagram is not available for {contentType === 'short_post' ? 'short posts' : 'threads'}. Use <strong>Visuals</strong> to schedule to Instagram.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Character limit warning */}
+                    {SCHEDULE_PLATFORMS.some((p) => contentLength > PLATFORM_CHAR_LIMITS[p.id]) && (
+                        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-amber-300 bg-amber-50">
+                            <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                            <p className="text-xs text-amber-700">
+                                Your text exceeds the character limit for{' '}
+                                <strong>
+                                    {SCHEDULE_PLATFORMS
+                                        .filter((p) => contentLength > PLATFORM_CHAR_LIMITS[p.id])
+                                        .map((p) => p.name)
+                                        .join(', ')}
+                                </strong>
+                                . To post there, shorten the {contentType === 'visual' ? 'description of the visual' : contentType === 'thread' ? 'thread' : 'short post'} first.
                             </p>
                         </div>
                     )}
@@ -342,7 +381,7 @@ export default function SchedulePostModal({
                                                         const inSlot = slot.platforms.includes(p.id);
                                                         const active = isSelected && selectedPlatforms.includes(p.id);
                                                         const connected = connectedPlatformIds.includes(p.id);
-                                                        const unsupported = getUnsupportedReason(p.id, contentType);
+                                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength);
                                                         if (unsupported) {
                                                             return (
                                                                 <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
@@ -434,7 +473,7 @@ export default function SchedulePostModal({
                                     {SCHEDULE_PLATFORMS.map((p) => {
                                         const active = selectedPlatforms.includes(p.id);
                                         const connected = connectedPlatformIds.includes(p.id);
-                                        const unsupported = getUnsupportedReason(p.id, contentType);
+                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength);
                                         if (unsupported) {
                                             return (
                                                 <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
