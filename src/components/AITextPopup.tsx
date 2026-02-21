@@ -18,7 +18,7 @@ import {
     Copy,
     CornerDownLeft,
 } from 'lucide-react';
-import { refineText } from '../services/api';
+import { refineText } from '../services/blogApi';
 import { toast } from 'sonner';
 
 // ============================================

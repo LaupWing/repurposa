@@ -25,10 +25,8 @@ import {
   getWizard,
   createWizard,
   updateWizard,
-  type TopicSuggestion,
-  type TopicHistoryEntry,
-  type BlogGenerationMode,
-} from "../services/api";
+} from "../services/blogApi";
+import type { TopicSuggestion, TopicHistoryEntry, BlogGenerationMode } from "../types";
 import { useProfile } from "../context/ProfileContext";
 
 // ============================================

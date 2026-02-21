@@ -40,9 +40,9 @@ import {
 import { TiptapEditor } from '../editor/TiptapEditor';
 import { RepurposePanel } from '../repurpose/RepurposePanel';
 import ImagePickerModal from '../ImagePickerModal';
-import { getBlog, updateBlog, deleteBlog, regenerateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion, refineText } from '../../services/api';
-import type { TopicSuggestion, BlogGenerationMode } from '../../services/api';
-import type { BlogPost, OutlineSection, PostVersion } from '../../services/api';
+import { getBlog, updateBlog, deleteBlog, regenerateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion, refineText } from '../../services/blogApi';
+import type { TopicSuggestion, BlogGenerationMode, BlogPost, OutlineSection, PostVersion } from '../../types';
+
 import { useProfile } from '../../context/ProfileContext';
 import {
     DndContext, closestCenter, KeyboardSensor, PointerSensor,

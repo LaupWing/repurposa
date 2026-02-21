@@ -8,8 +8,8 @@
 import { useState, useEffect } from '@wordpress/element';
 import { FileText, Search, Filter, Plus, Trash2, Pencil, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { getBlogs, deleteBlog } from '../../services/api';
-import type { BlogPost } from '../../services/api';
+import { getBlogs, deleteBlog } from '../../services/blogApi';
+import type { BlogPost } from '../../types';
 
 // ============================================
 // TYPES

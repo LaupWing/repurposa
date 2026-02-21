@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
-import { getPublishingSchedule, savePublishingSchedule, getScheduledPosts, deleteScheduledPost } from '../../services/api';
-import type { ScheduledPost as ApiScheduledPost } from '../../services/api';
+import { getPublishingSchedule, savePublishingSchedule, getScheduledPosts, deleteScheduledPost } from '../../services/scheduleApi';
+import type { ScheduledPost as ApiScheduledPost } from '../../types';
 import { useProfile } from '../../context/ProfileContext';
 import { TimezonePicker } from '../TimezonePicker';
 

@@ -11,7 +11,7 @@ import { Check, ExternalLink, Save, Loader2 } from "lucide-react";
 import { TimezonePicker } from "../TimezonePicker";
 import { useProfile } from "../../context/ProfileContext";
 import type { ProfileData } from "../../context/ProfileContext";
-import { disconnectSocialAccount } from "../../services/api";
+import { disconnectSocialAccount } from "../../services/profileApi";
 import { useSocialPopup } from "../../hooks/useSocialPopup";
 import { CONNECT_PLATFORMS } from "../../constants/platforms";
 

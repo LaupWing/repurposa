@@ -9,7 +9,8 @@ import { useState, useEffect } from '@wordpress/element';
 import { Popover, Spinner } from '@wordpress/components';
 import { Sparkles, HelpCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateTopics, type TopicSuggestion } from '../../../services/api';
+import { generateTopics } from '../../../services/blogApi';
+import type { TopicSuggestion } from '../../../types';
 import { useProfile } from '../../../context/ProfileContext';
 
 interface TopicGeneratorPopoverProps {

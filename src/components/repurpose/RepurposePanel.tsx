@@ -37,8 +37,10 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { generateShortPosts, getSwipes, getPublishingSchedule, getSocialAccounts, createScheduledPost, getScheduledPosts, updateShortPost, generateThreads, deleteVisual, publishNow } from '../../services/api';
-import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType, ThreadItem, Visual } from '../../services/api';
+import { generateShortPosts, getSwipes, updateShortPost, generateThreads, deleteVisual } from '../../services/repurposeApi';
+import { getPublishingSchedule, createScheduledPost, getScheduledPosts, publishNow } from '../../services/scheduleApi';
+import { getSocialAccounts } from '../../services/profileApi';
+import type { ShortPost, ShortPostSchedule, Swipe, SocialAccount, ScheduledPost as ScheduledPostType, ThreadItem, Visual } from '../../types';
 import { GeneratingOverlay } from '../GeneratingOverlay';
 import { AITextPopup } from '../AITextPopup';
 import ImagePickerModal from '../ImagePickerModal';
