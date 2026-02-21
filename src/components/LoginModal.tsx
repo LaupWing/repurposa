@@ -2,50 +2,22 @@
  * Login Modal
  *
  * Full-screen modal shown when no token exists.
- * Supports social login (Google, X, LinkedIn) and email OTP.
+ * All login methods (Google, X, LinkedIn, Email) open popups to the Laravel app.
  */
 
-import { useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { OTPInput, SlotProps } from 'input-otp';
-import { ArrowLeft, Loader2, Mail, Minus } from 'lucide-react';
+import { Loader2, Mail } from 'lucide-react';
 import { RiGoogleFill, RiTwitterXFill, RiLinkedinFill } from 'react-icons/ri';
 import logoUrl from '../assets/logo.svg';
 import { useSocialPopup } from '../hooks/useSocialPopup';
 
-type Step = 'social' | 'email' | 'code';
-
 const getConfig = () => window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
-
-function OTPSlot({ char, hasFakeCaret, isActive }: SlotProps) {
-    return (
-        <div
-            className={`relative flex h-9 w-9 items-center justify-center border-y border-r border-gray-300 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md ${
-                isActive ? 'z-10 ring-1 ring-blue-500 border-blue-500' : ''
-            }`}
-        >
-            {char}
-            {hasFakeCaret && (
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <div className="h-4 w-px animate-pulse bg-gray-900 duration-1000" />
-                </div>
-            )}
-        </div>
-    );
-}
 
 interface LoginModalProps {
     onConnected: () => void;
 }
 
 export default function LoginModal({ onConnected }: LoginModalProps) {
-    const [step, setStep] = useState<Step>('social');
-    const [email, setEmail] = useState('');
-    const [code, setCode] = useState('');
-    const [sending, setSending] = useState(false);
-    const [verifying, setVerifying] = useState(false);
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
     const saveTokenAndConnect = async (token: string) => {
         try {
             try { localStorage.removeItem('onboarding-step'); } catch { /* ignore */ }
@@ -71,78 +43,15 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
         },
     });
 
-    const openSocialLogin = (platform: string) => {
+    const openLogin = (platform: string) => {
         const { apiUrl } = getConfig();
         const origin = window.location.origin;
-        openPopup(`${apiUrl}/social/${platform}/login?origin=${encodeURIComponent(origin)}&source=wordpress`, platform);
-    };
 
-    const handleSendCode = async () => {
-        const { apiUrl } = getConfig();
-        setSending(true);
-        setErrors({});
+        const url = platform === 'email'
+            ? `${apiUrl}/auth/wordpress/email-login?origin=${encodeURIComponent(origin)}`
+            : `${apiUrl}/social/${platform}/login?origin=${encodeURIComponent(origin)}&source=wordpress`;
 
-        try {
-            const response = await fetch(`${apiUrl}/api/auth/email/send-code`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                body: JSON.stringify({ email, source: 'wordpress' }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                const errs: Record<string, string> = {};
-                if (data.errors) {
-                    for (const [key, val] of Object.entries(data.errors)) {
-                        errs[key] = Array.isArray(val) ? val[0] : (val as string);
-                    }
-                }
-                setErrors(errs);
-                setSending(false);
-                return;
-            }
-
-            setSending(false);
-            setStep('code');
-        } catch {
-            setSending(false);
-            setErrors({ email: 'Something went wrong. Please try again.' });
-        }
-    };
-
-    const handleVerifyCode = async () => {
-        const { apiUrl } = getConfig();
-        setVerifying(true);
-        setErrors({});
-
-        try {
-            const response = await fetch(`${apiUrl}/api/auth/email/verify-code`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                body: JSON.stringify({ email, code, source: 'wordpress' }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                const errs: Record<string, string> = {};
-                if (data.errors) {
-                    for (const [key, val] of Object.entries(data.errors)) {
-                        errs[key] = Array.isArray(val) ? val[0] : (val as string);
-                    }
-                }
-                setErrors(errs);
-                setVerifying(false);
-                return;
-            }
-
-            const data = await response.json();
-            if (data.token) {
-                await saveTokenAndConnect(data.token);
-            }
-        } catch {
-            setVerifying(false);
-            setErrors({ code: 'Something went wrong. Please try again.' });
-        }
+        openPopup(url, platform);
     };
 
     return (
@@ -157,213 +66,61 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
                     {/* Logo */}
                     <img src={logoUrl} alt="Repurposa" className="h-20 w-20 rounded-2xl shadow-lg" />
 
-                    {/* Social step */}
-                    {step === 'social' && (
-                        <>
-                            <div className="space-y-2 text-center">
-                                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Get started</h2>
-                                <p className="text-sm text-gray-500">Sign up or log in to Repurposa</p>
-                            </div>
+                    <div className="space-y-2 text-center">
+                        <h2 className="text-2xl font-bold tracking-tight text-gray-900">Get started</h2>
+                        <p className="text-sm text-gray-500">Sign up or log in to Repurposa</p>
+                    </div>
 
-                            <div className="flex flex-wrap items-center justify-center gap-2 w-full">
-                                <button
-                                    onClick={() => openSocialLogin('google')}
-                                    disabled={!!loadingPlatform}
-                                    className="flex items-center gap-2 h-9 px-4 text-sm font-medium border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {loadingPlatform === 'google' ? (
-                                        <Loader2 size={16} className="animate-spin" />
-                                    ) : (
-                                        <RiGoogleFill size={16} className="text-[#4285F4]" />
-                                    )}
-                                    Google
-                                </button>
-                                <button
-                                    onClick={() => openSocialLogin('twitter')}
-                                    disabled={!!loadingPlatform}
-                                    className="flex items-center gap-2 h-9 px-4 text-sm font-medium border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {loadingPlatform === 'twitter' ? (
-                                        <Loader2 size={16} className="animate-spin" />
-                                    ) : (
-                                        <RiTwitterXFill size={16} />
-                                    )}
-                                    X / Twitter
-                                </button>
-                                <button
-                                    onClick={() => openSocialLogin('linkedin')}
-                                    disabled={!!loadingPlatform}
-                                    className="flex items-center gap-2 h-9 px-4 text-sm font-medium border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {loadingPlatform === 'linkedin' ? (
-                                        <Loader2 size={16} className="animate-spin" />
-                                    ) : (
-                                        <RiLinkedinFill size={16} className="text-[#0A66C2]" />
-                                    )}
-                                    LinkedIn
-                                </button>
-                                <button
-                                    onClick={() => setStep('email')}
-                                    disabled={!!loadingPlatform}
-                                    className="flex items-center gap-2 h-9 px-4 text-sm font-medium border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <Mail size={16} />
-                                    Email
-                                </button>
-                            </div>
-                        </>
-                    )}
-
-                    {/* Email step */}
-                    {step === 'email' && (
-                        <>
-                            <div className="space-y-1 text-center">
-                                <h2 className="text-xl font-bold tracking-tight text-gray-900">Continue with email</h2>
-                                <p className="text-sm text-gray-500">We'll send you a login code</p>
-                            </div>
-
-                            <div className="w-full max-w-sm space-y-4">
-                                <div className="space-y-2">
-                                    <label htmlFor="auth-email" className="block text-sm font-medium text-gray-700">
-                                        Email
-                                    </label>
-                                    <input
-                                        id="auth-email"
-                                        type="email"
-                                        required
-                                        autoFocus
-                                        autoComplete="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && email.trim()) {
-                                                e.preventDefault();
-                                                handleSendCode();
-                                            }
-                                        }}
-                                        placeholder="you@example.com"
-                                        className="w-full h-10 px-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                    {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
-                                </div>
-
-                                <button
-                                    onClick={handleSendCode}
-                                    disabled={!email.trim() || sending}
-                                    className="w-full h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                                >
-                                    {sending ? (
-                                        <>
-                                            <Loader2 size={16} className="animate-spin" />
-                                            Sending code...
-                                        </>
-                                    ) : (
-                                        'Send me a code'
-                                    )}
-                                </button>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setStep('social');
-                                    setErrors({});
-                                }}
-                                className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer hover:text-gray-900 transition-colors"
-                            >
-                                <ArrowLeft size={14} />
-                                Back
-                            </button>
-                        </>
-                    )}
-
-                    {/* Code step */}
-                    {step === 'code' && (
-                        <div
-                            className={`flex flex-col items-center gap-6 transition-all duration-300 ${
-                                verifying ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
-                            }`}
+                    <div className="flex flex-wrap items-center justify-center gap-2 w-full">
+                        <button
+                            onClick={() => openLogin('google')}
+                            disabled={!!loadingPlatform}
+                            className="flex items-center gap-2 h-9 px-4 text-sm font-medium border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <div className="space-y-1 text-center">
-                                <h2 className="text-xl font-bold tracking-tight text-gray-900">Check your email</h2>
-                                <p className="text-sm text-gray-500">We sent a code to {email}</p>
-                            </div>
-
-                            <div className="flex flex-col items-center gap-4 w-full max-w-sm">
-                                <div className="space-y-2">
-                                    <OTPInput
-                                        maxLength={6}
-                                        autoFocus
-                                        value={code}
-                                        onChange={(value) => setCode(value)}
-                                        onComplete={() => {
-                                            setVerifying(true);
-                                            setTimeout(() => handleVerifyCode(), 400);
-                                        }}
-                                        containerClassName="flex items-center gap-2 has-[:disabled]:opacity-50"
-                                        render={({ slots }) => (
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex items-center">
-                                                    {slots.slice(0, 3).map((slot, i) => (
-                                                        <OTPSlot key={i} {...slot} />
-                                                    ))}
-                                                </div>
-                                                <Minus className="text-gray-400" size={16} />
-                                                <div className="flex items-center">
-                                                    {slots.slice(3).map((slot, i) => (
-                                                        <OTPSlot key={i + 3} {...slot} />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    />
-                                    {errors.code && <p className="text-sm text-red-600 text-center">{errors.code}</p>}
-                                </div>
-
-                                <button
-                                    onClick={handleVerifyCode}
-                                    disabled={code.length !== 6 || verifying}
-                                    className="w-full h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                                >
-                                    {verifying ? (
-                                        <>
-                                            <Loader2 size={16} className="animate-spin" />
-                                            Verifying...
-                                        </>
-                                    ) : (
-                                        'Verify & continue'
-                                    )}
-                                </button>
-                            </div>
-
-                            <div className="flex items-center gap-4 text-sm">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setStep('email');
-                                        setCode('');
-                                        setErrors({});
-                                    }}
-                                    className="flex items-center gap-1.5 text-gray-500 cursor-pointer hover:text-gray-900 transition-colors"
-                                >
-                                    <ArrowLeft size={14} />
-                                    Change email
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setCode('');
-                                        setErrors({});
-                                        handleSendCode();
-                                    }}
-                                    disabled={sending}
-                                    className="text-gray-500 cursor-pointer hover:text-gray-900 transition-colors disabled:opacity-50"
-                                >
-                                    Resend code
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                            {loadingPlatform === 'google' ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <RiGoogleFill size={16} className="text-[#4285F4]" />
+                            )}
+                            Google
+                        </button>
+                        <button
+                            onClick={() => openLogin('twitter')}
+                            disabled={!!loadingPlatform}
+                            className="flex items-center gap-2 h-9 px-4 text-sm font-medium border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loadingPlatform === 'twitter' ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <RiTwitterXFill size={16} />
+                            )}
+                            X / Twitter
+                        </button>
+                        <button
+                            onClick={() => openLogin('linkedin')}
+                            disabled={!!loadingPlatform}
+                            className="flex items-center gap-2 h-9 px-4 text-sm font-medium border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loadingPlatform === 'linkedin' ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <RiLinkedinFill size={16} className="text-[#0A66C2]" />
+                            )}
+                            LinkedIn
+                        </button>
+                        <button
+                            onClick={() => openLogin('email')}
+                            disabled={!!loadingPlatform}
+                            className="flex items-center gap-2 h-9 px-4 text-sm font-medium border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loadingPlatform === 'email' ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <Mail size={16} />
+                            )}
+                            Email
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
