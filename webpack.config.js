@@ -12,4 +12,11 @@ module.exports = {
     entry: {
         index: path.resolve(__dirname, 'src/index.tsx'),
     },
+    resolve: {
+        ...defaultConfig.resolve,
+        alias: {
+            ...defaultConfig.resolve?.alias,
+            '@': path.resolve(__dirname, 'src'),
+        },
+    },
 };

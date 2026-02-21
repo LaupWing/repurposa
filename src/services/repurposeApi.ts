@@ -7,7 +7,7 @@ import type {
     Visual,
     VisualSettings,
     Swipe,
-} from '../types';
+} from '@/types';
 
 // ============================================
 // SHORT POSTS

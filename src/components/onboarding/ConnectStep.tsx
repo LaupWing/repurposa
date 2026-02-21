@@ -1,5 +1,5 @@
 import { Loader2, Check } from 'lucide-react';
-import { CONNECT_PLATFORMS } from '../../constants/platforms';
+import { CONNECT_PLATFORMS } from '@/constants/platforms';
 
 interface ConnectStepProps {
     connectedPlatforms: string[];

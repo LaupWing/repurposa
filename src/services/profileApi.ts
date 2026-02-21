@@ -1,5 +1,5 @@
 import { apiRequest, getConfig } from './client';
-import type { SocialAccount } from '../types';
+import type { SocialAccount } from '@/types';
 
 export async function getSocialAccounts(): Promise<SocialAccount[]> {
     return apiRequest<SocialAccount[]>('/social/accounts', {}, 'GET');

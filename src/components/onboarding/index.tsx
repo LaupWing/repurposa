@@ -9,8 +9,8 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
-import { useProfile } from '../../context/ProfileContext';
-import { useSocialPopup } from '../../hooks/useSocialPopup';
+import { useProfile } from '@/context/ProfileContext';
+import { useSocialPopup } from '@/hooks/useSocialPopup';
 import WelcomeStep from './WelcomeStep';
 import ProfileStep from './ProfileStep';
 import EmailStep from './EmailStep';

@@ -9,12 +9,12 @@ import { useState, useRef } from "@wordpress/element";
 import { toast } from "sonner";
 import Avatar from "boring-avatars";
 import { Check, ExternalLink, Save, Loader2, Pencil } from "lucide-react";
-import { TimezonePicker } from "../TimezonePicker";
-import { useProfile } from "../../context/ProfileContext";
-import type { ProfileData } from "../../context/ProfileContext";
-import { disconnectSocialAccount, uploadAvatar, updateUser } from "../../services/profileApi";
-import { useSocialPopup } from "../../hooks/useSocialPopup";
-import { CONNECT_PLATFORMS } from "../../constants/platforms";
+import { TimezonePicker } from "@/components/TimezonePicker";
+import { useProfile } from "@/context/ProfileContext";
+import type { ProfileData } from "@/context/ProfileContext";
+import { disconnectSocialAccount, uploadAvatar, updateUser } from "@/services/profileApi";
+import { useSocialPopup } from "@/hooks/useSocialPopup";
+import { CONNECT_PLATFORMS } from "@/constants/platforms";
 
 const BRAND_VOICES = ["conversational", "professional", "bold"] as const;
 

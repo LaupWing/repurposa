@@ -22,9 +22,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { arrayMove } from '@dnd-kit/sortable';
-import { generateShortPosts, updateShortPost, generateThreads, deleteVisual } from '../../services/repurposeApi';
-import type { ShortPost, ShortPostSchedule, ThreadItem, Visual } from '../../types';
-import { GeneratingOverlay } from '../GeneratingOverlay';
+import { generateShortPosts, updateShortPost, generateThreads, deleteVisual } from '@/services/repurposeApi';
+import type { ShortPost, ShortPostSchedule, ThreadItem, Visual } from '@/types';
+import { GeneratingOverlay } from '@/components/GeneratingOverlay';
 import { VisualShortPostPreviewModal, VisualThreadPreviewModal, VisualPreview, GRADIENT_PRESETS } from './modals/VisualPreviewModal';
 import ShortPostCard, { type ShortPostPattern } from './cards/ShortPostCard';
 import ThreadCard from './cards/ThreadCard';

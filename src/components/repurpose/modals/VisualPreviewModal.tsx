@@ -27,10 +27,10 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useProfile } from '../../../context/ProfileContext';
-import { createVisual, updateVisual } from '../../../services/repurposeApi';
-import { AITextPopup } from '../../AITextPopup';
-import type { VisualSettings } from '../../../types';
+import { useProfile } from '@/context/ProfileContext';
+import { createVisual, updateVisual } from '@/services/repurposeApi';
+import { AITextPopup } from '@/components/AITextPopup';
+import type { VisualSettings } from '@/types';
 
 // ============================================
 // CONSTANTS
@@ -89,7 +89,7 @@ interface BaseVisualPreviewModalProps {
     visualId?: number;
     initialDescription?: string;
     initialSettings?: VisualSettings;
-    onSaved?: (visual: import('../../types').Visual) => void;
+    onSaved?: (visual: import('@/components/types').Visual) => void;
 }
 
 // ============================================
@@ -660,7 +660,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
 
             const contentArray = Array.isArray(content) ? content : [content];
 
-            let visual: import('../../types').Visual;
+            let visual: import('@/components/types').Visual;
             if (isEditing) {
                 visual = await updateVisual(visualId, { content: contentArray, description, settings });
             } else {

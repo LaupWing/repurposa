@@ -16,7 +16,7 @@ import Step1Topic from "./steps/Step1Topic";
 import Step2RoughOutline from "./steps/Step2RoughOutline";
 import Step3GeneratedOutline from "./steps/Step3GeneratedOutline";
 import ConfirmGenerateBlogModal from "./ConfirmGenerateBlogModal";
-import { GeneratingOverlay } from "../GeneratingOverlay";
+import { GeneratingOverlay } from "@/components/GeneratingOverlay";
 
 // API & Context
 import {
@@ -26,9 +26,9 @@ import {
   getWizard,
   createWizard,
   updateWizard,
-} from "../../services/blogApi";
-import type { TopicSuggestion, TopicHistoryEntry, BlogGenerationMode } from "../../types";
-import { useProfile } from "../../context/ProfileContext";
+} from "@/services/blogApi";
+import type { TopicSuggestion, TopicHistoryEntry, BlogGenerationMode } from "@/types";
+import { useProfile } from "@/context/ProfileContext";
 
 // ============================================
 // TYPES

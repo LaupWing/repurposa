@@ -37,13 +37,13 @@ import {
     BookOpen,
     ChevronDown,
 } from 'lucide-react';
-import { TiptapEditor } from '../editor/TiptapEditor';
-import { RepurposePanel } from '../repurpose/RepurposePanel';
-import ImagePickerModal from '../ImagePickerModal';
-import { getBlog, updateBlog, deleteBlog, regenerateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion, refineText } from '../../services/blogApi';
-import type { TopicSuggestion, BlogGenerationMode, BlogPost, OutlineSection, PostVersion } from '../../types';
+import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import { RepurposePanel } from '@/components/repurpose/RepurposePanel';
+import ImagePickerModal from '@/components/ImagePickerModal';
+import { getBlog, updateBlog, deleteBlog, regenerateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion, refineText } from '@/services/blogApi';
+import type { TopicSuggestion, BlogGenerationMode, BlogPost, OutlineSection, PostVersion } from '@/types';
 
-import { useProfile } from '../../context/ProfileContext';
+import { useProfile } from '@/context/ProfileContext';
 import {
     DndContext, closestCenter, KeyboardSensor, PointerSensor,
     useSensor, useSensors, type DragEndEvent,

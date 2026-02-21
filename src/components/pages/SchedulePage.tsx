@@ -26,10 +26,10 @@ import {
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toast } from 'sonner';
-import { getPublishingSchedule, savePublishingSchedule, getScheduledPosts, deleteScheduledPost } from '../../services/scheduleApi';
-import type { ScheduledPost as ApiScheduledPost } from '../../types';
-import { useProfile } from '../../context/ProfileContext';
-import { TimezonePicker } from '../TimezonePicker';
+import { getPublishingSchedule, savePublishingSchedule, getScheduledPosts, deleteScheduledPost } from '@/services/scheduleApi';
+import type { ScheduledPost as ApiScheduledPost } from '@/types';
+import { useProfile } from '@/context/ProfileContext';
+import { TimezonePicker } from '@/components/TimezonePicker';
 
 // ============================================
 // TYPES

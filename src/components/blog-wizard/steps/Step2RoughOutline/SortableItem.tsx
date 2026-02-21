@@ -9,7 +9,7 @@ import { useState, useRef, useEffect } from '@wordpress/element';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2, Pencil, Check, X } from 'lucide-react';
-import { AITextPopup } from '../../../AITextPopup';
+import { AITextPopup } from '@/components/AITextPopup';
 
 // ============================================
 // TYPES

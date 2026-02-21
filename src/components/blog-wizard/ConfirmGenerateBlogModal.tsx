@@ -1,6 +1,6 @@
 import { useState } from '@wordpress/element';
 import { X, Zap, Search, BookOpen } from 'lucide-react';
-import type { BlogGenerationMode } from '../../types';
+import type { BlogGenerationMode } from '@/types';
 
 const GENERATION_MODES: { id: BlogGenerationMode; label: string; description: string; icon: typeof Zap; badge?: string }[] = [
   {

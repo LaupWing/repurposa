@@ -3,7 +3,7 @@ import type {
     ScheduledPost,
     PublishNowResponse,
     PublishingScheduleResponse,
-} from '../types';
+} from '@/types';
 
 // ============================================
 // SCHEDULED POSTS

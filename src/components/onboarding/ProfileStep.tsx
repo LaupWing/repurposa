@@ -2,7 +2,7 @@ import { useState, useRef } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
 import Avatar from 'boring-avatars';
 import { Pencil } from 'lucide-react';
-import { uploadAvatar } from '../../services/profileApi';
+import { uploadAvatar } from '@/services/profileApi';
 
 interface ProfileStepProps {
     name: string;

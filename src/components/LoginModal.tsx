@@ -8,8 +8,8 @@
 import apiFetch from '@wordpress/api-fetch';
 import { Loader2, Mail } from 'lucide-react';
 import { RiGoogleFill, RiTwitterXFill, RiLinkedinFill } from 'react-icons/ri';
-import logoUrl from '../assets/logo.svg';
-import { useSocialPopup } from '../hooks/useSocialPopup';
+import logoUrl from '@/assets/logo.svg';
+import { useSocialPopup } from '@/hooks/useSocialPopup';
 
 const getConfig = () => window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
 

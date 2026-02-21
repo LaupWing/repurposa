@@ -9,7 +9,7 @@ import type {
     BlogPost,
     WizardData,
     PostVersion,
-} from '../types';
+} from '@/types';
 
 // ============================================
 // BLOG GENERATION

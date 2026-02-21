@@ -9,10 +9,10 @@ import { useState, useRef, useEffect } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
 import { FileText, Sparkles, HelpCircle, X, Loader2, Undo2, Redo2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateTopics, refineText } from '../../../../services/blogApi';
-import type { TopicSuggestion, TopicHistoryEntry } from '../../../../types';
-import { useProfile } from '../../../../context/ProfileContext';
-import { AITextPopup } from '../../../AITextPopup';
+import { generateTopics, refineText } from '@/services/blogApi';
+import type { TopicSuggestion, TopicHistoryEntry } from '@/types';
+import { useProfile } from '@/context/ProfileContext';
+import { AITextPopup } from '@/components/AITextPopup';
 
 // ============================================
 // TYPES

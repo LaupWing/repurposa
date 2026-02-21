@@ -11,11 +11,11 @@ import {
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { getPublishingSchedule, createScheduledPost, getScheduledPosts } from '../../../services/scheduleApi';
-import { getSocialAccounts } from '../../../services/profileApi';
-import { renderVisual } from '../../../services/repurposeApi';
-import type { SocialAccount, ScheduledPost as ScheduledPostType, Visual } from '../../../types';
-import type { ShortPostPattern } from '../cards/ShortPostCard';
+import { getPublishingSchedule, createScheduledPost, getScheduledPosts } from '@/services/scheduleApi';
+import { getSocialAccounts } from '@/services/profileApi';
+import { renderVisual } from '@/services/repurposeApi';
+import type { SocialAccount, ScheduledPost as ScheduledPostType, Visual } from '@/types';
+import type { ShortPostPattern } from '@/components/repurpose/cards/ShortPostCard';
 import { VisualPreview, GRADIENT_PRESETS } from './VisualPreviewModal';
 import {
     type SchedulePlatform,

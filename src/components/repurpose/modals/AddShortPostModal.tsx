@@ -1,9 +1,9 @@
 import { useState, useEffect } from '@wordpress/element';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
-import { getSwipes } from '../../../services/repurposeApi';
-import { emotionColors } from '../cards/ShortPostCard';
-import type { Swipe } from '../../../types';
+import { getSwipes } from '@/services/repurposeApi';
+import { emotionColors } from '@/components/repurpose/cards/ShortPostCard';
+import type { Swipe } from '@/types';
 
 interface AddShortPostModalProps {
     isOpen: boolean;
