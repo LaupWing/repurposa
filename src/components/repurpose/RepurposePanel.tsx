@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { arrayMove } from '@dnd-kit/sortable';
-import { generateShortPosts, updateShortPost, generateThreads, deleteVisual } from '@/services/repurposeApi';
+import { generateShortPosts, updateShortPost, generateThreads, updateThread, deleteVisual } from '@/services/repurposeApi';
 import type { ShortPost, ShortPostSchedule, ThreadItem, Visual } from '@/types';
 import { GeneratingOverlay } from '@/components/GeneratingOverlay';
 import { VisualShortPostPreviewModal, VisualThreadPreviewModal, VisualPreview, GRADIENT_PRESETS } from './modals/VisualPreviewModal';
@@ -304,23 +304,28 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                 thread={thread}
                                 index={index}
                                 onEditPost={(postIndex, content) => {
+                                    const updatedPosts = thread.posts.map((p, i) => i === postIndex ? { ...p, content } : p);
                                     setThreads(prev => prev.map(t =>
                                         t.id === thread.id
-                                            ? { ...t, posts: t.posts.map((p, i) => i === postIndex ? { ...p, content } : p) }
+                                            ? { ...t, posts: updatedPosts }
                                             : t
                                     ));
+                                    updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
                                 }}
                                 onDeletePost={(postIndex) => {
+                                    const updatedPosts = thread.posts.filter((_, i) => i !== postIndex);
                                     setThreads(prev => prev.map(t =>
                                         t.id === thread.id
-                                            ? { ...t, posts: t.posts.filter((_, i) => i !== postIndex) }
+                                            ? { ...t, posts: updatedPosts }
                                             : t
                                     ));
+                                    updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
                                 }}
                                 onInsertPost={(afterIndex) => {
+                                    const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content: '', media: null }, ...thread.posts.slice(afterIndex + 1)];
                                     setThreads(prev => prev.map(t =>
                                         t.id === thread.id
-                                            ? { ...t, posts: [...t.posts.slice(0, afterIndex + 1), { content: '', media: null }, ...t.posts.slice(afterIndex + 1)] }
+                                            ? { ...t, posts: updatedPosts }
                                             : t
                                     ));
                                 }}
@@ -328,6 +333,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     setThreads(prev => prev.map(t =>
                                         t.id === thread.id ? { ...t, hook: content } : t
                                     ));
+                                    updateThread(thread.id, { hook: content }).catch(() => toast.error('Failed to save'));
                                 }}
                                 onSchedule={() => {
                                     setSchedulingContentType('thread');
