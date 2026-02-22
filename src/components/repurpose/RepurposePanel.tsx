@@ -4,7 +4,7 @@
  * Panel for generating short posts, threads, visuals from blog content.
  */
 
-import { useState, useEffect, useRef } from '@wordpress/element';
+import { useEffect, useRef } from '@wordpress/element';
 import {
     FileText,
     Image,
@@ -14,42 +14,24 @@ import {
     Plus,
     Search,
 } from 'lucide-react';
-import { toast } from 'sonner';
-import { arrayMove } from '@dnd-kit/sortable';
-import { generateShortPosts, updateShortPost, generateThreads, updateThread, deleteVisual } from '@/services/repurposeApi';
-import type { ShortPost, ShortPostSchedule, ThreadItem, Visual } from '@/types';
+import type { ShortPost, ThreadItem, Visual } from '@/types';
 import { GeneratingOverlay } from '@/components/GeneratingOverlay';
 import { VisualShortPostPreviewModal, VisualThreadPreviewModal } from './modals/VisualPreviewModal';
-import ShortPostCard, { type ShortPostPattern } from './cards/ShortPostCard';
+import ShortPostCard from './cards/ShortPostCard';
 import ThreadCard from './cards/ThreadCard';
 import VisualCard from './cards/VisualCard';
-import { ConfirmGenerateModal, ConfirmDeleteModal, AddShortPostModal, SchedulePostModal, PublishNowModal, type ScheduleContentType } from './modals';
+import { ConfirmGenerateModal, ConfirmDeleteModal, AddShortPostModal, SchedulePostModal, PublishNowModal } from './modals';
 import { EmptyState, DependencyGate } from './EmptyState';
+import { useShortPosts } from '@/hooks/useShortPosts';
+import { useThreads } from '@/hooks/useThreads';
+import { useVisuals } from '@/hooks/useVisuals';
+import { useScheduling } from '@/hooks/useScheduling';
 
 // ============================================
 // TYPES
 // ============================================
 
 type TabType = 'short' | 'threads' | 'visuals' | 'video';
-
-function shortPostToPattern(sp: ShortPost): ShortPostPattern {
-    return {
-        id: sp.id,
-        content: sp.content,
-        emotions: sp.metadata?.emotions || [],
-        structure: sp.metadata?.structure || '',
-        why_it_works: sp.metadata?.why_it_works || '',
-        cta_content: sp.cta_content?.content || undefined,
-        scheduled_posts: sp.scheduled_posts || [],
-        media: (sp.media || []).filter((m): m is string => typeof m === 'string'),
-        cta_media: sp.cta_content?.media?.filter((m): m is string => typeof m === 'string') || [],
-        visualCount: sp.visuals?.length || 0,
-    };
-}
-
-
-
-
 
 // ============================================
 // MAIN COMPONENT
@@ -72,29 +54,10 @@ interface RepurposePanelProps {
 }
 
 export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab, onVisualCreated, onHighlightVisual, initialHighlightVisualId, initialShortPosts, initialThreads, initialVisuals }: RepurposePanelProps) {
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>(() =>
-        (initialShortPosts || []).map(shortPostToPattern)
-    );
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [schedulingPost, setSchedulingPost] = useState<ShortPostPattern | null>(null);
-    const [schedulingContentType, setSchedulingContentType] = useState<ScheduleContentType>('short_post');
-    const [schedulingVisual, setSchedulingVisual] = useState<Visual | null>(null);
-    const [schedulingThreadPosts, setSchedulingThreadPosts] = useState<string[] | null>(null);
-    const [publishingPost, setPublishingPost] = useState<ShortPostPattern | null>(null);
-    const [publishingContentType, setPublishingContentType] = useState<ScheduleContentType>('short_post');
-    const [threads, setThreads] = useState<ThreadItem[]>(initialThreads || []);
-    const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
-    const [visuals, setVisuals] = useState<Visual[]>(initialVisuals || []);
-    const [viewingVisual, setViewingVisual] = useState<Visual | null>(null);
-    const [highlightVisualId, setHighlightVisualId] = useState<number | null>(initialHighlightVisualId ?? null);
-    const [showSourcePicker, setShowSourcePicker] = useState(false);
-    const [sourcePickerTab, setSourcePickerTab] = useState<'short_posts' | 'threads'>('short_posts');
-    const [sourcePickerSearch, setSourcePickerSearch] = useState('');
-    const [creatingVisualSource, setCreatingVisualSource] = useState<{ type: 'short_post' | 'thread'; id: number; content: string | string[] } | null>(null);
-    const [deletingVisualId, setDeletingVisualId] = useState<number | null>(null);
+    const sp = useShortPosts(initialShortPosts, blogId, blogContent, isPublished, publishedPostUrl);
+    const th = useThreads(initialThreads, blogId, blogContent);
+    const vis = useVisuals(initialVisuals, initialHighlightVisualId);
+    const sched = useScheduling();
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -103,139 +66,63 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         scrollRef.current?.scrollTo(0, 0);
     }, [initialTab]);
 
-    // Sync highlight prop into local state (panel stays mounted now)
-    useEffect(() => {
-        if (initialHighlightVisualId != null) {
-            setHighlightVisualId(initialHighlightVisualId);
-        }
-    }, [initialHighlightVisualId]);
+    // --- Cross-hook orchestration ---
 
-    // Persist media changes to the API
-    const syncShortPostMedia = (postId: number, media: string[], ctaContent?: string, ctaMedia?: string[]) => {
-        updateShortPost(postId, {
-            media,
-            ...(ctaContent !== undefined && {
-                cta_content: ctaContent
-                    ? { content: ctaContent, media: ctaMedia && ctaMedia.length > 0 ? ctaMedia : null }
-                    : null,
-            }),
-        }).catch((err) => {
-            console.error('Failed to sync short post media:', err);
-            toast.error('Failed to save image changes');
-        });
-    };
+    const handleScheduled = (newScheduledPosts?: import('@/types').ShortPostSchedule[]) => {
+        const result = sched.handleScheduled(newScheduledPosts);
+        if (!result) return;
 
-    const handleAddShortPost = (content: string) => {
-        const newPost: ShortPostPattern = {
-            id: Date.now(),
-            content,
-            emotions: [],
-            structure: 'Custom',
-            why_it_works: 'Manually created post',
-            media: [],
-            cta_media: [],
-            visualCount: 0,
-        };
-        setShortPosts(prev => [...prev, newPost]);
-        toast.success('Short post added');
-    };
-
-
-    const onGenerateClick = () => {
-        setShowConfirmModal(true);
-    };
-
-    const handleGenerateShortPosts = async (includeCta: boolean = false) => {
-        setShowConfirmModal(false);
-
-        if (!blogContent || !blogId) {
-            toast.error('No blog content available to repurpose.');
-            return;
-        }
-
-        setIsGenerating(true);
-
-        try {
-            const ctaLink = includeCta && publishedPostUrl ? publishedPostUrl : undefined;
-            const response = await generateShortPosts(blogId, blogContent, ctaLink);
-
-            setShortPosts(response.short_posts.map(shortPostToPattern));
-            toast.success(`${response.short_posts.length} short posts generated`);
-        } catch (error) {
-            console.error('Failed to generate short posts:', error);
-            toast.error('Failed to generate short posts', {
-                description: error instanceof Error ? error.message : 'Please try again.',
-            });
-        } finally {
-            setIsGenerating(false);
+        if (result.contentType === 'short_post') {
+            sp.addScheduledPosts(result.postId, result.scheduledPosts);
+        } else if (result.contentType === 'thread') {
+            th.addScheduledPosts(result.postId, result.scheduledPosts);
+        } else if (result.contentType === 'visual' && result.visualId) {
+            vis.addScheduledPosts(result.visualId, result.scheduledPosts);
         }
     };
 
-    const handleScheduled = (newScheduledPosts?: ShortPostSchedule[]) => {
-        if (newScheduledPosts && newScheduledPosts.length > 0 && schedulingPost) {
-            if (schedulingContentType === 'short_post') {
-                setShortPosts(prev => prev.map(p =>
-                    p.id === schedulingPost.id
-                        ? { ...p, scheduled_posts: [...(p.scheduled_posts || []), ...newScheduledPosts] }
-                        : p
-                ));
-            } else if (schedulingContentType === 'thread') {
-                setThreads(prev => prev.map(t =>
-                    t.id === schedulingPost.id
-                        ? { ...t, scheduled_posts: [...(t.scheduled_posts || []), ...newScheduledPosts] }
-                        : t
-                ));
-            } else if (schedulingContentType === 'visual' && schedulingVisual) {
-                setVisuals(prev => prev.map(v =>
-                    v.id === schedulingVisual.id
-                        ? { ...v, scheduled_posts: [...(v.scheduled_posts || []), ...newScheduledPosts] }
-                        : v
-                ));
-            }
-        }
-        setSchedulingPost(null);
-        setSchedulingVisual(null);
-        setSchedulingThreadPosts(null);
-    };
+    const handleUnscheduled = (scheduledPostId: number) => {
+        sched.removeScheduledFromModal(scheduledPostId);
 
-    const handleGenerateThreads = async () => {
-        if (!blogContent || !blogId) {
-            toast.error('No blog content available to repurpose.');
-            return;
-        }
-
-        setIsGeneratingThreads(true);
-
-        try {
-            const response = await generateThreads(blogId, blogContent);
-            setThreads(response.threads);
-            toast.success(`${response.threads.length} threads generated`);
-        } catch (error) {
-            console.error('Failed to generate threads:', error);
-            toast.error('Failed to generate threads', {
-                description: error instanceof Error ? error.message : 'Please try again.',
-            });
-        } finally {
-            setIsGeneratingThreads(false);
+        if (sched.schedulingContentType === 'short_post' && sched.schedulingPost) {
+            sp.removeScheduledPost(sched.schedulingPost.id, scheduledPostId);
+        } else if (sched.schedulingContentType === 'thread' && sched.schedulingPost) {
+            th.removeScheduledPost(sched.schedulingPost.id, scheduledPostId);
+        } else if (sched.schedulingContentType === 'visual' && sched.schedulingVisual) {
+            vis.removeScheduledPost(sched.schedulingVisual.id, scheduledPostId);
         }
     };
 
-    // Show content based on initialTab (parent controls the tab)
+    const handleShortPostVisualSaved = (pattern: { id: number }, visual: Visual) => {
+        vis.addVisual(visual);
+        sp.incrementVisualCount(pattern.id);
+        onVisualCreated?.(visual);
+        onSwitchTab?.('visuals');
+    };
+
+    const handleThreadVisualSaved = (visual: Visual) => {
+        vis.addVisual(visual);
+        onVisualCreated?.(visual);
+        onSwitchTab?.('visuals');
+    };
+
+    // --- Render ---
+
     const renderContent = () => {
         switch (initialTab) {
             case 'short':
-                return shortPosts.length === 0 ? (
-                    <EmptyState type="short" onGenerate={onGenerateClick} isGenerating={isGenerating} isPublished={isPublished} />
+                return sp.shortPosts.length === 0 ? (
+                    <EmptyState type="short" onGenerate={sp.onGenerateClick} isGenerating={sp.isGenerating} isPublished={isPublished} />
                 ) : (
                     <div>
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Generated Short Posts</h3>
                             <div className="flex items-center gap-2">
                                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                    {shortPosts.length} short posts
+                                    {sp.shortPosts.length} short posts
                                 </span>
                                 <button
-                                    onClick={() => setShowAddModal(true)}
+                                    onClick={() => sp.setShowAddModal(true)}
                                     className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                                 >
                                     <Plus size={14} />
@@ -244,69 +131,17 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                             </div>
                         </div>
                         <div className="pl-2">
-                            {shortPosts.map((pattern, index) => (
+                            {sp.shortPosts.map((pattern, index) => (
                                 <ShortPostCard
                                     key={pattern.id}
                                     pattern={pattern}
                                     index={index}
                                     blogId={blogId}
-                                    onDelete={() => setShortPosts(prev => prev.filter(p => p.id !== pattern.id))}
-                                    onDeleteCta={() => {
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: undefined, cta_media: [] } : p));
-                                        updateShortPost(pattern.id, { cta_content: null }).catch(() => toast.error('Failed to save'));
-                                    }}
-                                    onAddCta={() => {
-                                        const ctaText = 'Read the full post here: ';
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: ctaText } : p));
-                                        updateShortPost(pattern.id, { cta_content: { content: ctaText, media: null } }).catch(() => toast.error('Failed to save'));
-                                    }}
-                                    onEdit={(content) => {
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p));
-                                        updateShortPost(pattern.id, { content }).catch(() => toast.error('Failed to save'));
-                                    }}
-                                    onEditCta={(content) => {
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p));
-                                        updateShortPost(pattern.id, { cta_content: { content, media: pattern.cta_media.length > 0 ? pattern.cta_media : null } }).catch(() => toast.error('Failed to save'));
-                                    }}
-                                    onSchedule={() => { setSchedulingPost(pattern); setSchedulingContentType('short_post'); }}
-                                    onPublishNow={() => { setPublishingPost(pattern); setPublishingContentType('short_post'); }}
-                                    onAddImage={(imageUrl) => {
-                                        const newMedia = [...pattern.media, imageUrl].slice(0, 4);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, media: newMedia } : p));
-                                        syncShortPostMedia(pattern.id, newMedia);
-                                    }}
-                                    onRemoveImage={(imageIndex) => {
-                                        const newMedia = pattern.media.filter((_, i) => i !== imageIndex);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, media: newMedia } : p));
-                                        syncShortPostMedia(pattern.id, newMedia);
-                                    }}
-                                    onReorderImages={(from, to) => {
-                                        const newMedia = arrayMove(pattern.media, from, to);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, media: newMedia } : p));
-                                        syncShortPostMedia(pattern.id, newMedia);
-                                    }}
-                                    onAddCtaImage={(imageUrl) => {
-                                        const newCtaImages = [...pattern.cta_media, imageUrl].slice(0, 4);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_media: newCtaImages } : p));
-                                        syncShortPostMedia(pattern.id, pattern.media, pattern.cta_content, newCtaImages);
-                                    }}
-                                    onRemoveCtaImage={(imageIndex) => {
-                                        const newCtaImages = pattern.cta_media.filter((_, i) => i !== imageIndex);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_media: newCtaImages } : p));
-                                        syncShortPostMedia(pattern.id, pattern.media, pattern.cta_content, newCtaImages);
-                                    }}
-                                    onReorderCtaImages={(from, to) => {
-                                        const newCtaImages = arrayMove(pattern.cta_media, from, to);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_media: newCtaImages } : p));
-                                        syncShortPostMedia(pattern.id, pattern.media, pattern.cta_content, newCtaImages);
-                                    }}
-                                    onVisualSaved={(visual) => {
-                                        setVisuals(prev => [...prev, visual]);
-                                        setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, visualCount: p.visualCount + 1 } : p));
-                                        onVisualCreated?.(visual);
-                                        onSwitchTab?.('visuals');
-                                    }}
-                                    cardVisuals={visuals.filter(v => v.source_type === 'short_post' && v.source_id === pattern.id)}
+                                    {...sp.getCardProps(pattern)}
+                                    onSchedule={() => sched.scheduleShortPost(pattern)}
+                                    onPublishNow={() => sched.publishShortPost(pattern)}
+                                    onVisualSaved={(visual) => handleShortPostVisualSaved(pattern, visual)}
+                                    cardVisuals={vis.visuals.filter(v => v.source_type === 'short_post' && v.source_id === pattern.id)}
                                     onGoToVisual={(visualId) => {
                                         onHighlightVisual?.(visualId);
                                         onSwitchTab?.('visuals');
@@ -319,132 +154,70 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 );
 
             case 'threads':
-                return threads.length === 0 ? (
-                    <EmptyState type="threads" onGenerate={handleGenerateThreads} isGenerating={isGeneratingThreads} />
+                return th.threads.length === 0 ? (
+                    <EmptyState type="threads" onGenerate={th.handleGenerateThreads} isGenerating={th.isGeneratingThreads} />
                 ) : (
                     <div>
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-sm font-medium text-gray-500">Thread Variations</h3>
                             <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                {threads.length} generated
+                                {th.threads.length} generated
                             </span>
                         </div>
-                        {threads.map((thread, index) => (
+                        {th.threads.map((thread, index) => (
                             <ThreadCard
                                 key={thread.id}
                                 thread={thread}
                                 index={index}
-                                onEditPost={(postIndex, content) => {
-                                    const updatedPosts = thread.posts.map((p, i) => i === postIndex ? { ...p, content } : p);
-                                    setThreads(prev => prev.map(t =>
-                                        t.id === thread.id
-                                            ? { ...t, posts: updatedPosts }
-                                            : t
-                                    ));
-                                    updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
-                                }}
-                                onDeletePost={(postIndex) => {
-                                    const updatedPosts = thread.posts.filter((_, i) => i !== postIndex);
-                                    setThreads(prev => prev.map(t =>
-                                        t.id === thread.id
-                                            ? { ...t, posts: updatedPosts }
-                                            : t
-                                    ));
-                                    updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
-                                }}
-                                onInsertPost={(afterIndex) => {
-                                    const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content: '', media: null }, ...thread.posts.slice(afterIndex + 1)];
-                                    setThreads(prev => prev.map(t =>
-                                        t.id === thread.id
-                                            ? { ...t, posts: updatedPosts }
-                                            : t
-                                    ));
-                                }}
-                                onEditHook={(content) => {
-                                    setThreads(prev => prev.map(t =>
-                                        t.id === thread.id ? { ...t, hook: content } : t
-                                    ));
-                                    updateThread(thread.id, { hook: content }).catch(() => toast.error('Failed to save'));
-                                }}
-                                onSchedule={() => {
-                                    setSchedulingContentType('thread');
-                                    setSchedulingThreadPosts(thread.posts.map(p => p.content));
-                                    setSchedulingPost({
-                                        id: thread.id,
-                                        content: thread.posts.map(p => p.content).join('\n\n---\n\n'),
-                                        emotions: thread.metadata.emotions,
-                                        structure: thread.metadata.structure,
-                                        why_it_works: thread.metadata.why_it_works,
-                                        media: [],
-                                        cta_media: [],
-                                        visualCount: 0,
-                                    });
-                                }}
-                                onPublishNow={() => {
-                                    setPublishingContentType('thread');
-                                    setPublishingPost({
-                                        id: thread.id,
-                                        content: thread.posts.map(p => p.content).join('\n\n---\n\n'),
-                                        emotions: thread.metadata.emotions,
-                                        structure: thread.metadata.structure,
-                                        why_it_works: thread.metadata.why_it_works,
-                                        media: [],
-                                        cta_media: [],
-                                        visualCount: 0,
-                                    });
-                                }}
-                                onDelete={() => setThreads(prev => prev.filter(t => t.id !== thread.id))}
+                                {...th.getCardProps(thread)}
+                                onSchedule={() => sched.scheduleThread(thread)}
+                                onPublishNow={() => sched.publishThread(thread)}
                                 blogId={blogId}
                                 isPublished={isPublished}
-                                onVisualSaved={(visual) => {
-                                    setVisuals(prev => [...prev, visual]);
-                                    onVisualCreated?.(visual);
-                                    onSwitchTab?.('visuals');
-                                }}
+                                onVisualSaved={handleThreadVisualSaved}
                             />
                         ))}
                     </div>
                 );
 
             case 'visuals': {
-                if (shortPosts.length === 0 && threads.length === 0) {
+                if (sp.shortPosts.length === 0 && th.threads.length === 0) {
                     return <DependencyGate type="visuals" onSwitchTab={onSwitchTab} />;
                 }
 
-                const hasShortPosts = shortPosts.length > 0;
-                const hasThreads = threads.length > 0;
-                const activePickerTab = sourcePickerTab === 'threads' && !hasThreads ? 'short_posts'
-                    : sourcePickerTab === 'short_posts' && !hasShortPosts ? 'threads'
-                    : sourcePickerTab;
-                const searchLower = sourcePickerSearch.toLowerCase();
+                const hasShortPosts = sp.shortPosts.length > 0;
+                const hasThreads = th.threads.length > 0;
+                const activePickerTab = vis.sourcePickerTab === 'threads' && !hasThreads ? 'short_posts'
+                    : vis.sourcePickerTab === 'short_posts' && !hasShortPosts ? 'threads'
+                    : vis.sourcePickerTab;
+                const searchLower = vis.sourcePickerSearch.toLowerCase();
                 const filteredShortPosts = hasShortPosts
-                    ? shortPosts.filter(sp => sp.content.toLowerCase().includes(searchLower))
+                    ? sp.shortPosts.filter(s => s.content.toLowerCase().includes(searchLower))
                     : [];
                 const filteredThreads = hasThreads
-                    ? threads.filter(t => t.posts.some(p => p.content.toLowerCase().includes(searchLower)) || t.hook.toLowerCase().includes(searchLower))
+                    ? th.threads.filter(t => t.posts.some(p => p.content.toLowerCase().includes(searchLower)) || t.hook.toLowerCase().includes(searchLower))
                     : [];
 
                 const sourcePickerContent = (
                     <>
-                        {showSourcePicker && (
+                        {vis.showSourcePicker && (
                             <div className="fixed inset-0 z-[99999] flex items-center justify-center">
-                                <div className="absolute inset-0 bg-black/40" onClick={() => { setShowSourcePicker(false); setSourcePickerSearch(''); }} />
+                                <div className="absolute inset-0 bg-black/40" onClick={vis.closeSourcePicker} />
                                 <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[75vh] overflow-hidden flex flex-col">
                                     {/* Header */}
                                     <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
                                         <h3 className="text-sm font-semibold text-gray-900">Select content for visual</h3>
-                                        <button onClick={() => { setShowSourcePicker(false); setSourcePickerSearch(''); }} className="h-7 w-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                                        <button onClick={vis.closeSourcePicker} className="h-7 w-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600">
                                             <X size={16} />
                                         </button>
                                     </div>
 
                                     {/* Tabs + Search */}
                                     <div className="px-5 pt-3 pb-0 space-y-3">
-                                        {/* Tabs — only show if both types exist */}
                                         {hasShortPosts && hasThreads && (
                                             <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
                                                 <button
-                                                    onClick={() => setSourcePickerTab('short_posts')}
+                                                    onClick={() => vis.setSourcePickerTab('short_posts')}
                                                     className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                                                         activePickerTab === 'short_posts'
                                                             ? 'bg-white text-gray-900 shadow-sm'
@@ -454,11 +227,11 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                                     <FileText size={13} />
                                                     Short Posts
                                                     <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] ${activePickerTab === 'short_posts' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-500'}`}>
-                                                        {shortPosts.length}
+                                                        {sp.shortPosts.length}
                                                     </span>
                                                 </button>
                                                 <button
-                                                    onClick={() => setSourcePickerTab('threads')}
+                                                    onClick={() => vis.setSourcePickerTab('threads')}
                                                     className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                                                         activePickerTab === 'threads'
                                                             ? 'bg-white text-gray-900 shadow-sm'
@@ -468,7 +241,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                                     <Layout size={13} />
                                                     Threads
                                                     <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] ${activePickerTab === 'threads' ? 'bg-violet-100 text-violet-700' : 'bg-gray-200 text-gray-500'}`}>
-                                                        {threads.length}
+                                                        {th.threads.length}
                                                     </span>
                                                 </button>
                                             </div>
@@ -479,14 +252,14 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                             <input
                                                 type="text"
-                                                value={sourcePickerSearch}
-                                                onChange={(e) => setSourcePickerSearch(e.target.value)}
+                                                value={vis.sourcePickerSearch}
+                                                onChange={(e) => vis.setSourcePickerSearch(e.target.value)}
                                                 placeholder={activePickerTab === 'threads' ? 'Search threads...' : 'Search short posts...'}
                                                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-blue-300 focus:ring-1 focus:ring-blue-200 outline-none transition-colors"
                                             />
-                                            {sourcePickerSearch && (
+                                            {vis.sourcePickerSearch && (
                                                 <button
-                                                    onClick={() => setSourcePickerSearch('')}
+                                                    onClick={() => vis.setSourcePickerSearch('')}
                                                     className="absolute right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-600"
                                                 >
                                                     <X size={13} />
@@ -499,22 +272,18 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     <div className="flex-1 overflow-y-auto p-4 space-y-2">
                                         {activePickerTab === 'short_posts' && (
                                             filteredShortPosts.length > 0 ? (
-                                                filteredShortPosts.map((sp) => (
+                                                filteredShortPosts.map((s) => (
                                                     <button
-                                                        key={`sp-${sp.id}`}
-                                                        onClick={() => {
-                                                            setCreatingVisualSource({ type: 'short_post', id: sp.id, content: sp.content });
-                                                            setShowSourcePicker(false);
-                                                            setSourcePickerSearch('');
-                                                        }}
+                                                        key={`sp-${s.id}`}
+                                                        onClick={() => vis.selectSource({ type: 'short_post', id: s.id, content: s.content })}
                                                         className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
                                                     >
-                                                        <p className="text-sm text-gray-800 line-clamp-3">{sp.content}</p>
+                                                        <p className="text-sm text-gray-800 line-clamp-3">{s.content}</p>
                                                     </button>
                                                 ))
                                             ) : (
                                                 <div className="text-center py-8 text-sm text-gray-400">
-                                                    {sourcePickerSearch ? 'No short posts match your search' : 'No short posts available'}
+                                                    {vis.sourcePickerSearch ? 'No short posts match your search' : 'No short posts available'}
                                                 </div>
                                             )
                                         )}
@@ -523,11 +292,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                                 filteredThreads.map((t) => (
                                                     <button
                                                         key={`t-${t.id}`}
-                                                        onClick={() => {
-                                                            setCreatingVisualSource({ type: 'thread', id: t.id, content: t.posts.map(p => p.content) });
-                                                            setShowSourcePicker(false);
-                                                            setSourcePickerSearch('');
-                                                        }}
+                                                        onClick={() => vis.selectSource({ type: 'thread', id: t.id, content: t.posts.map(p => p.content) })}
                                                         className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-violet-300 hover:bg-violet-50 transition-colors"
                                                     >
                                                         <p className="text-xs text-violet-600 font-medium mb-1">Thread · {t.posts.length} posts</p>
@@ -536,7 +301,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                                 ))
                                             ) : (
                                                 <div className="text-center py-8 text-sm text-gray-400">
-                                                    {sourcePickerSearch ? 'No threads match your search' : 'No threads available'}
+                                                    {vis.sourcePickerSearch ? 'No threads match your search' : 'No threads available'}
                                                 </div>
                                             )
                                         )}
@@ -545,39 +310,31 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                             </div>
                         )}
 
-                        {creatingVisualSource && (
-                            creatingVisualSource.type === 'thread' && Array.isArray(creatingVisualSource.content) ? (
+                        {vis.creatingVisualSource && (
+                            vis.creatingVisualSource.type === 'thread' && Array.isArray(vis.creatingVisualSource.content) ? (
                                 <VisualThreadPreviewModal
                                     isOpen={true}
-                                    onClose={() => setCreatingVisualSource(null)}
-                                    content={creatingVisualSource.content}
+                                    onClose={() => vis.setCreatingVisualSource(null)}
+                                    content={vis.creatingVisualSource.content}
                                     blogId={blogId}
-                                    sourceId={creatingVisualSource.id}
-                                    onSaved={(visual) => {
-                                        setVisuals(prev => [...prev, visual]);
-                                        setHighlightVisualId(visual.id);
-                                        setCreatingVisualSource(null);
-                                    }}
+                                    sourceId={vis.creatingVisualSource.id}
+                                    onSaved={vis.onVisualCreatedFromSource}
                                 />
                             ) : (
                                 <VisualShortPostPreviewModal
                                     isOpen={true}
-                                    onClose={() => setCreatingVisualSource(null)}
-                                    content={typeof creatingVisualSource.content === 'string' ? creatingVisualSource.content : creatingVisualSource.content[0]}
+                                    onClose={() => vis.setCreatingVisualSource(null)}
+                                    content={typeof vis.creatingVisualSource.content === 'string' ? vis.creatingVisualSource.content : vis.creatingVisualSource.content[0]}
                                     blogId={blogId}
-                                    sourceId={creatingVisualSource.id}
-                                    onSaved={(visual) => {
-                                        setVisuals(prev => [...prev, visual]);
-                                        setHighlightVisualId(visual.id);
-                                        setCreatingVisualSource(null);
-                                    }}
+                                    sourceId={vis.creatingVisualSource.id}
+                                    onSaved={vis.onVisualCreatedFromSource}
                                 />
                             )
                         )}
                     </>
                 );
 
-                if (visuals.length === 0) {
+                if (vis.visuals.length === 0) {
                     return (
                         <>
                             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-12 text-center">
@@ -589,7 +346,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     Create visual cards from your short posts or threads.
                                 </p>
                                 <button
-                                    onClick={() => setShowSourcePicker(true)}
+                                    onClick={() => vis.setShowSourcePicker(true)}
                                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                                 >
                                     <Plus size={16} />
@@ -607,10 +364,10 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                             <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Visuals</h3>
                             <div className="flex items-center gap-2">
                                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                    {visuals.length} visual{visuals.length !== 1 ? 's' : ''}
+                                    {vis.visuals.length} visual{vis.visuals.length !== 1 ? 's' : ''}
                                 </span>
                                 <button
-                                    onClick={() => setShowSourcePicker(true)}
+                                    onClick={() => vis.setShowSourcePicker(true)}
                                     className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                                 >
                                     <Plus size={14} />
@@ -619,71 +376,49 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                             </div>
                         </div>
                         <div className="space-y-4">
-                            {visuals.map((visual, index) => (
+                            {vis.visuals.map((visual, index) => (
                                 <VisualCard
                                     key={visual.id}
                                     visual={visual}
                                     index={index}
-                                    isHighlighted={highlightVisualId === visual.id}
+                                    isHighlighted={vis.highlightVisualId === visual.id}
                                     onHighlightRef={(el) => {
                                         if (el) {
                                             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                            setTimeout(() => setHighlightVisualId(null), 2000);
+                                            setTimeout(() => vis.setHighlightVisualId(null), 2000);
                                         }
                                     }}
-                                    onEdit={() => setViewingVisual(visual)}
-                                    onSchedule={() => {
-                                        const text = Array.isArray(visual.content) ? visual.content.join('\n\n---\n\n') : visual.content;
-                                        setSchedulingContentType('visual');
-                                        setSchedulingVisual(visual);
-                                        setSchedulingPost({
-                                            id: visual.id,
-                                            content: visual.description || text,
-                                            emotions: [],
-                                            structure: '',
-                                            why_it_works: '',
-                                            media: [],
-                                            cta_content: '',
-                                            cta_media: [],
-                                            scheduled_posts: [],
-                                            visualCount: 0,
-                                        });
-                                    }}
-                                    onDelete={() => setDeletingVisualId(visual.id)}
+                                    onEdit={() => vis.setViewingVisual(visual)}
+                                    onSchedule={() => sched.scheduleVisual(visual)}
+                                    onDelete={() => vis.setDeletingVisualId(visual.id)}
                                 />
                             ))}
                         </div>
 
-                        {viewingVisual && (
-                            viewingVisual.source_type === 'thread' && Array.isArray(viewingVisual.content) ? (
+                        {vis.viewingVisual && (
+                            vis.viewingVisual.source_type === 'thread' && Array.isArray(vis.viewingVisual.content) ? (
                                 <VisualThreadPreviewModal
                                     isOpen={true}
-                                    onClose={() => setViewingVisual(null)}
-                                    content={viewingVisual.content}
+                                    onClose={() => vis.setViewingVisual(null)}
+                                    content={vis.viewingVisual.content}
                                     blogId={blogId}
-                                    sourceId={viewingVisual.source_id}
-                                    visualId={viewingVisual.id}
-                                    initialDescription={viewingVisual.description}
-                                    initialSettings={viewingVisual.settings}
-                                    onSaved={(updated) => {
-                                        setVisuals(prev => prev.map(v => v.id === updated.id ? updated : v));
-                                        setViewingVisual(null);
-                                    }}
+                                    sourceId={vis.viewingVisual.source_id}
+                                    visualId={vis.viewingVisual.id}
+                                    initialDescription={vis.viewingVisual.description}
+                                    initialSettings={vis.viewingVisual.settings}
+                                    onSaved={vis.onVisualUpdated}
                                 />
                             ) : (
                                 <VisualShortPostPreviewModal
                                     isOpen={true}
-                                    onClose={() => setViewingVisual(null)}
-                                    content={Array.isArray(viewingVisual.content) ? viewingVisual.content[0] : viewingVisual.content}
+                                    onClose={() => vis.setViewingVisual(null)}
+                                    content={Array.isArray(vis.viewingVisual.content) ? vis.viewingVisual.content[0] : vis.viewingVisual.content}
                                     blogId={blogId}
-                                    sourceId={viewingVisual.source_id}
-                                    visualId={viewingVisual.id}
-                                    initialDescription={viewingVisual.description}
-                                    initialSettings={viewingVisual.settings}
-                                    onSaved={(updated) => {
-                                        setVisuals(prev => prev.map(v => v.id === updated.id ? updated : v));
-                                        setViewingVisual(null);
-                                    }}
+                                    sourceId={vis.viewingVisual.source_id}
+                                    visualId={vis.viewingVisual.id}
+                                    initialDescription={vis.viewingVisual.description}
+                                    initialSettings={vis.viewingVisual.settings}
+                                    onSaved={vis.onVisualUpdated}
                                 />
                             )
                         )}
@@ -716,81 +451,50 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
 
     return (
         <div className="relative flex h-full flex-col bg-white">
-            {isGenerating && (
+            {sp.isGenerating && (
                 <GeneratingOverlay
                     title="Generating Short Posts"
                     description="Analyzing your blog content and crafting engaging short posts..."
                 />
             )}
-            {isGeneratingThreads && (
+            {th.isGeneratingThreads && (
                 <GeneratingOverlay
                     title="Generating Threads"
                     description="Analyzing your blog content and crafting engaging threads..."
                 />
             )}
             <ConfirmGenerateModal
-                isOpen={showConfirmModal}
-                onClose={() => setShowConfirmModal(false)}
-                onConfirm={handleGenerateShortPosts}
+                isOpen={sp.showConfirmModal}
+                onClose={() => sp.setShowConfirmModal(false)}
+                onConfirm={sp.handleGenerateShortPosts}
                 isPublished={isPublished}
             />
             <AddShortPostModal
-                isOpen={showAddModal}
-                onClose={() => setShowAddModal(false)}
-                onAdd={handleAddShortPost}
+                isOpen={sp.showAddModal}
+                onClose={() => sp.setShowAddModal(false)}
+                onAdd={sp.handleAddShortPost}
             />
             <SchedulePostModal
-                isOpen={!!schedulingPost}
-                post={schedulingPost}
+                isOpen={!!sched.schedulingPost}
+                post={sched.schedulingPost}
                 blogId={blogId}
-                contentType={schedulingContentType}
-                visual={schedulingVisual}
-                threadPosts={schedulingThreadPosts}
-                onClose={() => { setSchedulingPost(null); setSchedulingVisual(null); setSchedulingThreadPosts(null); }}
+                contentType={sched.schedulingContentType}
+                visual={sched.schedulingVisual}
+                threadPosts={sched.schedulingThreadPosts}
+                onClose={sched.clearScheduling}
                 onScheduled={handleScheduled}
-                onUnscheduled={(scheduledPostId) => {
-                    // Remove the scheduled post from local state
-                    if (schedulingContentType === 'short_post' && schedulingPost) {
-                        setShortPosts(prev => prev.map(p =>
-                            p.id === schedulingPost.id
-                                ? { ...p, scheduled_posts: (p.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) }
-                                : p
-                        ));
-                        setSchedulingPost(prev => prev ? { ...prev, scheduled_posts: (prev.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) } : prev);
-                    } else if (schedulingContentType === 'thread' && schedulingPost) {
-                        setThreads(prev => prev.map(t =>
-                            t.id === schedulingPost.id
-                                ? { ...t, scheduled_posts: (t.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) }
-                                : t
-                        ));
-                        setSchedulingPost(prev => prev ? { ...prev, scheduled_posts: (prev.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) } : prev);
-                    } else if (schedulingContentType === 'visual' && schedulingVisual) {
-                        setVisuals(prev => prev.map(v =>
-                            v.id === schedulingVisual.id
-                                ? { ...v, scheduled_posts: (v.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) }
-                                : v
-                        ));
-                        setSchedulingPost(prev => prev ? { ...prev, scheduled_posts: (prev.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) } : prev);
-                    }
-                }}
+                onUnscheduled={handleUnscheduled}
             />
             <PublishNowModal
-                isOpen={!!publishingPost}
-                post={publishingPost}
-                contentType={publishingContentType}
-                onClose={() => setPublishingPost(null)}
+                isOpen={!!sched.publishingPost}
+                post={sched.publishingPost}
+                contentType={sched.publishingContentType}
+                onClose={sched.clearPublishing}
             />
             <ConfirmDeleteModal
-                isOpen={deletingVisualId !== null}
-                onClose={() => setDeletingVisualId(null)}
-                onConfirm={() => {
-                    if (deletingVisualId !== null) {
-                        setVisuals(prev => prev.filter(v => v.id !== deletingVisualId));
-                        deleteVisual(deletingVisualId)
-                            .then(() => toast.success('Visual deleted'))
-                            .catch(() => toast.error('Failed to delete visual'));
-                    }
-                }}
+                isOpen={vis.deletingVisualId !== null}
+                onClose={() => vis.setDeletingVisualId(null)}
+                onConfirm={vis.confirmDelete}
                 title="Delete Visual"
                 description="This visual will be permanently deleted. This action cannot be undone."
             />
