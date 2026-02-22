@@ -288,7 +288,24 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
     const totalChars = thread.posts.reduce((sum, p) => sum + p.content.length, 0);
 
     return (
-        <div className="mb-4 rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
+        <div className="relative mb-4 rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
+            {/* Schedule status badge - top right */}
+            {thread.scheduled_posts && thread.scheduled_posts.length > 0 && (() => {
+                const platformNames: Record<string, string> = { twitter: 'X', linkedin: 'LinkedIn', threads: 'Threads', instagram: 'IG', facebook: 'FB' };
+                const platforms = [...new Set(thread.scheduled_posts.map(sp => platformNames[sp.platform] || sp.platform))].join(', ');
+                const s = thread.scheduled_posts[0];
+                const dt = new Date(s.scheduled_at);
+                const timeStr = dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                return (
+                    <button
+                        onClick={onSchedule}
+                        className="absolute -top-2 right-2 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors z-10 text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                    >
+                        <Calendar size={10} />
+                        {timeStr} · {platforms}
+                    </button>
+                );
+            })()}
             {/* Header */}
             <div
                 onClick={() => setIsExpanded(!isExpanded)}

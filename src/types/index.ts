@@ -118,7 +118,7 @@ export interface ShortPost {
     cta_content?: ShortPostCta | null;
     media: string[] | null;
     metadata: ShortPostMetadata;
-    scheduled_post?: ShortPostSchedule | null;
+    scheduled_posts?: ShortPostSchedule[];
     visuals?: Visual[];
 }
 
@@ -148,6 +148,7 @@ export interface ThreadItem {
     hook: string;
     posts: ThreadPost[];
     metadata: ThreadMetadata;
+    scheduled_posts?: ShortPostSchedule[];
 }
 
 export interface GenerateThreadsResponse {
@@ -184,6 +185,7 @@ export interface Visual {
     content: string | string[];
     description?: string;
     settings: VisualSettings;
+    scheduled_posts?: ShortPostSchedule[];
     created_at: string;
     updated_at: string;
 }

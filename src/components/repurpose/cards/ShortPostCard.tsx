@@ -37,7 +37,7 @@ export interface ShortPostPattern {
     structure: string;
     why_it_works: string;
     cta_content?: string;
-    scheduled_post?: ShortPostSchedule | null;
+    scheduled_posts?: ShortPostSchedule[];
     media: string[];
     cta_media: string[];
     visualCount: number;
@@ -281,31 +281,26 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                 </div>
 
                 {/* Schedule status - top right (clickable) */}
-                {pattern.scheduled_post && (() => {
-                    const s = pattern.scheduled_post;
+                {pattern.scheduled_posts && pattern.scheduled_posts.length > 0 && (() => {
+                    const platformNames: Record<string, string> = { twitter: 'X', linkedin: 'LinkedIn', threads: 'Threads', instagram: 'IG', facebook: 'FB' };
+                    const platforms = [...new Set(pattern.scheduled_posts.map(sp => platformNames[sp.platform] || sp.platform))].join(', ');
+                    const s = pattern.scheduled_posts[0];
                     const dt = new Date(s.scheduled_at);
                     const timeStr = dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-                    const statusConfig = {
-                        pending: { label: timeStr, cls: 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100' },
-                        publishing: { label: 'Publishing...', cls: 'text-blue-600 bg-blue-50 border-blue-200' },
-                        published: { label: 'Published', cls: 'text-green-600 bg-green-50 border-green-200' },
-                        failed: { label: 'Failed', cls: 'text-red-600 bg-red-50 border-red-200 hover:bg-red-100' },
-                    };
-                    const cfg = statusConfig[s.status] || statusConfig.pending;
                     return (
                         <button
                             onClick={onSchedule}
-                            className={`absolute -top-2 right-2 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors ${cfg.cls}`}
+                            className="absolute -top-2 right-2 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
                         >
                             <Calendar size={10} />
-                            {cfg.label}
+                            {timeStr} · {platforms}
                         </button>
                     );
                 })()}
 
                 {/* Visual count badge - top right */}
                 {pattern.visualCount > 0 && (
-                    <div className="absolute -top-2" style={{ right: pattern.scheduled_post ? '7rem' : '0.5rem' }}>
+                    <div className="absolute -top-2" style={{ right: pattern.scheduled_posts && pattern.scheduled_posts.length > 0 ? '7rem' : '0.5rem' }}>
                         <button
                             onClick={() => setShowVisualsPopover(!showVisualsPopover)}
                             className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-violet-600 bg-violet-50 border-violet-200 hover:bg-violet-100"

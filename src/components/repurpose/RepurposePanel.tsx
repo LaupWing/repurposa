@@ -45,7 +45,7 @@ function shortPostToPattern(sp: ShortPost): ShortPostPattern {
         structure: sp.metadata?.structure || '',
         why_it_works: sp.metadata?.why_it_works || '',
         cta_content: sp.cta_content?.content || undefined,
-        scheduled_post: sp.scheduled_post || null,
+        scheduled_posts: sp.scheduled_posts || [],
         media: (sp.media || []).filter((m): m is string => typeof m === 'string'),
         cta_media: sp.cta_content?.media?.filter((m): m is string => typeof m === 'string') || [],
         visualCount: sp.visuals?.length || 0,
@@ -615,6 +615,40 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                             {index + 1}
                                         </div>
 
+                                        {/* Schedule status badge - top right */}
+                                        {visual.scheduled_posts && visual.scheduled_posts.length > 0 && (() => {
+                                            const platformNames: Record<string, string> = { twitter: 'X', linkedin: 'LinkedIn', threads: 'Threads', instagram: 'IG', facebook: 'FB' };
+                                            const platforms = [...new Set(visual.scheduled_posts.map(sp => platformNames[sp.platform] || sp.platform))].join(', ');
+                                            const s = visual.scheduled_posts[0];
+                                            const dt = new Date(s.scheduled_at);
+                                            const timeStr = dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                                            return (
+                                                <button
+                                                    onClick={() => {
+                                                        const text = Array.isArray(visual.content) ? visual.content.join('\n\n---\n\n') : visual.content;
+                                                        setSchedulingContentType('visual');
+                                                        setSchedulingVisual(visual);
+                                                        setSchedulingPost({
+                                                            id: visual.id,
+                                                            content: visual.description || text,
+                                                            emotions: [],
+                                                            structure: '',
+                                                            why_it_works: '',
+                                                            media: [],
+                                                            cta_content: '',
+                                                            cta_media: [],
+                                                            scheduled_posts: [],
+                                                            visualCount: 0,
+                                                        });
+                                                    }}
+                                                    className="absolute -top-2 right-2 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors z-10 text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                                                >
+                                                    <Calendar size={10} />
+                                                    {timeStr} · {platforms}
+                                                </button>
+                                            );
+                                        })()}
+
                                         <div className="flex gap-4 p-4">
                                             {/* Left - Actual VisualPreview scaled down */}
                                             <div onClick={() => setViewingVisual(visual)} className="flex-shrink-0 w-44 h-44 rounded-lg overflow-hidden relative cursor-pointer hover:opacity-90 transition-opacity">
@@ -685,7 +719,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                                                 media: [],
                                                                 cta_content: '',
                                                                 cta_media: [],
-                                                                scheduled_post: null,
+                                                                scheduled_posts: [],
                                                                 visualCount: 0,
                                                             });
                                                         }}
