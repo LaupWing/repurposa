@@ -25,6 +25,8 @@ import type { ShortPostSchedule, Visual } from '@/types';
 import { AITextPopup } from '@/components/AITextPopup';
 import ImagePickerModal from '@/components/ImagePickerModal';
 import { VisualShortPostPreviewModal, VisualPreview, GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
+import { createElement } from '@wordpress/element';
+import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 
 // ============================================
 // TYPES
@@ -282,18 +284,27 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
 
                 {/* Schedule status - top right (clickable) */}
                 {pattern.scheduled_posts && pattern.scheduled_posts.length > 0 && (() => {
-                    const platformNames: Record<string, string> = { twitter: 'X', linkedin: 'LinkedIn', threads: 'Threads', instagram: 'IG', facebook: 'FB' };
-                    const platforms = [...new Set(pattern.scheduled_posts.map(sp => platformNames[sp.platform] || sp.platform))].join(', ');
+                    const platformIcons: Record<string, React.ReactNode> = {
+                        twitter: createElement(RiTwitterXFill, { size: 10 }),
+                        linkedin: createElement(RiLinkedinFill, { size: 10 }),
+                        threads: createElement(RiThreadsFill, { size: 10 }),
+                        instagram: createElement(RiInstagramFill, { size: 10 }),
+                        facebook: createElement(RiFacebookFill, { size: 10 }),
+                    };
+                    const uniquePlatforms = [...new Set(pattern.scheduled_posts.map(sp => sp.platform))];
                     const s = pattern.scheduled_posts[0];
                     const dt = new Date(s.scheduled_at);
                     const timeStr = dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
                     return (
                         <button
                             onClick={onSchedule}
-                            className="absolute -top-2 right-2 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                            className="absolute -top-2 right-2 flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
                         >
                             <Calendar size={10} />
-                            {timeStr} · {platforms}
+                            {timeStr}
+                            <span className="flex items-center gap-0.5">
+                                {uniquePlatforms.map(p => <span key={p}>{platformIcons[p]}</span>)}
+                            </span>
                         </button>
                     );
                 })()}

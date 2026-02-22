@@ -20,6 +20,8 @@ import type { ThreadItem, Visual } from '@/types';
 import { AITextPopup } from '@/components/AITextPopup';
 import { VisualThreadPreviewModal } from '@/components/repurpose/modals/VisualPreviewModal';
 import { emotionColors } from './ShortPostCard';
+import { createElement } from '@wordpress/element';
+import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 
 // ============================================
 // SUB-COMPONENT
@@ -291,18 +293,27 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
         <div className="relative mb-4 rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
             {/* Schedule status badge - top right */}
             {thread.scheduled_posts && thread.scheduled_posts.length > 0 && (() => {
-                const platformNames: Record<string, string> = { twitter: 'X', linkedin: 'LinkedIn', threads: 'Threads', instagram: 'IG', facebook: 'FB' };
-                const platforms = [...new Set(thread.scheduled_posts.map(sp => platformNames[sp.platform] || sp.platform))].join(', ');
+                const platformIcons: Record<string, React.ReactNode> = {
+                    twitter: createElement(RiTwitterXFill, { size: 10 }),
+                    linkedin: createElement(RiLinkedinFill, { size: 10 }),
+                    threads: createElement(RiThreadsFill, { size: 10 }),
+                    instagram: createElement(RiInstagramFill, { size: 10 }),
+                    facebook: createElement(RiFacebookFill, { size: 10 }),
+                };
+                const uniquePlatforms = [...new Set(thread.scheduled_posts.map(sp => sp.platform))];
                 const s = thread.scheduled_posts[0];
                 const dt = new Date(s.scheduled_at);
                 const timeStr = dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
                 return (
                     <button
                         onClick={onSchedule}
-                        className="absolute -top-2 right-2 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors z-10 text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                        className="absolute -top-2 right-2 flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors z-10 text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
                     >
                         <Calendar size={10} />
-                        {timeStr} · {platforms}
+                        {timeStr}
+                        <span className="flex items-center gap-0.5">
+                            {uniquePlatforms.map(p => <span key={p}>{platformIcons[p]}</span>)}
+                        </span>
                     </button>
                 );
             })()}
