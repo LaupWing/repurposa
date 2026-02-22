@@ -108,6 +108,13 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         scrollRef.current?.scrollTo(0, 0);
     }, [initialTab]);
 
+    // Sync highlight prop into local state (panel stays mounted now)
+    useEffect(() => {
+        if (initialHighlightVisualId != null) {
+            setHighlightVisualId(initialHighlightVisualId);
+        }
+    }, [initialHighlightVisualId]);
+
     // Persist media changes to the API
     const syncShortPostMedia = (postId: number, media: string[], ctaContent?: string, ctaMedia?: string[]) => {
         updateShortPost(postId, {
@@ -824,10 +831,20 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             }
 
             case 'video':
-                if (shortPosts.length === 0 && threads.length === 0) {
-                    return <DependencyGate type="video" onSwitchTab={onSwitchTab} />;
-                }
-                return <EmptyState type="video" onGenerate={() => {}} isGenerating={false} />;
+                return (
+                    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-16 text-center">
+                        <div className="mb-4 h-12 w-12 flex items-center justify-center rounded-full bg-amber-50 border border-amber-200">
+                            <Video size={24} className="text-amber-500" />
+                        </div>
+                        <span className="mb-3 inline-block px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                            Coming Soon
+                        </span>
+                        <h3 className="mb-1.5 text-lg font-semibold text-gray-900">Video Clips</h3>
+                        <p className="max-w-[280px] text-sm text-gray-500 leading-relaxed">
+                            Turn your blog content into short video clips for social media. Stay tuned!
+                        </p>
+                    </div>
+                );
 
             default:
                 return null;
