@@ -17,7 +17,7 @@ import { Tooltip } from '@wordpress/components';
 import { getPublishingSchedule, createScheduledPost, getScheduledPosts, deleteScheduledPost } from '@/services/scheduleApi';
 import { getSocialAccounts } from '@/services/profileApi';
 import { renderVisual } from '@/services/repurposeApi';
-import type { SocialAccount, ScheduledPost as ScheduledPostType, Visual } from '@/types';
+import type { SocialAccount, ScheduledPost as ScheduledPostType, ShortPostSchedule, Visual } from '@/types';
 import type { ShortPostPattern } from '@/components/repurpose/cards/ShortPostCard';
 import { VisualPreview, GRADIENT_PRESETS } from './VisualPreviewModal';
 import {
@@ -43,7 +43,7 @@ interface SchedulePostModalProps {
     visual?: Visual | null;
     threadPosts?: string[] | null;
     onClose: () => void;
-    onScheduled: () => void;
+    onScheduled: (newScheduledPosts?: ShortPostSchedule[]) => void;
     onUnscheduled?: (scheduledPostId: number) => void;
 }
 
@@ -247,7 +247,13 @@ export default function SchedulePostModal({
                 });
             });
 
-            await Promise.all(promises);
+            const results = (await Promise.all(promises)).filter(Boolean) as ScheduledPostType[];
+            const newScheduledPosts: ShortPostSchedule[] = results.map(r => ({
+                id: r.id,
+                platform: r.platform,
+                status: r.status,
+                scheduled_at: r.scheduled_at,
+            }));
 
             const platformNames = selectedPlatforms
                 .map((id) => SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name)
@@ -263,7 +269,7 @@ export default function SchedulePostModal({
             toast.success('Post scheduled!', {
                 description: `${platformNames} · ${formattedTime}`,
             });
-            onScheduled();
+            onScheduled(newScheduledPosts);
         } catch (error) {
             toast.error('Failed to schedule post', {
                 description: error instanceof Error ? error.message : 'Please try again.',
@@ -606,8 +612,9 @@ export default function SchedulePostModal({
                     <div>
                         {post.scheduled_posts && post.scheduled_posts.length > 0 && (
                             <button
-                                onClick={() => {
-                                    post.scheduled_posts!.forEach(sp => handleUnschedule(sp.id));
+                                onClick={async () => {
+                                    await Promise.all(post.scheduled_posts!.map(sp => handleUnschedule(sp.id)));
+                                    onClose();
                                 }}
                                 disabled={removingId !== null}
                                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"

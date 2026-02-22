@@ -162,7 +162,28 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         }
     };
 
-    const handleScheduled = () => {
+    const handleScheduled = (newScheduledPosts?: ShortPostSchedule[]) => {
+        if (newScheduledPosts && newScheduledPosts.length > 0 && schedulingPost) {
+            if (schedulingContentType === 'short_post') {
+                setShortPosts(prev => prev.map(p =>
+                    p.id === schedulingPost.id
+                        ? { ...p, scheduled_posts: [...(p.scheduled_posts || []), ...newScheduledPosts] }
+                        : p
+                ));
+            } else if (schedulingContentType === 'thread') {
+                setThreads(prev => prev.map(t =>
+                    t.id === schedulingPost.id
+                        ? { ...t, scheduled_posts: [...(t.scheduled_posts || []), ...newScheduledPosts] }
+                        : t
+                ));
+            } else if (schedulingContentType === 'visual' && schedulingVisual) {
+                setVisuals(prev => prev.map(v =>
+                    v.id === schedulingVisual.id
+                        ? { ...v, scheduled_posts: [...(v.scheduled_posts || []), ...newScheduledPosts] }
+                        : v
+                ));
+            }
+        }
         setSchedulingPost(null);
         setSchedulingVisual(null);
         setSchedulingThreadPosts(null);
