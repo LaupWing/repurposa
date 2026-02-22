@@ -19,6 +19,7 @@ import { Tooltip } from '@wordpress/components';
 import type { ThreadItem, Visual } from '@/types';
 import { AITextPopup } from '@/components/AITextPopup';
 import { VisualThreadPreviewModal } from '@/components/repurpose/modals/VisualPreviewModal';
+import { ConfirmDeleteModal } from '@/components/repurpose/modals';
 import { emotionColors } from './ShortPostCard';
 import { createElement } from '@wordpress/element';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
@@ -53,6 +54,7 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
     const [postMenuOpen, setPostMenuOpen] = useState(false);
     const postMenuRef = useRef<HTMLDivElement>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     useEffect(() => {
         if (!postMenuOpen) return;
@@ -182,7 +184,7 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
                                             </button>
                                             <div className="border-t border-gray-100 my-1" />
                                             <button
-                                                onClick={() => { onDelete(); setPostMenuOpen(false); }}
+                                                onClick={() => { setShowDeleteConfirm(true); setPostMenuOpen(false); }}
                                                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                             >
                                                 <Trash2 size={14} />
@@ -209,6 +211,13 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
                     </button>
                 </div>
             )}
+            <ConfirmDeleteModal
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={() => { onDelete(); toast.success('Thread post deleted'); }}
+                title="Delete Thread Post"
+                description="This post will be removed from the thread. This action cannot be undone."
+            />
         </div>
     );
 }
@@ -241,6 +250,7 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const [showVisualModal, setShowVisualModal] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [autoEditIndex, setAutoEditIndex] = useState<number | null>(null);
 
     // Stable unique keys for posts so React doesn't reuse components on insert/delete
@@ -448,7 +458,7 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                 </button>
                                 <div className="border-t border-gray-100 my-1" />
                                 <button
-                                    onClick={() => { onDelete(); setMenuOpen(false); }}
+                                    onClick={() => { setShowDeleteConfirm(true); setMenuOpen(false); }}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                 >
                                     <Trash2 size={14} />
@@ -521,6 +531,13 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                     onVisualSaved?.(visual);
                     toast.success('Saved to visuals');
                 }}
+            />
+            <ConfirmDeleteModal
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={() => { onDelete(); toast.success('Thread deleted'); }}
+                title="Delete Thread"
+                description="This thread and all its posts will be permanently deleted. This action cannot be undone."
             />
         </div>
     );

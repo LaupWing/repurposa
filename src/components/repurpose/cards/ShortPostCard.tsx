@@ -25,6 +25,7 @@ import type { ShortPostSchedule, Visual } from '@/types';
 import { AITextPopup } from '@/components/AITextPopup';
 import ImagePickerModal from '@/components/ImagePickerModal';
 import { VisualShortPostPreviewModal, VisualPreview, GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
+import { ConfirmDeleteModal } from '@/components/repurpose/modals';
 import { createElement } from '@wordpress/element';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 
@@ -222,6 +223,7 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
     const [showCtaImagePicker, setShowCtaImagePicker] = useState(false);
     const [showVisualModal, setShowVisualModal] = useState(false);
     const [showVisualsPopover, setShowVisualsPopover] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
     const editCtaTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -282,43 +284,19 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                     {index + 1}
                 </div>
 
-                {/* Schedule status - top right (clickable) */}
-                {pattern.scheduled_posts && pattern.scheduled_posts.length > 0 && (() => {
-                    const platformIcons: Record<string, React.ReactNode> = {
-                        twitter: createElement(RiTwitterXFill, { size: 10 }),
-                        linkedin: createElement(RiLinkedinFill, { size: 10 }),
-                        threads: createElement(RiThreadsFill, { size: 10 }),
-                        instagram: createElement(RiInstagramFill, { size: 10 }),
-                        facebook: createElement(RiFacebookFill, { size: 10 }),
-                    };
-                    const uniquePlatforms = [...new Set(pattern.scheduled_posts.map(sp => sp.platform))];
-                    const s = pattern.scheduled_posts[0];
-                    const dt = new Date(s.scheduled_at);
-                    const timeStr = dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-                    return (
-                        <button
-                            onClick={onSchedule}
-                            className="absolute -top-2 right-2 flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
-                        >
-                            <Calendar size={10} />
-                            {timeStr}
-                            <span className="flex items-center gap-0.5">
-                                {uniquePlatforms.map(p => <span key={p}>{platformIcons[p]}</span>)}
-                            </span>
-                        </button>
-                    );
-                })()}
-
-                {/* Visual count badge - top right */}
-                {pattern.visualCount > 0 && (
-                    <div className="absolute -top-2" style={{ right: pattern.scheduled_posts && pattern.scheduled_posts.length > 0 ? '7rem' : '0.5rem' }}>
-                        <button
-                            onClick={() => setShowVisualsPopover(!showVisualsPopover)}
-                            className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-violet-600 bg-violet-50 border-violet-200 hover:bg-violet-100"
-                        >
-                            <Image size={10} />
-                            {pattern.visualCount} {pattern.visualCount === 1 ? 'Visual' : 'Visuals'}
-                        </button>
+                {/* Badges container - top right */}
+                {(pattern.visualCount > 0 || (pattern.scheduled_posts && pattern.scheduled_posts.length > 0)) && (
+                    <div className="absolute -top-2 right-2 flex items-center gap-1.5 z-10">
+                        {/* Visual count badge */}
+                        {pattern.visualCount > 0 && (
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowVisualsPopover(!showVisualsPopover)}
+                                    className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-violet-600 bg-violet-50 border-violet-200 hover:bg-violet-100"
+                                >
+                                    <Image size={10} />
+                                    {pattern.visualCount} {pattern.visualCount === 1 ? 'Visual' : 'Visuals'}
+                                </button>
                         {showVisualsPopover && cardVisuals && cardVisuals.length > 0 && (
                             <>
                                 <div className="fixed inset-0 z-10" onClick={() => setShowVisualsPopover(false)} />
@@ -357,6 +335,35 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                                 </div>
                             </>
                         )}
+                            </div>
+                        )}
+
+                        {/* Schedule status badge */}
+                        {pattern.scheduled_posts && pattern.scheduled_posts.length > 0 && (() => {
+                            const platformIcons: Record<string, React.ReactNode> = {
+                                twitter: createElement(RiTwitterXFill, { size: 10 }),
+                                linkedin: createElement(RiLinkedinFill, { size: 10 }),
+                                threads: createElement(RiThreadsFill, { size: 10 }),
+                                instagram: createElement(RiInstagramFill, { size: 10 }),
+                                facebook: createElement(RiFacebookFill, { size: 10 }),
+                            };
+                            const uniquePlatforms = [...new Set(pattern.scheduled_posts.map(sp => sp.platform))];
+                            const s = pattern.scheduled_posts[0];
+                            const dt = new Date(s.scheduled_at);
+                            const timeStr = dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                            return (
+                                <button
+                                    onClick={onSchedule}
+                                    className="flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                                >
+                                    <Calendar size={10} />
+                                    {timeStr}
+                                    <span className="flex items-center gap-0.5">
+                                        {uniquePlatforms.map(p => <span key={p}>{platformIcons[p]}</span>)}
+                                    </span>
+                                </button>
+                            );
+                        })()}
                     </div>
                 )}
 
@@ -505,7 +512,7 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                                         </button>
                                         <div className="border-t border-gray-100 my-1" />
                                         <button
-                                            onClick={() => { onDelete(); setMenuOpen(false); }}
+                                            onClick={() => { setShowDeleteConfirm(true); setMenuOpen(false); }}
                                             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                         >
                                             <Trash2 size={14} />
@@ -661,6 +668,13 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                     onVisualSaved?.(visual);
                     toast.success('Saved to visuals');
                 }}
+            />
+            <ConfirmDeleteModal
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={() => { onDelete(); toast.success('Short post deleted'); }}
+                title="Delete Short Post"
+                description="This short post will be permanently deleted. This action cannot be undone."
             />
         </div>
     );

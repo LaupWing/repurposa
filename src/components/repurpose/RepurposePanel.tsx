@@ -29,7 +29,7 @@ import { GeneratingOverlay } from '@/components/GeneratingOverlay';
 import { VisualShortPostPreviewModal, VisualThreadPreviewModal, VisualPreview, GRADIENT_PRESETS } from './modals/VisualPreviewModal';
 import ShortPostCard, { type ShortPostPattern } from './cards/ShortPostCard';
 import ThreadCard from './cards/ThreadCard';
-import { ConfirmGenerateModal, AddShortPostModal, SchedulePostModal, PublishNowModal, type ScheduleContentType } from './modals';
+import { ConfirmGenerateModal, ConfirmDeleteModal, AddShortPostModal, SchedulePostModal, PublishNowModal, type ScheduleContentType } from './modals';
 import { EmptyState, DependencyGate } from './EmptyState';
 
 // ============================================
@@ -100,6 +100,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [sourcePickerTab, setSourcePickerTab] = useState<'short_posts' | 'threads'>('short_posts');
     const [sourcePickerSearch, setSourcePickerSearch] = useState('');
     const [creatingVisualSource, setCreatingVisualSource] = useState<{ type: 'short_post' | 'thread'; id: number; content: string | string[] } | null>(null);
+    const [deletingVisualId, setDeletingVisualId] = useState<number | null>(null);
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -774,10 +775,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                                         <Calendar size={14} />
                                                     </button>
                                                     <button
-                                                        onClick={() => {
-                                                            setVisuals(prev => prev.filter(v => v.id !== visual.id));
-                                                            deleteVisual(visual.id).catch(() => toast.error('Failed to delete visual'));
-                                                        }}
+                                                        onClick={() => setDeletingVisualId(visual.id)}
                                                         className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
                                                         title="Delete"
                                                     >
@@ -916,6 +914,20 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 post={publishingPost}
                 contentType={publishingContentType}
                 onClose={() => setPublishingPost(null)}
+            />
+            <ConfirmDeleteModal
+                isOpen={deletingVisualId !== null}
+                onClose={() => setDeletingVisualId(null)}
+                onConfirm={() => {
+                    if (deletingVisualId !== null) {
+                        setVisuals(prev => prev.filter(v => v.id !== deletingVisualId));
+                        deleteVisual(deletingVisualId)
+                            .then(() => toast.success('Visual deleted'))
+                            .catch(() => toast.error('Failed to delete visual'));
+                    }
+                }}
+                title="Delete Visual"
+                description="This visual will be permanently deleted. This action cannot be undone."
             />
             {/* Content - No internal tabs, parent controls which content to show */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
