@@ -6,12 +6,9 @@
 
 import { useState, useEffect, useRef } from '@wordpress/element';
 import {
-    Share2,
     FileText,
     Image,
     Video,
-    Sparkles,
-    Lightbulb,
     Layout,
     X,
     Plus,
