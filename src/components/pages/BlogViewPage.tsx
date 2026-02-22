@@ -1747,20 +1747,25 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                         />
                     )}
 
-                    {activeTab === 'short' && (
-                        <RepurposePanel initialTab="short" blogContent={post.content} blogId={post.id} isPublished={!!post.published_post_id} publishedPostUrl={post.published_post_url} editShortPostId={shortPostId} onSwitchTab={setActiveTab} onVisualCreated={(visual) => { setPost(prev => prev ? { ...prev, visuals: [...(prev.visuals || []), visual] } : prev); setHighlightVisualId(visual.id); }} onHighlightVisual={setHighlightVisualId} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
-                    )}
-
-                    {activeTab === 'threads' && (
-                        <RepurposePanel initialTab="threads" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} onVisualCreated={(visual) => { setPost(prev => prev ? { ...prev, visuals: [...(prev.visuals || []), visual] } : prev); setHighlightVisualId(visual.id); }} onHighlightVisual={setHighlightVisualId} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
-                    )}
-
-                    {activeTab === 'visuals' && (
-                        <RepurposePanel initialTab="visuals" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} initialHighlightVisualId={highlightVisualId} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
-                    )}
-
-                    {activeTab === 'video' && (
-                        <RepurposePanel initialTab="video" blogContent={post.content} blogId={post.id} onSwitchTab={setActiveTab} initialShortPosts={post.short_posts} initialThreads={post.threads} initialVisuals={post.visuals} />
+                    {activeTab !== 'blog' && activeTab !== 'settings' && (
+                        <RepurposePanel
+                            initialTab={activeTab}
+                            blogContent={post.content}
+                            blogId={post.id}
+                            isPublished={!!post.published_post_id}
+                            publishedPostUrl={post.published_post_url}
+                            editShortPostId={shortPostId}
+                            onSwitchTab={setActiveTab}
+                            onVisualCreated={(visual) => {
+                                setPost(prev => prev ? { ...prev, visuals: [...(prev.visuals || []), visual] } : prev);
+                                setHighlightVisualId(visual.id);
+                            }}
+                            onHighlightVisual={setHighlightVisualId}
+                            initialHighlightVisualId={highlightVisualId}
+                            initialShortPosts={post.short_posts}
+                            initialThreads={post.threads}
+                            initialVisuals={post.visuals}
+                        />
                     )}
 
                     {activeTab === 'settings' && (

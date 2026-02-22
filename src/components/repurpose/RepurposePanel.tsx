@@ -4,7 +4,7 @@
  * Panel for generating short posts, threads, visuals from blog content.
  */
 
-import { useState, createElement } from '@wordpress/element';
+import { useState, useEffect, useRef, createElement } from '@wordpress/element';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import {
     Share2,
@@ -100,6 +100,13 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const [sourcePickerTab, setSourcePickerTab] = useState<'short_posts' | 'threads'>('short_posts');
     const [sourcePickerSearch, setSourcePickerSearch] = useState('');
     const [creatingVisualSource, setCreatingVisualSource] = useState<{ type: 'short_post' | 'thread'; id: number; content: string | string[] } | null>(null);
+
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to top when switching tabs
+    useEffect(() => {
+        scrollRef.current?.scrollTo(0, 0);
+    }, [initialTab]);
 
     // Persist media changes to the API
     const syncShortPostMedia = (postId: number, media: string[], ctaContent?: string, ctaMedia?: string[]) => {
@@ -894,7 +901,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 onClose={() => setPublishingPost(null)}
             />
             {/* Content - No internal tabs, parent controls which content to show */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
                 {renderContent()}
             </div>
         </div>
