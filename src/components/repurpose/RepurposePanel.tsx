@@ -6,13 +6,9 @@
 
 import { useEffect, useRef } from '@wordpress/element';
 import {
-    FileText,
     Image,
     Video,
-    Layout,
-    X,
     Plus,
-    Search,
 } from 'lucide-react';
 import type { ShortPost, ThreadItem, Visual } from '@/types';
 import { GeneratingOverlay } from '@/components/GeneratingOverlay';
@@ -20,7 +16,7 @@ import { VisualShortPostPreviewModal, VisualThreadPreviewModal } from './modals/
 import ShortPostCard from './cards/ShortPostCard';
 import ThreadCard from './cards/ThreadCard';
 import VisualCard from './cards/VisualCard';
-import { ConfirmGenerateModal, ConfirmDeleteModal, AddShortPostModal, SchedulePostModal, PublishNowModal } from './modals';
+import { ConfirmGenerateModal, ConfirmDeleteModal, AddShortPostModal, SchedulePostModal, PublishNowModal, SourcePickerModal } from './modals';
 import { EmptyState, DependencyGate } from './EmptyState';
 import { useShortPosts } from '@/hooks/useShortPosts';
 import { useThreads } from '@/hooks/useThreads';
@@ -190,148 +186,23 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 const activePickerTab = vis.sourcePickerTab === 'threads' && !hasThreads ? 'short_posts'
                     : vis.sourcePickerTab === 'short_posts' && !hasShortPosts ? 'threads'
                     : vis.sourcePickerTab;
-                const searchLower = vis.sourcePickerSearch.toLowerCase();
-                const filteredShortPosts = hasShortPosts
-                    ? sp.shortPosts.filter(s => s.content.toLowerCase().includes(searchLower))
-                    : [];
-                const filteredThreads = hasThreads
-                    ? th.threads.filter(t => t.posts.some(p => p.content.toLowerCase().includes(searchLower)) || t.hook.toLowerCase().includes(searchLower))
-                    : [];
 
-                const sourcePickerContent = (
-                    <>
-                        {vis.showSourcePicker && (
-                            <div className="fixed inset-0 z-[99999] flex items-center justify-center">
-                                <div className="absolute inset-0 bg-black/40" onClick={vis.closeSourcePicker} />
-                                <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[75vh] overflow-hidden flex flex-col">
-                                    {/* Header */}
-                                    <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-                                        <h3 className="text-sm font-semibold text-gray-900">Select content for visual</h3>
-                                        <button onClick={vis.closeSourcePicker} className="h-7 w-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                                            <X size={16} />
-                                        </button>
-                                    </div>
-
-                                    {/* Tabs + Search */}
-                                    <div className="px-5 pt-3 pb-0 space-y-3">
-                                        {hasShortPosts && hasThreads && (
-                                            <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
-                                                <button
-                                                    onClick={() => vis.setSourcePickerTab('short_posts')}
-                                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                                        activePickerTab === 'short_posts'
-                                                            ? 'bg-white text-gray-900 shadow-sm'
-                                                            : 'text-gray-500 hover:text-gray-700'
-                                                    }`}
-                                                >
-                                                    <FileText size={13} />
-                                                    Short Posts
-                                                    <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] ${activePickerTab === 'short_posts' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-500'}`}>
-                                                        {sp.shortPosts.length}
-                                                    </span>
-                                                </button>
-                                                <button
-                                                    onClick={() => vis.setSourcePickerTab('threads')}
-                                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                                        activePickerTab === 'threads'
-                                                            ? 'bg-white text-gray-900 shadow-sm'
-                                                            : 'text-gray-500 hover:text-gray-700'
-                                                    }`}
-                                                >
-                                                    <Layout size={13} />
-                                                    Threads
-                                                    <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] ${activePickerTab === 'threads' ? 'bg-violet-100 text-violet-700' : 'bg-gray-200 text-gray-500'}`}>
-                                                        {th.threads.length}
-                                                    </span>
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* Search */}
-                                        <div className="relative">
-                                            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                            <input
-                                                type="text"
-                                                value={vis.sourcePickerSearch}
-                                                onChange={(e) => vis.setSourcePickerSearch(e.target.value)}
-                                                placeholder={activePickerTab === 'threads' ? 'Search threads...' : 'Search short posts...'}
-                                                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-blue-300 focus:ring-1 focus:ring-blue-200 outline-none transition-colors"
-                                            />
-                                            {vis.sourcePickerSearch && (
-                                                <button
-                                                    onClick={() => vis.setSourcePickerSearch('')}
-                                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-600"
-                                                >
-                                                    <X size={13} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Content list */}
-                                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                                        {activePickerTab === 'short_posts' && (
-                                            filteredShortPosts.length > 0 ? (
-                                                filteredShortPosts.map((s) => (
-                                                    <button
-                                                        key={`sp-${s.id}`}
-                                                        onClick={() => vis.selectSource({ type: 'short_post', id: s.id, content: s.content })}
-                                                        className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
-                                                    >
-                                                        <p className="text-sm text-gray-800 line-clamp-3">{s.content}</p>
-                                                    </button>
-                                                ))
-                                            ) : (
-                                                <div className="text-center py-8 text-sm text-gray-400">
-                                                    {vis.sourcePickerSearch ? 'No short posts match your search' : 'No short posts available'}
-                                                </div>
-                                            )
-                                        )}
-                                        {activePickerTab === 'threads' && (
-                                            filteredThreads.length > 0 ? (
-                                                filteredThreads.map((t) => (
-                                                    <button
-                                                        key={`t-${t.id}`}
-                                                        onClick={() => vis.selectSource({ type: 'thread', id: t.id, content: t.posts.map(p => p.content) })}
-                                                        className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-violet-300 hover:bg-violet-50 transition-colors"
-                                                    >
-                                                        <p className="text-xs text-violet-600 font-medium mb-1">Thread · {t.posts.length} posts</p>
-                                                        <p className="text-sm text-gray-800 line-clamp-3">{t.posts[0]?.content}</p>
-                                                    </button>
-                                                ))
-                                            ) : (
-                                                <div className="text-center py-8 text-sm text-gray-400">
-                                                    {vis.sourcePickerSearch ? 'No threads match your search' : 'No threads available'}
-                                                </div>
-                                            )
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {vis.creatingVisualSource && (
-                            vis.creatingVisualSource.type === 'thread' && Array.isArray(vis.creatingVisualSource.content) ? (
-                                <VisualThreadPreviewModal
-                                    isOpen={true}
-                                    onClose={() => vis.setCreatingVisualSource(null)}
-                                    content={vis.creatingVisualSource.content}
-                                    blogId={blogId}
-                                    sourceId={vis.creatingVisualSource.id}
-                                    onSaved={vis.onVisualCreatedFromSource}
-                                />
-                            ) : (
-                                <VisualShortPostPreviewModal
-                                    isOpen={true}
-                                    onClose={() => vis.setCreatingVisualSource(null)}
-                                    content={typeof vis.creatingVisualSource.content === 'string' ? vis.creatingVisualSource.content : vis.creatingVisualSource.content[0]}
-                                    blogId={blogId}
-                                    sourceId={vis.creatingVisualSource.id}
-                                    onSaved={vis.onVisualCreatedFromSource}
-                                />
-                            )
-                        )}
-                    </>
+                const sourcePickerModal = (
+                    <SourcePickerModal
+                        isOpen={vis.showSourcePicker}
+                        onClose={vis.closeSourcePicker}
+                        search={vis.sourcePickerSearch}
+                        onSearchChange={vis.setSourcePickerSearch}
+                        activeTab={activePickerTab}
+                        onTabChange={vis.setSourcePickerTab}
+                        shortPosts={sp.shortPosts}
+                        threads={th.threads}
+                        onSelect={vis.selectSource}
+                        creatingSource={vis.creatingVisualSource}
+                        onCreatingSourceClose={() => vis.setCreatingVisualSource(null)}
+                        onVisualSaved={vis.onVisualCreatedFromSource}
+                        blogId={blogId}
+                    />
                 );
 
                 if (vis.visuals.length === 0) {
@@ -353,7 +224,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     Create Visual
                                 </button>
                             </div>
-                            {sourcePickerContent}
+                            {sourcePickerModal}
                         </>
                     );
                 }
@@ -423,7 +294,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                             )
                         )}
 
-                        {sourcePickerContent}
+                        {sourcePickerModal}
                     </>
                 );
             }
