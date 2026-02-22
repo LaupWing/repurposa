@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
-import { useProfile } from '@/context/ProfileContext';
+import { useProfileStore } from '@/store/profileStore';
 import { useSocialPopup } from '@/hooks/useSocialPopup';
 import WelcomeStep from './WelcomeStep';
 import ProfileStep from './ProfileStep';
@@ -40,7 +40,7 @@ interface OnboardingModalProps {
 }
 
 export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
-    const { user, refreshProfile } = useProfile();
+    const { user, refreshProfile } = useProfileStore();
     const provider = user?.signup_provider;
     const steps = getStepsForProvider(provider);
 

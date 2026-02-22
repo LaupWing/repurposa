@@ -10,8 +10,8 @@ import { toast } from "sonner";
 import Avatar from "boring-avatars";
 import { Check, ExternalLink, Save, Loader2, Pencil } from "lucide-react";
 import { TimezonePicker } from "@/components/TimezonePicker";
-import { useProfile } from "@/context/ProfileContext";
-import type { ProfileData } from "@/context/ProfileContext";
+import { useProfileStore } from "@/store/profileStore";
+import type { ProfileData } from "@/store/profileStore";
 import { disconnectSocialAccount, uploadAvatar, updateUser } from "@/services/profileApi";
 import { useSocialPopup } from "@/hooks/useSocialPopup";
 import { CONNECT_PLATFORMS } from "@/constants/platforms";
@@ -23,7 +23,7 @@ const BRAND_VOICES = ["conversational", "professional", "bold"] as const;
 // ============================================
 
 export default function SettingsPage() {
-  const { user, profile: contextProfile, socialConnections, isLoading, saveProfile, refreshProfile } = useProfile();
+  const { user, profile: contextProfile, socialConnections, isLoading, saveProfile, refreshProfile } = useProfileStore();
   const [localProfile, setLocalProfile] = useState<ProfileData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);

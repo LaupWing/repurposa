@@ -43,7 +43,7 @@ import ImagePickerModal from '@/components/ImagePickerModal';
 import { getBlog, updateBlog, deleteBlog, regenerateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion, refineText } from '@/services/blogApi';
 import type { TopicSuggestion, BlogGenerationMode, BlogPost, OutlineSection, PostVersion } from '@/types';
 
-import { useProfile } from '@/context/ProfileContext';
+import { useProfileStore } from '@/store/profileStore';
 import {
     DndContext, closestCenter, KeyboardSensor, PointerSensor,
     useSensor, useSensors, type DragEndEvent,
@@ -302,7 +302,7 @@ function RegenerateModal({
     post: BlogPost;
     onRegenerated: (title: string, content: string) => void;
 }) {
-    const { profile } = useProfile();
+    const { profile } = useProfileStore();
     const [activeStep, setActiveStep] = useState<'rough' | 'outline'>('rough');
     const [topic, setTopic] = useState(post.topic || '');
     const [targetAudience, setTargetAudience] = useState(profile?.target_audience || '');

@@ -28,7 +28,7 @@ import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFaceb
 import { toast } from 'sonner';
 import { getPublishingSchedule, savePublishingSchedule, getScheduledPosts, deleteScheduledPost } from '@/services/scheduleApi';
 import type { ScheduledPost as ApiScheduledPost } from '@/types';
-import { useProfile } from '@/context/ProfileContext';
+import { useProfileStore } from '@/store/profileStore';
 import { TimezonePicker } from '@/components/TimezonePicker';
 
 // ============================================
@@ -646,7 +646,7 @@ function DayRow({
 // ============================================
 
 export default function SchedulePage() {
-    const { socialConnections, profile, saveProfile } = useProfile();
+    const { socialConnections, profile, saveProfile } = useProfileStore();
     const [activeTab, setActiveTab] = useState<TabType>('queue');
     const [posts, setPosts] = useState<ScheduledPost[]>([]);
     const [isLoadingPosts, setIsLoadingPosts] = useState(true);

@@ -28,7 +28,7 @@ import {
   updateWizard,
 } from "@/services/blogApi";
 import type { TopicSuggestion, TopicHistoryEntry, BlogGenerationMode } from "@/types";
-import { useProfile } from "@/context/ProfileContext";
+import { useProfileStore } from "@/store/profileStore";
 
 // ============================================
 // TYPES
@@ -62,7 +62,7 @@ interface BlogWizardProps {
 // ============================================
 
 export default function BlogWizard({ onComplete }: BlogWizardProps) {
-  const { profile } = useProfile();
+  const { profile } = useProfileStore();
   const [isLoading, setIsLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);

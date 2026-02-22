@@ -11,7 +11,7 @@ import { Sparkles, HelpCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateTopics } from '@/services/blogApi';
 import type { TopicSuggestion } from '@/types';
-import { useProfile } from '@/context/ProfileContext';
+import { useProfileStore } from '@/store/profileStore';
 
 interface TopicGeneratorPopoverProps {
     isOpen: boolean;
@@ -32,7 +32,7 @@ export default function TopicGeneratorPopover({
     initialPrompt = '',
     anchorRef,
 }: TopicGeneratorPopoverProps) {
-    const { profile } = useProfile();
+    const { profile } = useProfileStore();
     const [prompt, setPrompt] = useState(initialPrompt);
     const [isGenerating, setIsGenerating] = useState(false);
     const [suggestions, setSuggestions] = useState<TopicSuggestion[]>([]);

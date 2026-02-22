@@ -5,8 +5,9 @@
  * No custom sidebar - uses WordPress native navigation.
  */
 
+import { useEffect } from '@wordpress/element';
 import { Toaster, toast } from 'sonner';
-import { ProfileProvider, useProfile } from './context/ProfileContext';
+import { useProfileStore } from './store/profileStore';
 import BlogWizard from './components/blog-wizard/BlogWizard';
 import BlogsPage from './components/pages/BlogsPage';
 import BlogViewPage from './components/pages/BlogViewPage';
@@ -22,12 +23,26 @@ interface AppProps {
     postId?: number;
 }
 
-// ============================================
-// INNER APP (uses context)
-// ============================================
+export default function App({ initialPage, postId }: AppProps) {
+    const { isLoading, isConnected, needsOnboarding, fetchProfile } = useProfileStore();
 
-function AppContent({ initialPage, postId }: AppProps) {
-    const { isLoading, isConnected, needsOnboarding } = useProfile();
+    // Fetch profile on mount (replaces ProfileProvider)
+    useEffect(() => {
+        const token = (window.wbrpConfig || { token: '' }).token;
+        if (!token) {
+            useProfileStore.setState({ isLoading: false });
+            return;
+        }
+
+        fetchProfile()
+            .catch((error) => {
+                console.error('Failed to load profile:', error);
+                useProfileStore.setState({ isConnected: false });
+            })
+            .finally(() => {
+                useProfileStore.setState({ isLoading: false });
+            });
+    }, [fetchProfile]);
 
     const handleWizardComplete = (data: WizardData) => {
         toast.success('Blog created!', {
@@ -45,20 +60,20 @@ function AppContent({ initialPage, postId }: AppProps) {
     // Not connected — show login modal
     if (!isConnected) {
         return (
-            <>
+            <div className="wbrp-app">
                 <Toaster position="bottom-right" richColors />
                 <LoginModal onConnected={() => window.location.reload()} />
-            </>
+            </div>
         );
     }
 
     // Connected but needs onboarding
     if (needsOnboarding) {
         return (
-            <>
+            <div className="wbrp-app">
                 <Toaster position="bottom-right" richColors />
                 <OnboardingModal onComplete={() => window.location.reload()} />
-            </>
+            </div>
         );
     }
 
@@ -80,23 +95,9 @@ function AppContent({ initialPage, postId }: AppProps) {
     };
 
     return (
-        <>
+        <div className="wbrp-app">
             <Toaster position="bottom-right" richColors />
             {renderPage()}
-        </>
-    );
-}
-
-// ============================================
-// APP WITH PROVIDER
-// ============================================
-
-export default function App(props: AppProps) {
-    return (
-        <ProfileProvider>
-            <div className="wbrp-app">
-                <AppContent {...props} />
-            </div>
-        </ProfileProvider>
+        </div>
     );
 }

@@ -27,7 +27,7 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useProfile } from '@/context/ProfileContext';
+import { useProfileStore } from '@/store/profileStore';
 import { createVisual, updateVisual } from '@/services/repurposeApi';
 import { AITextPopup } from '@/components/AITextPopup';
 import type { VisualSettings } from '@/types';
@@ -559,7 +559,7 @@ function generateRandomStats(): EngagementStats {
 }
 
 function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, visualId, initialDescription, initialSettings, onSaved }: BaseVisualPreviewModalProps) {
-    const { user, socialConnections } = useProfile();
+    const { user, socialConnections } = useProfileStore();
     const xConnection = socialConnections.find((c) => c.platform === 'twitter');
 
     const posts = Array.isArray(content) ? content : [content];

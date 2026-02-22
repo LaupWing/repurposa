@@ -11,7 +11,7 @@ import { FileText, Sparkles, HelpCircle, X, Loader2, Undo2, Redo2, Clock } from 
 import { toast } from 'sonner';
 import { generateTopics, refineText } from '@/services/blogApi';
 import type { TopicSuggestion, TopicHistoryEntry } from '@/types';
-import { useProfile } from '@/context/ProfileContext';
+import { useProfileStore } from '@/store/profileStore';
 import { AITextPopup } from '@/components/AITextPopup';
 
 // ============================================
@@ -45,7 +45,7 @@ export default function Step1Topic({
     topicHistoryIndex,
     onTopicHistoryUpdate,
 }: Step1TopicProps) {
-    const { profile } = useProfile();
+    const { profile } = useProfileStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
