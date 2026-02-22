@@ -840,6 +840,31 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 threadPosts={schedulingThreadPosts}
                 onClose={() => { setSchedulingPost(null); setSchedulingVisual(null); setSchedulingThreadPosts(null); }}
                 onScheduled={handleScheduled}
+                onUnscheduled={(scheduledPostId) => {
+                    // Remove the scheduled post from local state
+                    if (schedulingContentType === 'short_post' && schedulingPost) {
+                        setShortPosts(prev => prev.map(p =>
+                            p.id === schedulingPost.id
+                                ? { ...p, scheduled_posts: (p.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) }
+                                : p
+                        ));
+                        setSchedulingPost(prev => prev ? { ...prev, scheduled_posts: (prev.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) } : prev);
+                    } else if (schedulingContentType === 'thread' && schedulingPost) {
+                        setThreads(prev => prev.map(t =>
+                            t.id === schedulingPost.id
+                                ? { ...t, scheduled_posts: (t.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) }
+                                : t
+                        ));
+                        setSchedulingPost(prev => prev ? { ...prev, scheduled_posts: (prev.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) } : prev);
+                    } else if (schedulingContentType === 'visual' && schedulingVisual) {
+                        setVisuals(prev => prev.map(v =>
+                            v.id === schedulingVisual.id
+                                ? { ...v, scheduled_posts: (v.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) }
+                                : v
+                        ));
+                        setSchedulingPost(prev => prev ? { ...prev, scheduled_posts: (prev.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) } : prev);
+                    }
+                }}
             />
             <PublishNowModal
                 isOpen={!!publishingPost}

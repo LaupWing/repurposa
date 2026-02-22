@@ -37,5 +37,6 @@ export async function apiRequest<T>(
         throw new Error(error.message || `API error: ${response.status}`);
     }
 
-    return response.json();
+    const text = await response.text();
+    return text ? JSON.parse(text) : undefined as T;
 }

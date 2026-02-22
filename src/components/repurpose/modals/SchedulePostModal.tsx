@@ -7,11 +7,14 @@ import {
     ChevronRight,
     AlertTriangle,
     X,
+    Trash2,
 } from 'lucide-react';
+import { createElement } from '@wordpress/element';
+import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { getPublishingSchedule, createScheduledPost, getScheduledPosts } from '@/services/scheduleApi';
+import { getPublishingSchedule, createScheduledPost, getScheduledPosts, deleteScheduledPost } from '@/services/scheduleApi';
 import { getSocialAccounts } from '@/services/profileApi';
 import { renderVisual } from '@/services/repurposeApi';
 import type { SocialAccount, ScheduledPost as ScheduledPostType, Visual } from '@/types';
@@ -41,6 +44,7 @@ interface SchedulePostModalProps {
     threadPosts?: string[] | null;
     onClose: () => void;
     onScheduled: () => void;
+    onUnscheduled?: (scheduledPostId: number) => void;
 }
 
 export default function SchedulePostModal({
@@ -52,6 +56,7 @@ export default function SchedulePostModal({
     threadPosts,
     onClose,
     onScheduled,
+    onUnscheduled,
 }: SchedulePostModalProps) {
     const [selectedPlatforms, setSelectedPlatforms] = useState<SchedulePlatform[]>([]);
     const [date, setDate] = useState(getDefaultDate);
@@ -64,6 +69,7 @@ export default function SchedulePostModal({
     const [useCustom, setUseCustom] = useState(false);
     const [slotPage, setSlotPage] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [removingId, setRemovingId] = useState<number | null>(null);
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
     const slotsPerPage = 6;
 
@@ -173,6 +179,30 @@ export default function SchedulePostModal({
     const handleUseCustom = () => {
         setUseCustom(true);
         setSelectedSlotIndex(null);
+    };
+
+    const platformIcons: Record<string, React.ReactNode> = {
+        twitter: createElement(RiTwitterXFill, { size: 14 }),
+        linkedin: createElement(RiLinkedinFill, { size: 14 }),
+        threads: createElement(RiThreadsFill, { size: 14 }),
+        instagram: createElement(RiInstagramFill, { size: 14 }),
+        facebook: createElement(RiFacebookFill, { size: 14 }),
+    };
+    const platformDisplayNames: Record<string, string> = { twitter: 'X', linkedin: 'LinkedIn', threads: 'Threads', instagram: 'Instagram', facebook: 'Facebook' };
+
+    const handleUnschedule = async (scheduledPostId: number) => {
+        setRemovingId(scheduledPostId);
+        try {
+            await deleteScheduledPost(scheduledPostId);
+            toast.success('Unscheduled');
+            onUnscheduled?.(scheduledPostId);
+        } catch (error) {
+            toast.error('Failed to unschedule', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setRemovingId(null);
+        }
     };
 
     // Computed visual data for offscreen rendering
@@ -571,7 +601,24 @@ export default function SchedulePostModal({
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200 bg-gray-50">
+                    {/* Left - Unschedule */}
+                    <div>
+                        {post.scheduled_posts && post.scheduled_posts.length > 0 && (
+                            <button
+                                onClick={() => {
+                                    post.scheduled_posts!.forEach(sp => handleUnschedule(sp.id));
+                                }}
+                                disabled={removingId !== null}
+                                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                <Trash2 size={14} />
+                                {removingId !== null ? 'Removing...' : 'Unschedule'}
+                            </button>
+                        )}
+                    </div>
+                    {/* Right - Cancel + Schedule */}
+                    <div className="flex items-center gap-3">
                     <button
                         onClick={onClose}
                         className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -586,6 +633,7 @@ export default function SchedulePostModal({
                         <Calendar size={14} />
                         {isSubmitting ? (visual ? 'Rendering & Scheduling...' : 'Scheduling...') : 'Schedule'}
                     </button>
+                    </div>
                 </div>
             </div>
         </div>
