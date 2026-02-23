@@ -7,6 +7,8 @@
 
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from '@wordpress/element';
 import { toPng } from 'html-to-image';
+import Cropper from 'react-easy-crop';
+import type { Point } from 'react-easy-crop';
 import {
     X,
     Download,
@@ -178,6 +180,7 @@ export function VisualPreview({
     displayName,
     handle,
     avatarUrl,
+    avatarCrop,
     theme,
     style,
     stats,
@@ -190,6 +193,7 @@ export function VisualPreview({
     displayName: string;
     handle: string;
     avatarUrl?: string;
+    avatarCrop?: { x: number; y: number; width: number; height: number };
     theme: Theme;
     style: Style;
     stats: EngagementStats;
@@ -202,6 +206,20 @@ export function VisualPreview({
     const isBasic = style === 'basic';
     const isMinimal = style === 'minimal';
     const initial = displayName?.charAt(0).toUpperCase() || handle?.charAt(0).toUpperCase() || '?';
+
+    const getAvatarBgStyle = (): React.CSSProperties | undefined => {
+        if (!avatarCrop || !avatarUrl) return undefined;
+        const { x, y, width, height } = avatarCrop;
+        const bgSize = `${(100 / width) * 100}% ${(100 / height) * 100}%`;
+        const bgPosX = width >= 100 ? 50 : (x / (100 - width)) * 100;
+        const bgPosY = height >= 100 ? 50 : (y / (100 - height)) * 100;
+        return {
+            backgroundImage: `url(${avatarUrl})`,
+            backgroundSize: bgSize,
+            backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+        };
+    };
+    const avatarBgStyle = getAvatarBgStyle();
 
     const innerRef = useRef<HTMLDivElement>(null);
 
@@ -241,7 +259,9 @@ export function VisualPreview({
                 <div className="flex items-center gap-3 mb-6 flex-shrink-0">
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-violet-600">
                         {avatarUrl ? (
-                            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                            avatarBgStyle
+                                ? <div className="h-full w-full" style={avatarBgStyle} />
+                                : <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
                             <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-white">
                                 {initial}
@@ -277,7 +297,9 @@ export function VisualPreview({
                 <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-violet-600">
                         {avatarUrl ? (
-                            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                            avatarBgStyle
+                                ? <div className="h-full w-full" style={avatarBgStyle} />
+                                : <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
                             <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-white">
                                 {initial}
@@ -583,6 +605,11 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const [isCurrentPostOverflowing, setIsCurrentPostOverflowing] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string | undefined>(xConnection?.profilePicture || undefined);
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+    const [avatarCrop, setAvatarCrop] = useState<{ x: number; y: number; width: number; height: number } | undefined>(undefined);
+    const [showCropModal, setShowCropModal] = useState(false);
+    const [cropPosition, setCropPosition] = useState<Point>({ x: 0, y: 0 });
+    const [cropZoom, setCropZoom] = useState(1);
+    const [pendingCroppedArea, setPendingCroppedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
     const defaultDescription = Array.isArray(content) ? content.join('\n\n') : content;
     const [description, setDescription] = useState(initialDescription ?? defaultDescription);
     const [modalTab, setModalTab] = useState<'visual' | 'description'>('visual');
@@ -606,6 +633,10 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         setDisplayName(initialSettings?.display_name ?? user?.name ?? 'Your Name');
         setHandle(initialSettings?.handle ?? xConnection?.username ?? 'yourhandle');
         setAvatarUrl(initialSettings?.avatar_url ?? xConnection?.profilePicture ?? undefined);
+        setAvatarCrop(initialSettings?.avatar_crop ?? undefined);
+        setCropPosition({ x: 0, y: 0 });
+        setCropZoom(1);
+        setPendingCroppedArea(null);
         setDescription(initialDescription ?? (Array.isArray(content) ? content.join('\n\n') : content));
         if (initialSettings?.stats) {
             setStats(initialSettings.stats);
@@ -650,6 +681,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                 display_name: displayName,
                 handle,
                 avatar_url: avatarUrl,
+                ...(avatarCrop && { avatar_crop: avatarCrop }),
                 ...(style === 'detailed' && { stats }),
                 ...(Object.keys(textSizes).length > 0 && { text_sizes: textSizes }),
             };
@@ -677,7 +709,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         } finally {
             setSaving(false);
         }
-    }, [blogId, sourceType, sourceId, visualId, isEditing, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, stats, textSizes, content, description, onSaved]);
+    }, [blogId, sourceType, sourceId, visualId, isEditing, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, avatarCrop, stats, textSizes, content, description, onSaved]);
 
     if (!isOpen) return null;
 
@@ -755,8 +787,9 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                             <Pencil size={14} className="text-gray-600" />
                                         </button>
                                         <button
-                                            className="absolute -bottom-1 -right-1 flex items-center justify-center w-7 h-7 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-colors"
-                                            title="Avatar settings"
+                                            onClick={() => avatarUrl && setShowCropModal(true)}
+                                            className={`absolute -bottom-1 -right-1 flex items-center justify-center w-7 h-7 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-colors ${!avatarUrl ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                            title="Reposition avatar"
                                         >
                                             <Settings size={14} className="text-gray-600" />
                                         </button>
@@ -767,6 +800,65 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                         onSelect={(url) => setAvatarUrl(url)}
                                         currentImage={avatarUrl}
                                     />
+
+                                    {/* Avatar Crop Modal */}
+                                    {showCropModal && avatarUrl && (
+                                        <div className="fixed inset-0 z-[100001] flex items-center justify-center">
+                                            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCropModal(false)} />
+                                            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                                                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+                                                    <h3 className="font-semibold text-gray-900">Reposition Avatar</h3>
+                                                    <button onClick={() => setShowCropModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                                                        <X size={18} />
+                                                    </button>
+                                                </div>
+                                                <div className="relative h-72 bg-gray-900">
+                                                    <Cropper
+                                                        image={avatarUrl}
+                                                        crop={cropPosition}
+                                                        zoom={cropZoom}
+                                                        aspect={1}
+                                                        cropShape="round"
+                                                        showGrid={false}
+                                                        onCropChange={setCropPosition}
+                                                        onZoomChange={setCropZoom}
+                                                        onCropComplete={(croppedArea) => setPendingCroppedArea(croppedArea)}
+                                                    />
+                                                </div>
+                                                <div className="px-5 py-3 flex items-center gap-3">
+                                                    <span className="text-xs text-gray-500">Zoom</span>
+                                                    <input
+                                                        type="range"
+                                                        min={1}
+                                                        max={3}
+                                                        step={0.05}
+                                                        value={cropZoom}
+                                                        onChange={(e) => setCropZoom(Number(e.target.value))}
+                                                        className="flex-1 accent-blue-600"
+                                                    />
+                                                </div>
+                                                <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-gray-50">
+                                                    <button
+                                                        onClick={() => setShowCropModal(false)}
+                                                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (pendingCroppedArea) {
+                                                                setAvatarCrop(pendingCroppedArea);
+                                                            }
+                                                            setShowCropModal(false);
+                                                        }}
+                                                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex-1">
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Display Name</label>
@@ -853,6 +945,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                             displayName={displayName}
                                             handle={handle}
                                             avatarUrl={avatarUrl}
+                                            avatarCrop={avatarCrop}
                                             theme={theme}
                                             style={style}
                                             stats={stats}

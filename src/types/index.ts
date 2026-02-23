@@ -167,6 +167,7 @@ export interface VisualSettings {
     display_name: string;
     handle: string;
     avatar_url?: string;
+    avatar_crop?: { x: number; y: number; width: number; height: number };
     stats?: {
         views: number;
         reposts: number;
