@@ -209,8 +209,76 @@ beforeEach(() => {
 // ============================================
 
 describe('RepurposePanel', () => {
-    // Placeholder so the file runs without error
     it('renders without crashing', () => {
         render(<RepurposePanel />);
+    });
+
+    describe('cross-hook orchestration: handleScheduled', () => {
+        it('routes scheduled posts to the short posts hook when contentType is short_post', () => {
+            // ARRANGE —
+            // We need two hooks set up with specific behavior:
+            //
+            // 1. The scheduling hook's handleScheduled() must return a result
+            //    that says "this was a short_post being scheduled"
+            // 2. The short posts hook needs a trackable addScheduledPosts spy
+            //    so we can verify it was called
+
+            const spAddScheduledPosts = vi.fn();
+            mockUseShortPosts.mockReturnValue({
+                ...defaultShortPosts(),
+                addScheduledPosts: spAddScheduledPosts,
+            });
+
+            const thAddScheduledPosts = vi.fn();
+            mockUseThreads.mockReturnValue({
+                ...defaultThreads(),
+                addScheduledPosts: thAddScheduledPosts,
+            });
+
+            // This is what sched.handleScheduled() will return when called.
+            // It tells RepurposePanel: "a short_post (id: 42) was scheduled"
+            const schedHandleScheduled = vi.fn().mockReturnValue({
+                contentType: 'short_post',
+                postId: 42,
+                visualId: null,
+                scheduledPosts: [
+                    { id: 100, platform: 'twitter', status: 'pending', scheduled_at: '2026-03-01T12:00:00Z' },
+                ],
+            });
+
+            mockUseScheduling.mockReturnValue({
+                ...defaultScheduling(),
+                handleScheduled: schedHandleScheduled,
+            });
+
+            // ACT —
+            // Render the component. Our mock SchedulePostModal captures its props,
+            // including the onScheduled callback that RepurposePanel created.
+            render(<RepurposePanel />);
+
+            // Grab the onScheduled callback from the captured modal props
+            // and call it — simulating what happens when the user confirms a schedule.
+            const onScheduled = capturedScheduleModalProps.onScheduled as (
+                posts: Array<{ id: number; platform: string; status: string; scheduled_at: string }>
+            ) => void;
+
+            onScheduled([
+                { id: 100, platform: 'twitter', status: 'pending', scheduled_at: '2026-03-01T12:00:00Z' },
+            ]);
+
+            // ASSERT —
+            // 1. The scheduling hook was asked to process the new scheduled posts
+            expect(schedHandleScheduled).toHaveBeenCalledWith([
+                { id: 100, platform: 'twitter', status: 'pending', scheduled_at: '2026-03-01T12:00:00Z' },
+            ]);
+
+            // 2. Since contentType was 'short_post', the SHORT POSTS hook got the update
+            expect(spAddScheduledPosts).toHaveBeenCalledWith(42, [
+                { id: 100, platform: 'twitter', status: 'pending', scheduled_at: '2026-03-01T12:00:00Z' },
+            ]);
+
+            // 3. The threads hook should NOT have been called — this wasn't a thread
+            expect(thAddScheduledPosts).not.toHaveBeenCalled();
+        });
     });
 });
