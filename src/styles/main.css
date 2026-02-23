@@ -49,6 +49,17 @@
   animation: status-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
+/* Animated text cycle */
+.animated-text-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.animated-text-out {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
 /**
  * TipTap Editor Styles
  */

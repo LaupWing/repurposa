@@ -16,7 +16,6 @@ import {
     Loader2,
     Sparkles,
     Share2,
-    X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
@@ -75,10 +74,11 @@ function InsertPopover({ onInsertPost, onInsertCta }: { onInsertPost: () => void
     );
 }
 
-function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, autoEdit, onAutoEditHandled, onCreateCta }: {
+function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onInsertBelow, autoEdit, onAutoEditHandled, onCreateCta }: {
     post: ThreadItem['posts'][number];
     idx: number;
     isLast: boolean;
+    hideInsert?: boolean;
     onEdit: (content: string) => void;
     onDelete: () => void;
     onInsertBelow: () => void;
@@ -242,7 +242,7 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
                 )}
             </div>
             {/* Insert post below button */}
-            {!isLast && (
+            {!isLast && !hideInsert && (
                 <div className="relative flex items-center justify-center my-1">
                     <div className="absolute inset-x-0 top-1/2 h-px border-t border-dashed border-gray-200" />
                     <InsertPopover onInsertPost={onInsertBelow} onInsertCta={() => onCreateCta?.()} />
@@ -273,16 +273,14 @@ interface ThreadCardProps {
     onSchedule: () => void;
     onPublishNow: () => void;
     onDelete: () => void;
-    onSaveCta: (content: string) => void;
-    onEditCta: (content: string) => void;
-    onDeleteCta: () => void;
+    onInsertCtaPost: (afterIndex: number, content: string) => void;
     onGenerateCta: (content: string[]) => Promise<string | null>;
     blogId?: number;
     onVisualSaved?: (visual: Visual) => void;
     isPublished?: boolean;
 }
 
-export default function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onPublishNow, onDelete, onSaveCta, onEditCta, onDeleteCta, onGenerateCta, blogId, onVisualSaved }: ThreadCardProps) {
+export default function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onPublishNow, onDelete, onInsertCtaPost, onGenerateCta, blogId, onVisualSaved }: ThreadCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditingHook, setIsEditingHook] = useState(false);
     const [editHookContent, setEditHookContent] = useState(thread.hook);
@@ -297,10 +295,7 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
     const [ctaAfterIndex, setCtaAfterIndex] = useState<number>(0);
     const [ctaContent, setCtaContent] = useState('');
     const [isGeneratingCta, setIsGeneratingCta] = useState(false);
-    const [isEditingCta, setIsEditingCta] = useState(false);
-    const [editCtaContent, setEditCtaContent] = useState('');
     const ctaTextareaRef = useRef<HTMLTextAreaElement>(null);
-    const editCtaTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Stable unique keys for posts so React doesn't reuse components on insert/delete
     const nextKeyId = useRef(thread.posts.length);
@@ -348,24 +343,25 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
 
     const totalChars = thread.posts.reduce((sum, p) => sum + p.content.length, 0);
 
-    const handleGenerateCtaClick = async () => {
-        const contentUpTo = thread.posts.slice(0, ctaAfterIndex + 1).map(p => p.content);
+    const generateCtaForIndex = async (afterIdx: number) => {
+        const contentUpTo = thread.posts.slice(0, afterIdx + 1).map(p => p.content);
         setIsGeneratingCta(true);
         const result = await onGenerateCta(contentUpTo);
         setIsGeneratingCta(false);
         if (result) setCtaContent(result);
     };
 
-    const handleSaveCta = () => {
-        if (!ctaContent.trim()) return;
-        onSaveCta(ctaContent);
-        setIsCtaOpen(false);
-        setCtaContent('');
+    const handleGenerateCtaClick = () => {
+        generateCtaForIndex(ctaAfterIndex);
     };
 
-    const handleSaveCtaEdit = () => {
-        onEditCta(editCtaContent);
-        setIsEditingCta(false);
+    const handleSaveCta = () => {
+        if (!ctaContent.trim()) return;
+        const newKey = `p-${nextKeyId.current++}`;
+        setPostKeys(prev => [...prev.slice(0, ctaAfterIndex + 1), newKey, ...prev.slice(ctaAfterIndex + 1)]);
+        onInsertCtaPost(ctaAfterIndex, ctaContent);
+        setIsCtaOpen(false);
+        setCtaContent('');
     };
 
     return (
@@ -563,6 +559,7 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                     post={post}
                                     idx={idx}
                                     isLast={idx === thread.posts.length - 1 && !isCtaOpen}
+                                    hideInsert={isCtaOpen && ctaAfterIndex === idx}
                                     onEdit={(content) => onEditPost(idx, content)}
                                     onDelete={() => handleDeletePost(idx)}
                                     onInsertBelow={() => handleInsertPost(idx)}
@@ -572,10 +569,11 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                         setCtaAfterIndex(idx);
                                         setIsCtaOpen(true);
                                         setCtaContent('');
+                                        generateCtaForIndex(idx);
                                     }}
                                 />
                                 {/* Inline CTA input after this post */}
-                                {isCtaOpen && !thread.cta_content && ctaAfterIndex === idx && (
+                                {isCtaOpen && ctaAfterIndex === idx && (
                                     <div className="relative pb-4 pl-8">
                                         {/* Thread line */}
                                         {idx < thread.posts.length - 1 && (
@@ -620,7 +618,7 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
                                                     >
                                                         <Sparkles size={12} />
-                                                        Generate
+                                                        Regenerate
                                                     </button>
                                                     <button
                                                         onClick={() => { setIsCtaOpen(false); setCtaContent(''); }}
@@ -652,9 +650,11 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                     setIsExpanded(true);
                                 }}
                                 onInsertCta={() => {
-                                    setCtaAfterIndex(thread.posts.length - 1);
+                                    const lastIdx = thread.posts.length - 1;
+                                    setCtaAfterIndex(lastIdx);
                                     setIsCtaOpen(true);
                                     setCtaContent('');
+                                    generateCtaForIndex(lastIdx);
                                 }}
                             />
                             <span className="ml-2 text-xs text-gray-400">Add</span>
@@ -682,77 +682,6 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                 description="This thread and all its posts will be permanently deleted. This action cannot be undone."
             />
             </div>
-
-            {/* Existing CTA */}
-            {thread.cta_content && isExpanded && (
-                <div className="relative ml-6 mt-0">
-                    <div className="absolute top-0 left-4 h-4 w-0.5 bg-gray-200" />
-                    <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                        <div className="mb-3 flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                                <Share2 size={12} className="text-gray-400" />
-                                <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
-                                    Reply · CTA
-                                </span>
-                            </div>
-                        </div>
-                        <div className="mb-3">
-                            {isEditingCta ? (
-                                <div>
-                                    <AITextPopup textareaRef={editCtaTextareaRef} value={editCtaContent} onChange={setEditCtaContent} />
-                                    <textarea
-                                        ref={editCtaTextareaRef}
-                                        value={editCtaContent}
-                                        onChange={(e) => setEditCtaContent(e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
-                                        rows={3}
-                                        style={{ fieldSizing: 'content' } as React.CSSProperties}
-                                    />
-                                    <div className="mt-2 flex items-center justify-end gap-2">
-                                        <button
-                                            onClick={() => { setEditCtaContent(thread.cta_content || ''); setIsEditingCta(false); }}
-                                            className="px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={handleSaveCtaEdit}
-                                            className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-                                        >
-                                            Save
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
-                                    {thread.cta_content}
-                                </div>
-                            )}
-                        </div>
-                        {!isEditingCta && (
-                            <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                                <span className={`font-mono text-[10px] ${(thread.cta_content?.length || 0) > 280 ? 'text-red-500' : 'text-gray-400'}`}>
-                                    {thread.cta_content?.length || 0}/280
-                                </span>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => { setEditCtaContent(thread.cta_content || ''); setIsEditingCta(true); }}
-                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                                    >
-                                        <Pencil size={14} />
-                                    </button>
-                                    <button
-                                        onClick={onDeleteCta}
-                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

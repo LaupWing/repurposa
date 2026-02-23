@@ -77,19 +77,13 @@ export function useThreads(
             updateThread(thread.id, { hook: content }).catch(() => toast.error('Failed to save'));
         },
         onDelete: () => setThreads(prev => prev.filter(t => t.id !== thread.id)),
-        onSaveCta: (content: string) => {
-            setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, cta_content: content } : t));
-            updateThread(thread.id, { cta_content: content }).catch(() => toast.error('Failed to save'));
+        onInsertCtaPost: (afterIndex: number, content: string) => {
+            const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content, media: null }, ...thread.posts.slice(afterIndex + 1)];
+            setThreads(prev => prev.map(t =>
+                t.id === thread.id ? { ...t, posts: updatedPosts } : t
+            ));
+            updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
             toast.success('CTA saved');
-        },
-        onEditCta: (content: string) => {
-            setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, cta_content: content } : t));
-            updateThread(thread.id, { cta_content: content }).catch(() => toast.error('Failed to save'));
-            toast.success('CTA saved');
-        },
-        onDeleteCta: () => {
-            setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, cta_content: undefined } : t));
-            updateThread(thread.id, { cta_content: null }).catch(() => toast.error('Failed to save'));
         },
         onGenerateCta: async (content: string[]): Promise<string | null> => {
             if (!blogId) return null;
