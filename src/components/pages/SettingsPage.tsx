@@ -333,10 +333,10 @@ export default function SettingsPage() {
               Content language
             </label>
             <select
-              value={profile?.lang || "en"}
+              value={profile?.content_lang || "en"}
               onChange={(e) =>
                 setProfile((prev) =>
-                  prev ? { ...prev, lang: e.target.value as 'en' | 'nl' } : null
+                  prev ? { ...prev, content_lang: e.target.value as 'en' | 'nl' } : null
                 )
               }
               className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
