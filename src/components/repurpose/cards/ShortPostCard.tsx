@@ -275,6 +275,7 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
     const handleSaveCtaEdit = () => {
         onEditCta(editCtaContent);
         setIsEditingCta(false);
+        toast.success('CTA saved');
     };
 
     const handleCancelCtaEdit = () => {
@@ -629,9 +630,9 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                                     </div>
                                 </div>
                             ) : (
-                                <p className="text-sm leading-relaxed text-gray-800">
+                                <div className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
                                     {pattern.cta_content}
-                                </p>
+                                </div>
                             )}
                         </div>
 
@@ -668,7 +669,7 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                                         <ImagePlus size={14} />
                                     </button>
                                     <button
-                                        onClick={() => setIsEditingCta(true)}
+                                        onClick={() => { setEditCtaContent(pattern.cta_content || ''); setIsEditingCta(true); }}
                                         className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                                     >
                                         <Pencil size={14} />
