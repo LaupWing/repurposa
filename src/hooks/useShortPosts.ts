@@ -1,7 +1,7 @@
 import { useState } from '@wordpress/element';
 import { toast } from 'sonner';
 import { arrayMove } from '@dnd-kit/sortable';
-import { generateShortPosts, updateShortPost } from '@/services/repurposeApi';
+import { generateShortPosts, updateShortPost, generateCta } from '@/services/repurposeApi';
 import type { ShortPost, ShortPostSchedule } from '@/types';
 import type { ShortPostPattern } from '@/components/repurpose/cards/ShortPostCard';
 
@@ -114,10 +114,25 @@ export function useShortPosts(
             setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: undefined, cta_media: [] } : p));
             updateShortPost(pattern.id, { cta_content: null }).catch(() => toast.error('Failed to save'));
         },
-        onAddCta: () => {
-            const ctaText = 'Read the full post here: ';
-            setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: ctaText } : p));
+        onAddCta: async () => {
+            if (!blogId) return;
+            setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, is_generating_cta: true, pending_cta: undefined } : p));
+            try {
+                const response = await generateCta(blogId, [pattern.content]);
+                setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, is_generating_cta: false, pending_cta: response.cta } : p));
+            } catch {
+                setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, is_generating_cta: false } : p));
+                toast.error('Failed to generate CTA');
+            }
+        },
+        onAcceptCta: () => {
+            const ctaText = pattern.pending_cta;
+            if (!ctaText) return;
+            setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: ctaText, pending_cta: undefined } : p));
             updateShortPost(pattern.id, { cta_content: { content: ctaText, media: null } }).catch(() => toast.error('Failed to save'));
+        },
+        onRejectCta: () => {
+            setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, pending_cta: undefined } : p));
         },
         onEdit: (content: string) => {
             setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, content } : p));

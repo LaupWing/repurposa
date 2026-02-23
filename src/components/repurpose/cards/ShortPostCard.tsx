@@ -14,6 +14,8 @@ import {
     Plus,
     MoreHorizontal,
     Send,
+    Loader2,
+    Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
@@ -40,6 +42,8 @@ export interface ShortPostPattern {
     structure: string;
     why_it_works: string;
     cta_content?: string;
+    pending_cta?: string;
+    is_generating_cta?: boolean;
     scheduled_posts?: ShortPostSchedule[];
     media: string[];
     cta_media: string[];
@@ -202,9 +206,11 @@ interface ShortPostCardProps {
     onGoToVisual?: (visualId: number) => void;
     autoEdit?: boolean;
     isPublished?: boolean;
+    onAcceptCta: () => void;
+    onRejectCta: () => void;
 }
 
-export default function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onPublishNow, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, cardVisuals, onGoToVisual, autoEdit, isPublished }: ShortPostCardProps) {
+export default function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onPublishNow, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, cardVisuals, onGoToVisual, autoEdit, isPublished, onAcceptCta, onRejectCta }: ShortPostCardProps) {
     const [copied, setCopied] = useState(false);
     const [copiedCta, setCopiedCta] = useState(false);
     const [isEditing, setIsEditing] = useState(!!autoEdit);
@@ -527,16 +533,54 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                 )}
             </div>
 
-            {/* Add CTA button when no CTA exists and post is published */}
+            {/* CTA generation states (no existing CTA + published) */}
             {!pattern.cta_content && isPublished && (
                 <div className="ml-6 mt-2">
-                    <button
-                        onClick={onAddCta}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                        <Plus size={14} />
-                        Add CTA Reply
-                    </button>
+                    {pattern.is_generating_cta ? (
+                        <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg">
+                            <Loader2 size={14} className="animate-spin" />
+                            Generating CTA...
+                        </div>
+                    ) : pattern.pending_cta ? (
+                        <div className="border border-blue-200 bg-blue-50/50 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-blue-600 uppercase tracking-wide">
+                                <Sparkles size={12} />
+                                Generated CTA Preview
+                            </div>
+                            <p className="text-sm text-gray-800">{pattern.pending_cta}</p>
+                            <div className="flex items-center gap-2 pt-1">
+                                <button
+                                    onClick={onAcceptCta}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                                >
+                                    <Check size={12} />
+                                    Accept
+                                </button>
+                                <button
+                                    onClick={onRejectCta}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <X size={12} />
+                                    Reject
+                                </button>
+                                <button
+                                    onClick={onAddCta}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors ml-auto"
+                                >
+                                    <Sparkles size={12} />
+                                    Regenerate
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={onAddCta}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                            <Plus size={14} />
+                            Add CTA Reply
+                        </button>
+                    )}
                 </div>
             )}
 

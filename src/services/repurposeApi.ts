@@ -10,6 +10,14 @@ import type {
 } from '@/types';
 
 // ============================================
+// CTA
+// ============================================
+
+export async function generateCta(postId: number, content: string[]): Promise<{ cta: string }> {
+    return apiRequest<{ cta: string }>(`/repurpose/${postId}/generate-cta`, { content });
+}
+
+// ============================================
 // SHORT POSTS
 // ============================================
 
