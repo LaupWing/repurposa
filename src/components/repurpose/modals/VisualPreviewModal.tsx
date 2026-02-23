@@ -25,6 +25,8 @@ import {
     Plus,
     Type,
     AlertTriangle,
+    Pencil,
+    Settings,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfileStore } from '@/store/profileStore';
@@ -731,19 +733,34 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                             <div className="flex items-center gap-3 mb-4">
                                 <div>
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Avatar</label>
-                                    <button
-                                        onClick={() => setShowAvatarPicker(true)}
-                                        className="h-[52px] w-[52px] rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-violet-600 hover:ring-2 hover:ring-blue-400 hover:ring-offset-2 transition-all flex-shrink-0"
-                                        title="Change avatar"
-                                    >
-                                        {avatarUrl ? (
-                                            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                                        ) : (
-                                            <span className="flex h-full w-full items-center justify-center text-lg font-semibold text-white">
-                                                {(displayName?.charAt(0) || '?').toUpperCase()}
-                                            </span>
-                                        )}
-                                    </button>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowAvatarPicker(true)}
+                                            className="h-20 w-20 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-violet-600 hover:ring-2 hover:ring-blue-400 hover:ring-offset-2 transition-all flex-shrink-0"
+                                            title="Change avatar"
+                                        >
+                                            {avatarUrl ? (
+                                                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                                            ) : (
+                                                <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-white">
+                                                    {(displayName?.charAt(0) || '?').toUpperCase()}
+                                                </span>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => setShowAvatarPicker(true)}
+                                            className="absolute -bottom-1 -left-1 flex items-center justify-center w-7 h-7 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-colors"
+                                            title="Change image"
+                                        >
+                                            <Pencil size={14} className="text-gray-600" />
+                                        </button>
+                                        <button
+                                            className="absolute -bottom-1 -right-1 flex items-center justify-center w-7 h-7 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-colors"
+                                            title="Avatar settings"
+                                        >
+                                            <Settings size={14} className="text-gray-600" />
+                                        </button>
+                                    </div>
                                     <ImagePickerModal
                                         isOpen={showAvatarPicker}
                                         onClose={() => setShowAvatarPicker(false)}
