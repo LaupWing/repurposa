@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { useProfileStore } from '@/store/profileStore';
 import { createVisual, updateVisual } from '@/services/repurposeApi';
 import { AITextPopup } from '@/components/AITextPopup';
+import ImagePickerModal from '@/components/ImagePickerModal';
 import type { VisualSettings } from '@/types';
 
 // ============================================
@@ -579,7 +580,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const [textSizes, setTextSizes] = useState<Record<number, TextSize>>({});
     const [isCurrentPostOverflowing, setIsCurrentPostOverflowing] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string | undefined>(xConnection?.profilePicture || undefined);
-    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const [showAvatarPicker, setShowAvatarPicker] = useState(false);
     const defaultDescription = Array.isArray(content) ? content.join('\n\n') : content;
     const [description, setDescription] = useState(initialDescription ?? defaultDescription);
     const [modalTab, setModalTab] = useState<'visual' | 'description'>('visual');
@@ -611,13 +612,6 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         }
     }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => setAvatarUrl(reader.result as string);
-        reader.readAsDataURL(file);
-    }, []);
 
     const handleDownload = useCallback(async () => {
         if (!previewRef.current || downloading) return;
@@ -738,7 +732,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                 <div>
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Avatar</label>
                                     <button
-                                        onClick={() => avatarInputRef.current?.click()}
+                                        onClick={() => setShowAvatarPicker(true)}
                                         className="h-[52px] w-[52px] rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-violet-600 hover:ring-2 hover:ring-blue-400 hover:ring-offset-2 transition-all flex-shrink-0"
                                         title="Change avatar"
                                     >
@@ -750,12 +744,11 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                             </span>
                                         )}
                                     </button>
-                                    <input
-                                        ref={avatarInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleAvatarChange}
-                                        className="hidden"
+                                    <ImagePickerModal
+                                        isOpen={showAvatarPicker}
+                                        onClose={() => setShowAvatarPicker(false)}
+                                        onSelect={(url) => setAvatarUrl(url)}
+                                        currentImage={avatarUrl}
                                     />
                                 </div>
                                 <div className="flex-1">
