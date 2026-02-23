@@ -78,6 +78,7 @@ export default function VisualCard({
                             displayName={visual.settings.display_name}
                             handle={visual.settings.handle}
                             avatarUrl={visual.settings.avatar_url}
+                            avatarCrop={visual.settings.avatar_crop}
                             theme={visual.settings.theme}
                             style={visual.settings.style}
                             stats={visual.settings.stats || { views: 0, reposts: 0, quotes: 0, likes: 0, bookmarks: 0 }}

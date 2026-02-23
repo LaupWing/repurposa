@@ -711,6 +711,17 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         }
     }, [blogId, sourceType, sourceId, visualId, isEditing, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, avatarCrop, stats, textSizes, content, description, onSaved]);
 
+    const controlsAvatarStyle: React.CSSProperties | undefined = avatarCrop && avatarUrl ? (() => {
+        const { x, y, width, height } = avatarCrop;
+        const bgPosX = width >= 100 ? 50 : (x / (100 - width)) * 100;
+        const bgPosY = height >= 100 ? 50 : (y / (100 - height)) * 100;
+        return {
+            backgroundImage: `url(${avatarUrl})`,
+            backgroundSize: `${(100 / width) * 100}% ${(100 / height) * 100}%`,
+            backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+        };
+    })() : undefined;
+
     if (!isOpen) return null;
 
     return (
@@ -772,7 +783,9 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                             title="Change avatar"
                                         >
                                             {avatarUrl ? (
-                                                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                                                controlsAvatarStyle
+                                                    ? <div className="h-full w-full rounded-full" style={controlsAvatarStyle} />
+                                                    : <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                                             ) : (
                                                 <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-white">
                                                     {(displayName?.charAt(0) || '?').toUpperCase()}
