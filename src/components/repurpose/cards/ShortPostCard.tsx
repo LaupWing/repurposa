@@ -206,7 +206,7 @@ interface ShortPostCardProps {
     onGoToVisual?: (visualId: number) => void;
     autoEdit?: boolean;
     isPublished?: boolean;
-    onAcceptCta: () => void;
+    onAcceptCta: (editedContent?: string) => void;
     onRejectCta: () => void;
 }
 
@@ -234,6 +234,13 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
     const menuRef = useRef<HTMLDivElement>(null);
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
     const editCtaTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Seed edit textarea when pending CTA arrives
+    useEffect(() => {
+        if (pattern.pending_cta) {
+            setEditCtaContent(pattern.pending_cta);
+        }
+    }, [pattern.pending_cta]);
 
     // Close menu on outside click
     useEffect(() => {
@@ -548,29 +555,40 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                                 <Sparkles size={12} />
                                 Generated CTA Preview
                             </div>
-                            <p className="text-sm text-gray-800">{pattern.pending_cta}</p>
-                            <div className="flex items-center gap-2 pt-1">
-                                <button
-                                    onClick={onAcceptCta}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                                >
-                                    <Check size={12} />
-                                    Accept
-                                </button>
-                                <button
-                                    onClick={onRejectCta}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                >
-                                    <X size={12} />
-                                    Reject
-                                </button>
-                                <button
-                                    onClick={onAddCta}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors ml-auto"
-                                >
-                                    <Sparkles size={12} />
-                                    Regenerate
-                                </button>
+                            <textarea
+                                value={editCtaContent}
+                                onChange={(e) => setEditCtaContent(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                rows={3}
+                                style={{ fieldSizing: 'content' } as React.CSSProperties}
+                            />
+                            <div className="flex items-center justify-between pt-1">
+                                <span className={`font-mono text-[10px] ${editCtaContent.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                    {editCtaContent.length}/280
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={onAddCta}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                    >
+                                        <Sparkles size={12} />
+                                        Regenerate
+                                    </button>
+                                    <button
+                                        onClick={onRejectCta}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                    >
+                                        <X size={12} />
+                                        Reject
+                                    </button>
+                                    <button
+                                        onClick={() => onAcceptCta(editCtaContent)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                                    >
+                                        <Check size={12} />
+                                        Accept
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ) : (

@@ -125,11 +125,12 @@ export function useShortPosts(
                 toast.error('Failed to generate CTA');
             }
         },
-        onAcceptCta: () => {
-            const ctaText = pattern.pending_cta;
+        onAcceptCta: (editedContent?: string) => {
+            const ctaText = editedContent || pattern.pending_cta;
             if (!ctaText) return;
             setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: ctaText, pending_cta: undefined } : p));
             updateShortPost(pattern.id, { cta_content: { content: ctaText, media: null } }).catch(() => toast.error('Failed to save'));
+            toast.success('CTA saved');
         },
         onRejectCta: () => {
             setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, pending_cta: undefined } : p));
