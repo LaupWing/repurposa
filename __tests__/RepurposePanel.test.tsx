@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
-import { RepurposePanel } from './RepurposePanel';
+import { RepurposePanel } from '@/components/repurpose/RepurposePanel';
 
 // --- Hook mocks ---
 
@@ -29,25 +29,25 @@ vi.mock('@/hooks/useScheduling', () => ({
 // Captures props so we can invoke internal callbacks (e.g. onScheduled)
 let capturedScheduleModalProps: Record<string, unknown> = {};
 
-vi.mock('./cards/ShortPostCard', () => ({
+vi.mock('@/components/repurpose/cards/ShortPostCard', () => ({
     default: ({ pattern }: { pattern: { id: number } }) => (
         <div data-testid={`short-post-card-${pattern.id}`} />
     ),
 }));
 
-vi.mock('./cards/ThreadCard', () => ({
+vi.mock('@/components/repurpose/cards/ThreadCard', () => ({
     default: ({ thread }: { thread: { id: number } }) => (
         <div data-testid={`thread-card-${thread.id}`} />
     ),
 }));
 
-vi.mock('./cards/VisualCard', () => ({
+vi.mock('@/components/repurpose/cards/VisualCard', () => ({
     default: ({ visual }: { visual: { id: number } }) => (
         <div data-testid={`visual-card-${visual.id}`} />
     ),
 }));
 
-vi.mock('./modals', () => ({
+vi.mock('@/components/repurpose/modals', () => ({
     ConfirmGenerateModal: ({ isOpen }: { isOpen: boolean }) =>
         isOpen ? <div data-testid="confirm-generate-modal" /> : null,
     ConfirmDeleteModal: ({ isOpen }: { isOpen: boolean }) =>
@@ -64,7 +64,7 @@ vi.mock('./modals', () => ({
         isOpen ? <div data-testid="source-picker-modal" /> : null,
 }));
 
-vi.mock('./modals/VisualPreviewModal', () => ({
+vi.mock('@/components/repurpose/modals/VisualPreviewModal', () => ({
     VisualShortPostPreviewModal: () => <div data-testid="visual-sp-preview-modal" />,
     VisualThreadPreviewModal: () => <div data-testid="visual-thread-preview-modal" />,
 }));
