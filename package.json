@@ -5,7 +5,9 @@
   "scripts": {
     "build": "wp-scripts build",
     "start": "wp-scripts start",
-    "lint:js": "wp-scripts lint-js"
+    "lint:js": "wp-scripts lint-js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
