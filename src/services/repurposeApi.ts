@@ -68,6 +68,7 @@ export async function generateThreads(
 export async function updateThread(threadId: number, data: {
     hook?: string;
     posts?: { content: string; media: unknown }[];
+    cta_content?: string | null;
 }): Promise<ThreadItem> {
     return apiRequest<ThreadItem>(`/repurpose/threads/${threadId}`, data as Record<string, unknown>, 'PATCH');
 }

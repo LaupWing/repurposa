@@ -1,6 +1,6 @@
 import { useState } from '@wordpress/element';
 import { toast } from 'sonner';
-import { generateThreads, updateThread } from '@/services/repurposeApi';
+import { generateThreads, updateThread, generateCta } from '@/services/repurposeApi';
 import type { ThreadItem, ShortPostSchedule } from '@/types';
 
 export function useThreads(
@@ -77,6 +77,31 @@ export function useThreads(
             updateThread(thread.id, { hook: content }).catch(() => toast.error('Failed to save'));
         },
         onDelete: () => setThreads(prev => prev.filter(t => t.id !== thread.id)),
+        onSaveCta: (content: string) => {
+            setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, cta_content: content } : t));
+            updateThread(thread.id, { cta_content: content }).catch(() => toast.error('Failed to save'));
+            toast.success('CTA saved');
+        },
+        onEditCta: (content: string) => {
+            setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, cta_content: content } : t));
+            updateThread(thread.id, { cta_content: content }).catch(() => toast.error('Failed to save'));
+            toast.success('CTA saved');
+        },
+        onDeleteCta: () => {
+            setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, cta_content: undefined } : t));
+            updateThread(thread.id, { cta_content: null }).catch(() => toast.error('Failed to save'));
+        },
+        onGenerateCta: async (): Promise<string | null> => {
+            if (!blogId) return null;
+            try {
+                const allContent = thread.posts.map(p => p.content);
+                const response = await generateCta(blogId, allContent);
+                return response.cta;
+            } catch {
+                toast.error('Failed to generate CTA');
+                return null;
+            }
+        },
     });
 
     return {

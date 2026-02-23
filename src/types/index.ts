@@ -149,6 +149,7 @@ export interface ThreadItem {
     posts: ThreadPost[];
     metadata: ThreadMetadata;
     scheduled_posts?: ShortPostSchedule[];
+    cta_content?: string;
 }
 
 export interface GenerateThreadsResponse {
