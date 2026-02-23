@@ -4,12 +4,14 @@
  * Shows a loading overlay with animated spinner while AI generates content.
  */
 
+import { AnimatedText } from '@/components/AnimatedText';
+
 interface GeneratingOverlayProps {
     title: string;
-    description: string;
+    descriptions: string[];
 }
 
-export function GeneratingOverlay({ title, description }: GeneratingOverlayProps) {
+export function GeneratingOverlay({ title, descriptions }: GeneratingOverlayProps) {
     return (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center space-y-6 bg-white/80 backdrop-blur-sm rounded-lg">
             <div className="relative">
@@ -62,7 +64,7 @@ export function GeneratingOverlay({ title, description }: GeneratingOverlayProps
             </div>
             <div className="space-y-2 text-center">
                 <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-                <p className="max-w-sm text-sm text-gray-500 animate-pulse">{description}</p>
+                <AnimatedText texts={descriptions} interval={1800} className="text-sm text-gray-500" />
             </div>
         </div>
     );

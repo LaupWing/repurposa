@@ -326,13 +326,23 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             {sp.isGenerating && (
                 <GeneratingOverlay
                     title="Generating Short Posts"
-                    description="Analyzing your blog content and crafting engaging short posts..."
+                    descriptions={[
+                        'Analyzing your blog content...',
+                        'Extracting key insights...',
+                        'Crafting engaging short posts...',
+                        'Polishing the final touches...',
+                    ]}
                 />
             )}
             {th.isGeneratingThreads && (
                 <GeneratingOverlay
                     title="Generating Threads"
-                    description="Analyzing your blog content and crafting engaging threads..."
+                    descriptions={[
+                        'Analyzing your blog content...',
+                        'Breaking down key points...',
+                        'Structuring the thread flow...',
+                        'Crafting engaging tweets...',
+                    ]}
                 />
             )}
             <ConfirmGenerateModal

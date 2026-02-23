@@ -308,13 +308,23 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         {isGeneratingOutline && (
           <GeneratingOverlay
             title="Crafting Your Outline"
-            description="Analyzing your topic and ideas to create a compelling blog structure..."
+            descriptions={[
+                'Analyzing your topic and ideas...',
+                'Researching key talking points...',
+                'Structuring a compelling flow...',
+                'Finalizing your outline...',
+            ]}
           />
         )}
         {isGeneratingBlog && (
           <GeneratingOverlay
             title="Writing Your Blog"
-            description="Creating engaging content based on your outline..."
+            descriptions={[
+                'Creating engaging content...',
+                'Developing each section...',
+                'Adding depth and detail...',
+                'Polishing the final draft...',
+            ]}
           />
         )}
 

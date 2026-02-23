@@ -70,7 +70,7 @@ vi.mock('@/components/repurpose/modals/VisualPreviewModal', () => ({
 }));
 
 vi.mock('@/components/GeneratingOverlay', () => ({
-    GeneratingOverlay: ({ title }: { title: string }) => (
+    GeneratingOverlay: ({ title }: { title: string; descriptions: string[] }) => (
         <div data-testid="generating-overlay">{title}</div>
     ),
 }));
