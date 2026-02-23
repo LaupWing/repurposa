@@ -201,9 +201,10 @@ interface ShortPostCardProps {
     cardVisuals?: Visual[];
     onGoToVisual?: (visualId: number) => void;
     autoEdit?: boolean;
+    isPublished?: boolean;
 }
 
-export default function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onPublishNow, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, cardVisuals, onGoToVisual, autoEdit }: ShortPostCardProps) {
+export default function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onPublishNow, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, cardVisuals, onGoToVisual, autoEdit, isPublished }: ShortPostCardProps) {
     const [copied, setCopied] = useState(false);
     const [copiedCta, setCopiedCta] = useState(false);
     const [isEditing, setIsEditing] = useState(!!autoEdit);
@@ -526,8 +527,8 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                 )}
             </div>
 
-            {/* Add CTA button when no CTA exists */}
-            {!pattern.cta_content && (
+            {/* Add CTA button when no CTA exists and post is published */}
+            {!pattern.cta_content && isPublished && (
                 <div className="ml-6 mt-2">
                     <button
                         onClick={onAddCta}

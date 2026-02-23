@@ -143,6 +143,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                         onSwitchTab?.('visuals');
                                     }}
                                     autoEdit={pattern.id === editShortPostId}
+                                    isPublished={isPublished}
                                 />
                             ))}
                         </div>
