@@ -91,11 +91,10 @@ export function useThreads(
             setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, cta_content: undefined } : t));
             updateThread(thread.id, { cta_content: null }).catch(() => toast.error('Failed to save'));
         },
-        onGenerateCta: async (): Promise<string | null> => {
+        onGenerateCta: async (content: string[]): Promise<string | null> => {
             if (!blogId) return null;
             try {
-                const allContent = thread.posts.map(p => p.content);
-                const response = await generateCta(blogId, allContent);
+                const response = await generateCta(blogId, content);
                 return response.cta;
             } catch {
                 toast.error('Failed to generate CTA');

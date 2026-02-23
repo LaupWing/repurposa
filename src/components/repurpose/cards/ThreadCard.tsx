@@ -32,7 +32,50 @@ import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFaceb
 // SUB-COMPONENT
 // ============================================
 
-function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, autoEdit, onAutoEditHandled, isPublished, onCreateCta }: {
+function InsertPopover({ onInsertPost, onInsertCta }: { onInsertPost: () => void; onInsertCta: () => void }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const handleClick = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [open]);
+
+    return (
+        <div className="relative" ref={ref}>
+            <button
+                onClick={() => setOpen(!open)}
+                className="relative z-[1] h-6 w-6 flex items-center justify-center rounded-full border border-gray-300 bg-white text-gray-400 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-500 transition-all shadow-sm"
+            >
+                <Plus size={13} />
+            </button>
+            {open && (
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-10 w-36">
+                    <button
+                        onClick={() => { onInsertPost(); setOpen(false); }}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                        <Plus size={12} />
+                        Post
+                    </button>
+                    <button
+                        onClick={() => { onInsertCta(); setOpen(false); }}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                        <Link2 size={12} />
+                        CTA Reply
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, autoEdit, onAutoEditHandled, onCreateCta }: {
     post: ThreadItem['posts'][number];
     idx: number;
     isLast: boolean;
@@ -41,7 +84,6 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
     onInsertBelow: () => void;
     autoEdit?: boolean;
     onAutoEditHandled?: () => void;
-    isPublished?: boolean;
     onCreateCta?: () => void;
 }) {
     const [isEditing, setIsEditing] = useState(autoEdit || false);
@@ -84,6 +126,10 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
     };
 
     const handleCancel = () => {
+        if (!post.content) {
+            onDelete();
+            return;
+        }
         setEditContent(post.content);
         setIsEditing(false);
     };
@@ -179,13 +225,6 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
                                                 <ImagePlus size={14} />
                                                 Add Image
                                             </button>
-                                            <button
-                                                onClick={() => { if (isPublished) { onCreateCta?.(); } else { toast.info('Publish the blog first to generate a CTA'); } setPostMenuOpen(false); }}
-                                                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${isPublished ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400'}`}
-                                            >
-                                                <Link2 size={14} />
-                                                Create CTA
-                                            </button>
                                             <div className="border-t border-gray-100 my-1" />
                                             <button
                                                 onClick={() => { setShowDeleteConfirm(true); setPostMenuOpen(false); }}
@@ -204,15 +243,9 @@ function ThreadPostItem({ post, idx, isLast, onEdit, onDelete, onInsertBelow, au
             </div>
             {/* Insert post below button */}
             {!isLast && (
-                <div className="relative flex items-center justify-center mt-0.5 -mb-1.5">
+                <div className="relative flex items-center justify-center my-1">
                     <div className="absolute inset-x-0 top-1/2 h-px border-t border-dashed border-gray-200" />
-                    <button
-                        onClick={onInsertBelow}
-                        className="relative z-[1] h-6 w-6 flex items-center justify-center rounded-full border border-gray-300 bg-white text-gray-400 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-500 transition-all shadow-sm"
-                        title="Insert tweet below"
-                    >
-                        <Plus size={13} />
-                    </button>
+                    <InsertPopover onInsertPost={onInsertBelow} onInsertCta={() => onCreateCta?.()} />
                 </div>
             )}
             <ConfirmDeleteModal
@@ -243,13 +276,13 @@ interface ThreadCardProps {
     onSaveCta: (content: string) => void;
     onEditCta: (content: string) => void;
     onDeleteCta: () => void;
-    onGenerateCta: () => Promise<string | null>;
+    onGenerateCta: (content: string[]) => Promise<string | null>;
     blogId?: number;
     onVisualSaved?: (visual: Visual) => void;
     isPublished?: boolean;
 }
 
-export default function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onPublishNow, onDelete, onSaveCta, onEditCta, onDeleteCta, onGenerateCta, blogId, onVisualSaved, isPublished }: ThreadCardProps) {
+export default function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onPublishNow, onDelete, onSaveCta, onEditCta, onDeleteCta, onGenerateCta, blogId, onVisualSaved }: ThreadCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditingHook, setIsEditingHook] = useState(false);
     const [editHookContent, setEditHookContent] = useState(thread.hook);
@@ -261,6 +294,7 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [autoEditIndex, setAutoEditIndex] = useState<number | null>(null);
     const [isCtaOpen, setIsCtaOpen] = useState(false);
+    const [ctaAfterIndex, setCtaAfterIndex] = useState<number>(0);
     const [ctaContent, setCtaContent] = useState('');
     const [isGeneratingCta, setIsGeneratingCta] = useState(false);
     const [isEditingCta, setIsEditingCta] = useState(false);
@@ -315,8 +349,9 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
     const totalChars = thread.posts.reduce((sum, p) => sum + p.content.length, 0);
 
     const handleGenerateCtaClick = async () => {
+        const contentUpTo = thread.posts.slice(0, ctaAfterIndex + 1).map(p => p.content);
         setIsGeneratingCta(true);
-        const result = await onGenerateCta();
+        const result = await onGenerateCta(contentUpTo);
         setIsGeneratingCta(false);
         if (result) setCtaContent(result);
     };
@@ -523,35 +558,106 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
 
                     <div className="relative mt-2">
                         {thread.posts.map((post, idx) => (
-                            <ThreadPostItem
-                                key={postKeys[idx] || idx}
-                                post={post}
-                                idx={idx}
-                                isLast={idx === thread.posts.length - 1}
-                                onEdit={(content) => onEditPost(idx, content)}
-                                onDelete={() => handleDeletePost(idx)}
-                                onInsertBelow={() => handleInsertPost(idx)}
-                                autoEdit={autoEditIndex === idx}
-                                onAutoEditHandled={() => setAutoEditIndex(null)}
-                                isPublished={isPublished}
-                                onCreateCta={() => {
+                            <div key={postKeys[idx] || idx}>
+                                <ThreadPostItem
+                                    post={post}
+                                    idx={idx}
+                                    isLast={idx === thread.posts.length - 1 && !isCtaOpen}
+                                    onEdit={(content) => onEditPost(idx, content)}
+                                    onDelete={() => handleDeletePost(idx)}
+                                    onInsertBelow={() => handleInsertPost(idx)}
+                                    autoEdit={autoEditIndex === idx}
+                                    onAutoEditHandled={() => setAutoEditIndex(null)}
+                                    onCreateCta={() => {
+                                        setCtaAfterIndex(idx);
+                                        setIsCtaOpen(true);
+                                        setCtaContent('');
+                                    }}
+                                />
+                                {/* Inline CTA input after this post */}
+                                {isCtaOpen && !thread.cta_content && ctaAfterIndex === idx && (
+                                    <div className="relative pb-4 pl-8">
+                                        {/* Thread line */}
+                                        {idx < thread.posts.length - 1 && (
+                                            <div className="absolute top-6 left-[11px] h-[calc(100%-12px)] w-[2px] bg-gray-200" />
+                                        )}
+                                        {/* CTA dot */}
+                                        <div className="absolute top-0 left-0 flex h-6 w-6 items-center justify-center rounded-full border border-blue-300 bg-blue-50 text-[10px] font-medium text-blue-600">
+                                            <Link2 size={10} />
+                                        </div>
+                                        <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-3 space-y-2">
+                                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-blue-600 uppercase tracking-wide">
+                                                <Share2 size={12} />
+                                                CTA Reply
+                                            </div>
+                                            {isGeneratingCta ? (
+                                                <div className="flex items-center gap-2 px-3 py-4 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg justify-center">
+                                                    <Loader2 size={14} className="animate-spin" />
+                                                    Generating CTA...
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <AITextPopup textareaRef={ctaTextareaRef} value={ctaContent} onChange={setCtaContent} />
+                                                    <textarea
+                                                        ref={ctaTextareaRef}
+                                                        value={ctaContent}
+                                                        onChange={(e) => setCtaContent(e.target.value)}
+                                                        placeholder="Write your CTA or click Generate..."
+                                                        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                                        rows={3}
+                                                        style={{ fieldSizing: 'content' } as React.CSSProperties}
+                                                    />
+                                                </>
+                                            )}
+                                            <div className="flex items-center justify-between pt-1">
+                                                <span className={`font-mono text-[10px] ${ctaContent.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                                    {ctaContent.length}/280
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={handleGenerateCtaClick}
+                                                        disabled={isGeneratingCta}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Sparkles size={12} />
+                                                        Generate
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { setIsCtaOpen(false); setCtaContent(''); }}
+                                                        disabled={isGeneratingCta}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={handleSaveCta}
+                                                        disabled={!ctaContent.trim() || isGeneratingCta}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Check size={12} />
+                                                        Save
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        {/* Add at end */}
+                        <div className="pl-8 pt-1 flex items-center">
+                            <InsertPopover
+                                onInsertPost={() => {
+                                    handleInsertPost(thread.posts.length - 1);
+                                    setIsExpanded(true);
+                                }}
+                                onInsertCta={() => {
+                                    setCtaAfterIndex(thread.posts.length - 1);
                                     setIsCtaOpen(true);
                                     setCtaContent('');
                                 }}
                             />
-                        ))}
-                        {/* Add tweet at end */}
-                        <div className="pl-8 pt-1">
-                            <button
-                                onClick={() => {
-                                    handleInsertPost(thread.posts.length - 1);
-                                    setIsExpanded(true);
-                                }}
-                                className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-blue-500 transition-colors px-2 py-1.5 rounded-md hover:bg-blue-50"
-                            >
-                                <Plus size={14} />
-                                Add tweet
-                            </button>
+                            <span className="ml-2 text-xs text-gray-400">Add</span>
                         </div>
                     </div>
                 </div>
@@ -577,69 +683,8 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
             />
             </div>
 
-            {/* CTA input (creating new) */}
-            {!thread.cta_content && isPublished && (
-                <div className="ml-6 mt-2">
-                    {isCtaOpen ? (
-                        <div className="border border-gray-200 bg-white rounded-lg p-3 shadow-sm space-y-2">
-                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 uppercase tracking-wide">
-                                <Share2 size={12} />
-                                CTA Reply
-                            </div>
-                            <AITextPopup textareaRef={ctaTextareaRef} value={ctaContent} onChange={setCtaContent} />
-                            <textarea
-                                ref={ctaTextareaRef}
-                                value={ctaContent}
-                                onChange={(e) => setCtaContent(e.target.value)}
-                                placeholder="Write your CTA reply or generate one..."
-                                className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
-                                rows={3}
-                                style={{ fieldSizing: 'content' } as React.CSSProperties}
-                            />
-                            <div className="flex items-center justify-between pt-1">
-                                <span className={`font-mono text-[10px] ${ctaContent.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
-                                    {ctaContent.length}/280
-                                </span>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={handleGenerateCtaClick}
-                                        disabled={isGeneratingCta}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {isGeneratingCta ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                        {isGeneratingCta ? 'Generating...' : 'Generate'}
-                                    </button>
-                                    <button
-                                        onClick={() => { setIsCtaOpen(false); setCtaContent(''); }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSaveCta}
-                                        disabled={!ctaContent.trim()}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        <Check size={12} />
-                                        Save
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => setIsCtaOpen(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                            <Plus size={14} />
-                            Add CTA Reply
-                        </button>
-                    )}
-                </div>
-            )}
-
             {/* Existing CTA */}
-            {thread.cta_content && (
+            {thread.cta_content && isExpanded && (
                 <div className="relative ml-6 mt-0">
                     <div className="absolute top-0 left-4 h-4 w-0.5 bg-gray-200" />
                     <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
