@@ -7,6 +7,10 @@
  */
 
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+
+// jsdom doesn't implement scrollTo — stub it so components that scroll don't crash.
+Element.prototype.scrollTo = vi.fn();
 
 // Mock the WordPress config that PHP injects via wp_localize_script.
 // Every test starts with a known-good config. Individual tests can override.
