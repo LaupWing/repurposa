@@ -2,17 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 import { RepurposePanel } from './RepurposePanel';
 
-// ============================================
-// HOOK MOCKS
-// ============================================
-//
-// vi.fn() creates a "spy" — a fake function that:
-//   1. Does nothing by default
-//   2. Records every time it was called and with what arguments
-//   3. Can be told what to return via .mockReturnValue()
-//
-// We create one spy per hook. Then vi.mock() tells Vitest:
-// "When RepurposePanel imports this module, use MY fake instead."
+// --- Hook mocks ---
 
 const mockUseShortPosts = vi.fn();
 vi.mock('@/hooks/useShortPosts', () => ({
@@ -34,20 +24,9 @@ vi.mock('@/hooks/useScheduling', () => ({
     useScheduling: () => mockUseScheduling(),
 }));
 
-// ============================================
-// CHILD COMPONENT MOCKS
-// ============================================
-//
-// RepurposePanel renders ShortPostCard, ThreadCard, modals, etc.
-// Those are complex components with their own dependencies.
-// We replace them with simple stubs that:
-//   - Render a small div so we can verify they appear
-//   - Expose their props so we can inspect what RepurposePanel passed to them
-//
-// The key insight: for the cross-hook orchestration tests,
-// we need to grab the `onScheduled` callback that RepurposePanel
-// passes to SchedulePostModal. So our mock captures props.
+// --- Child component mocks ---
 
+// Captures props so we can invoke internal callbacks (e.g. onScheduled)
 let capturedScheduleModalProps: Record<string, unknown> = {};
 
 vi.mock('./cards/ShortPostCard', () => ({
@@ -75,8 +54,6 @@ vi.mock('./modals', () => ({
         isOpen ? <div data-testid="confirm-delete-modal" /> : null,
     AddShortPostModal: ({ isOpen }: { isOpen: boolean }) =>
         isOpen ? <div data-testid="add-short-post-modal" /> : null,
-    // THIS is the important one for our cross-hook test.
-    // We capture ALL the props so we can call onScheduled() ourselves.
     SchedulePostModal: (props: Record<string, unknown>) => {
         capturedScheduleModalProps = props;
         return props.isOpen ? <div data-testid="schedule-post-modal" /> : null;
@@ -98,17 +75,7 @@ vi.mock('@/components/GeneratingOverlay', () => ({
     ),
 }));
 
-// ============================================
-// DEFAULT HOOK RETURN VALUES
-// ============================================
-//
-// Each hook returns an object full of state and functions.
-// These defaults represent the "idle" state — nothing loaded, nothing happening.
-//
-// Why functions as defaults? Because RepurposePanel calls things like
-// sp.addScheduledPosts() and sched.handleScheduled(). If those aren't
-// functions, the component would crash. vi.fn() gives us safe no-op
-// functions that also track whether they were called.
+// --- Default hook returns (idle state) ---
 
 function defaultShortPosts() {
     return {
@@ -188,13 +155,6 @@ function defaultScheduling() {
     };
 }
 
-// ============================================
-// BEFORE EACH
-// ============================================
-//
-// Runs before every single test. Resets all mocks to default state.
-// Without this, mock setup from test #1 would bleed into test #2.
-
 beforeEach(() => {
     vi.clearAllMocks();
     capturedScheduleModalProps = {};
@@ -204,9 +164,7 @@ beforeEach(() => {
     mockUseScheduling.mockReturnValue(defaultScheduling());
 });
 
-// ============================================
-// TESTS — we'll add these one at a time
-// ============================================
+// --- Tests ---
 
 describe('RepurposePanel', () => {
     it('renders without crashing', () => {
@@ -215,14 +173,6 @@ describe('RepurposePanel', () => {
 
     describe('cross-hook orchestration: handleScheduled', () => {
         it('routes scheduled posts to the short posts hook when contentType is short_post', () => {
-            // ARRANGE —
-            // We need two hooks set up with specific behavior:
-            //
-            // 1. The scheduling hook's handleScheduled() must return a result
-            //    that says "this was a short_post being scheduled"
-            // 2. The short posts hook needs a trackable addScheduledPosts spy
-            //    so we can verify it was called
-
             const spAddScheduledPosts = vi.fn();
             mockUseShortPosts.mockReturnValue({
                 ...defaultShortPosts(),
@@ -235,8 +185,6 @@ describe('RepurposePanel', () => {
                 addScheduledPosts: thAddScheduledPosts,
             });
 
-            // This is what sched.handleScheduled() will return when called.
-            // It tells RepurposePanel: "a short_post (id: 42) was scheduled"
             const schedHandleScheduled = vi.fn().mockReturnValue({
                 contentType: 'short_post',
                 postId: 42,
@@ -251,13 +199,9 @@ describe('RepurposePanel', () => {
                 handleScheduled: schedHandleScheduled,
             });
 
-            // ACT —
-            // Render the component. Our mock SchedulePostModal captures its props,
-            // including the onScheduled callback that RepurposePanel created.
             render(<RepurposePanel />);
 
-            // Grab the onScheduled callback from the captured modal props
-            // and call it — simulating what happens when the user confirms a schedule.
+            // Grab the internal callback via captured modal props
             const onScheduled = capturedScheduleModalProps.onScheduled as (
                 posts: Array<{ id: number; platform: string; status: string; scheduled_at: string }>
             ) => void;
@@ -266,18 +210,12 @@ describe('RepurposePanel', () => {
                 { id: 100, platform: 'twitter', status: 'pending', scheduled_at: '2026-03-01T12:00:00Z' },
             ]);
 
-            // ASSERT —
-            // 1. The scheduling hook was asked to process the new scheduled posts
             expect(schedHandleScheduled).toHaveBeenCalledWith([
                 { id: 100, platform: 'twitter', status: 'pending', scheduled_at: '2026-03-01T12:00:00Z' },
             ]);
-
-            // 2. Since contentType was 'short_post', the SHORT POSTS hook got the update
             expect(spAddScheduledPosts).toHaveBeenCalledWith(42, [
                 { id: 100, platform: 'twitter', status: 'pending', scheduled_at: '2026-03-01T12:00:00Z' },
             ]);
-
-            // 3. The threads hook should NOT have been called — this wasn't a thread
             expect(thAddScheduledPosts).not.toHaveBeenCalled();
         });
     });
