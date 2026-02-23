@@ -117,7 +117,7 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
 
     saveProfile: async (data) => {
         await laravelFetch('/profile', {
-            method: 'POST',
+            method: 'PUT',
             body: JSON.stringify(data),
         });
         set({ profile: data });
