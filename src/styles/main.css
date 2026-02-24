@@ -60,6 +60,16 @@
   transform: translateY(-8px);
 }
 
+/* Shimmer gradient text animation */
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0% 0; }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s linear infinite alternate;
+}
+
 /**
  * TipTap Editor Styles
  */

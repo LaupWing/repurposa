@@ -63,7 +63,18 @@ export function GeneratingOverlay({ title, descriptions }: GeneratingOverlayProp
                 </svg>
             </div>
             <div className="space-y-2 text-center">
-                <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+                <h3
+                    className="animate-shimmer bg-clip-text text-lg font-semibold"
+                    style={{
+                        backgroundImage:
+                            'linear-gradient(90deg, #111827 0%, #111827 40%, #06b6d4 45%, #3b82f6 50%, #8b5cf6 55%, #d946ef 60%, #111827 65%, #111827 100%)',
+                        backgroundSize: '200% 100%',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                    }}
+                >
+                    {title}
+                </h3>
                 <AnimatedText texts={descriptions} interval={1800} className="text-sm text-gray-500" />
             </div>
         </div>
