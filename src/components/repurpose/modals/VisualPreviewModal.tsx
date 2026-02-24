@@ -603,7 +603,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const [saving, setSaving] = useState(false);
     const [textSizes, setTextSizes] = useState<Record<number, TextSize>>({});
     const [isCurrentPostOverflowing, setIsCurrentPostOverflowing] = useState(false);
-    const [avatarUrl, setAvatarUrl] = useState<string | undefined>(xConnection?.profilePicture || undefined);
+    const [avatarUrl, setAvatarUrl] = useState<string | undefined>(user?.avatar || undefined);
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
     const [avatarCrop, setAvatarCrop] = useState<{ x: number; y: number; width: number; height: number } | undefined>(undefined);
     const [showCropModal, setShowCropModal] = useState(false);
@@ -632,7 +632,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         setGradient(GRADIENT_PRESETS.find(g => g.id === initialSettings?.gradient_id) || GRADIENT_PRESETS[0]);
         setDisplayName(initialSettings?.display_name ?? user?.name ?? 'Your Name');
         setHandle(initialSettings?.handle ?? xConnection?.username ?? 'yourhandle');
-        setAvatarUrl(initialSettings?.avatar_url ?? xConnection?.profilePicture ?? undefined);
+        setAvatarUrl(initialSettings?.avatar_url ?? user?.avatar ?? undefined);
         setAvatarCrop(initialSettings?.avatar_crop ?? undefined);
         setCropPosition({ x: 0, y: 0 });
         setCropZoom(1);
