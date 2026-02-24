@@ -28,6 +28,7 @@ import {
     Type,
     AlertTriangle,
     Pencil,
+    Check,
     Settings,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -94,7 +95,7 @@ interface BaseVisualPreviewModalProps {
     visualId?: number;
     initialDescription?: string;
     initialSettings?: VisualSettings;
-    onSaved?: (visual: import('@/components/types').Visual) => void;
+    onSaved?: (visual: import('@/types').Visual) => void;
 }
 
 // ============================================
@@ -188,6 +189,9 @@ export function VisualPreview({
     gradient,
     textSize,
     onOverflowChange,
+    isEditing: isEditingContent,
+    editValue,
+    onEditChange,
 }: {
     content: string;
     displayName: string;
@@ -201,6 +205,9 @@ export function VisualPreview({
     gradient: GradientPreset;
     textSize?: TextSize | null;
     onOverflowChange?: (isOverflowing: boolean) => void;
+    isEditing?: boolean;
+    editValue?: string;
+    onEditChange?: (value: string) => void;
 }) {
     const isDark = theme === 'dark';
     const isBasic = style === 'basic';
@@ -254,7 +261,7 @@ export function VisualPreview({
     // Basic style: flat card, no gradient wrapper
     if (isBasic) {
         return (
-            <div className={`h-[500px] w-[500px] flex flex-col px-10 py-12 shadow-2xl ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'}`}>
+            <div className={`h-[500px] w-[500px] flex flex-col px-10 py-12 shadow-2xl ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'} ${isEditingContent ? 'ring-2 ring-inset ring-blue-400' : ''}`}>
                 {/* Avatar + Name */}
                 <div className="flex items-center gap-3 mb-6 flex-shrink-0">
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-violet-600">
@@ -275,12 +282,21 @@ export function VisualPreview({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-h-0 overflow-hidden">
-                    <div ref={innerRef} className={`${textClass} ${fontWeightClass}`}>
-                        {paragraphs.map((para, i) => (
-                            <p key={i} className={`whitespace-pre-wrap leading-snug ${i < paragraphs.length - 1 ? 'mb-[1em]' : ''}`}>{para}</p>
-                        ))}
-                    </div>
+                <div className={`flex-1 min-h-0 ${isEditingContent ? '' : 'overflow-hidden'}`}>
+                    {isEditingContent ? (
+                        <textarea
+                            value={editValue ?? content}
+                            onChange={(e) => onEditChange?.(e.target.value)}
+                            className="w-full h-full resize-none bg-transparent text-sm focus:outline-none"
+                            autoFocus
+                        />
+                    ) : (
+                        <div ref={innerRef} className={`${textClass} ${fontWeightClass}`}>
+                            {paragraphs.map((para, i) => (
+                                <p key={i} className={`whitespace-pre-wrap leading-snug ${i < paragraphs.length - 1 ? 'mb-[1em]' : ''}`}>{para}</p>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -291,7 +307,7 @@ export function VisualPreview({
             <div
                 className={`flex h-full w-full flex-col rounded-2xl shadow-xl ${
                     isMinimal ? 'p-6' : 'p-5'
-                } ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'}`}
+                } ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'} ${isEditingContent ? 'ring-2 ring-inset ring-blue-400' : ''}`}
             >
                 {/* Header */}
                 <div className="flex items-center gap-3 flex-shrink-0">
@@ -318,12 +334,21 @@ export function VisualPreview({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-h-0 py-4 overflow-hidden">
-                    <div ref={innerRef} className={`${textClass} ${fontWeightClass}`}>
-                        {paragraphs.map((para, i) => (
-                            <p key={i} className={`whitespace-pre-wrap leading-relaxed ${i < paragraphs.length - 1 ? 'mb-[1em]' : ''}`}>{para}</p>
-                        ))}
-                    </div>
+                <div className={`flex-1 min-h-0 py-4 ${isEditingContent ? '' : 'overflow-hidden'}`}>
+                    {isEditingContent ? (
+                        <textarea
+                            value={editValue ?? content}
+                            onChange={(e) => onEditChange?.(e.target.value)}
+                            className={`w-full h-full resize-none bg-transparent focus:outline-none ${isDark ? 'text-white' : 'text-black'} text-sm`}
+                            autoFocus
+                        />
+                    ) : (
+                        <div ref={innerRef} className={`${textClass} ${fontWeightClass}`}>
+                            {paragraphs.map((para, i) => (
+                                <p key={i} className={`whitespace-pre-wrap leading-relaxed ${i < paragraphs.length - 1 ? 'mb-[1em]' : ''}`}>{para}</p>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Timestamp */}
@@ -587,7 +612,9 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const { user, socialConnections } = useProfileStore();
     const xConnection = socialConnections.find((c) => c.platform === 'twitter');
 
-    const posts = Array.isArray(content) ? content : [content];
+    const [editablePosts, setEditablePosts] = useState<string[]>(() => Array.isArray(content) ? [...content] : [content]);
+    const [editingPostIndex, setEditingPostIndex] = useState<number | null>(null);
+    const [editDraft, setEditDraft] = useState('');
     const [currentPostIndex, setCurrentPostIndex] = useState(0);
 
     const previewRef = useRef<HTMLDivElement>(null);
@@ -618,6 +645,9 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     useEffect(() => {
         if (!isOpen) return;
         setCurrentPostIndex(0);
+        setEditablePosts(Array.isArray(content) ? [...content] : [content]);
+        setEditingPostIndex(null);
+        setEditDraft('');
         setTextSizes(
             initialSettings?.text_sizes
                 ? Object.fromEntries(
@@ -686,17 +716,15 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                 ...(Object.keys(textSizes).length > 0 && { text_sizes: textSizes }),
             };
 
-            const contentArray = Array.isArray(content) ? content : [content];
-
-            let visual: import('@/components/types').Visual;
+            let visual: import('@/types').Visual;
             if (isEditing) {
-                visual = await updateVisual(visualId, { content: contentArray, description, settings });
+                visual = await updateVisual(visualId, { content: editablePosts, description, settings });
             } else {
                 if (!blogId || !sourceType || !sourceId) return;
                 visual = await createVisual(blogId, {
                     source_type: sourceType,
                     source_id: sourceId,
-                    content: contentArray,
+                    content: editablePosts,
                     description,
                     settings,
                 });
@@ -709,7 +737,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         } finally {
             setSaving(false);
         }
-    }, [blogId, sourceType, sourceId, visualId, isEditing, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, avatarCrop, stats, textSizes, content, description, onSaved]);
+    }, [blogId, sourceType, sourceId, visualId, isEditing, saving, style, theme, corners, gradient, displayName, handle, avatarUrl, avatarCrop, stats, textSizes, editablePosts, description, onSaved]);
 
     const controlsAvatarStyle: React.CSSProperties | undefined = avatarCrop && avatarUrl ? (() => {
         const { x, y, width, height } = avatarCrop;
@@ -935,7 +963,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                             {/* Preview */}
                             <div className="flex items-center justify-center gap-3">
                                 {/* Left chevron */}
-                                {posts.length > 1 ? (
+                                {editablePosts.length > 1 ? (
                                     <button
                                         onClick={() => setCurrentPostIndex((i) => Math.max(0, i - 1))}
                                         disabled={currentPostIndex === 0}
@@ -947,90 +975,135 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
 
                                 {/* Card + badge + text size */}
                                 <div className="relative">
-                                    {posts.length > 1 && (
+                                    {editablePosts.length > 1 && (
                                         <div className="absolute -top-3 right-3 z-10 rounded-full bg-black/70 px-2.5 py-0.5 text-xs font-medium text-white shadow-sm">
-                                            Post {currentPostIndex + 1} of {posts.length}
+                                            Post {currentPostIndex + 1} of {editablePosts.length}
                                         </div>
                                     )}
-                                    <div ref={previewRef}>
-                                        <VisualPreview
-                                            content={posts[currentPostIndex]}
-                                            displayName={displayName}
-                                            handle={handle}
-                                            avatarUrl={avatarUrl}
-                                            avatarCrop={avatarCrop}
-                                            theme={theme}
-                                            style={style}
-                                            stats={stats}
-                                            roundedCorners={corners === 'rounded'}
-                                            gradient={gradient}
-                                            textSize={textSizes[currentPostIndex] || null}
-                                            onOverflowChange={setIsCurrentPostOverflowing}
-                                        />
-                                    </div>
-                                    {/* Text size toggle */}
-                                    <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full bg-white border shadow-sm px-2 py-1 ${isCurrentPostOverflowing ? 'border-amber-300' : 'border-gray-200'}`}>
-                                        <Type size={12} className="text-gray-400" />
-                                        <span className="text-[10px] font-medium text-gray-500">Font size</span>
-                                        <div className="flex items-center gap-0.5 ml-0.5">
-                                            <button
-                                                onClick={() => {
-                                                    const current = textSizes[currentPostIndex] || TEXT_SCALE[STYLE_RANGE[style].start];
-                                                    const idx = TEXT_SCALE.indexOf(current as TextSize);
-                                                    if (idx < STYLE_RANGE[style].end) setTextSizes(prev => ({ ...prev, [currentPostIndex]: TEXT_SCALE[idx + 1] }));
-                                                }}
-                                                className="h-5 w-5 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                                                title="Decrease font size"
-                                            >
-                                                <Minus size={12} />
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    if (textSizes[currentPostIndex]) {
-                                                        setTextSizes(prev => {
-                                                            const next = { ...prev };
-                                                            delete next[currentPostIndex];
-                                                            return next;
-                                                        });
-                                                    }
-                                                }}
-                                                className={`text-[10px] font-bold min-w-[28px] text-center ${textSizes[currentPostIndex] ? 'text-blue-600 hover:text-blue-800 cursor-pointer' : 'text-gray-700'}`}
-                                                title={textSizes[currentPostIndex] ? 'Click to reset to Auto' : ''}
-                                            >
-                                                {TEXT_SIZE_LABELS[textSizes[currentPostIndex]] || 'Auto'}
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    const current = textSizes[currentPostIndex] || TEXT_SCALE[STYLE_RANGE[style].start];
-                                                    const idx = TEXT_SCALE.indexOf(current as TextSize);
-                                                    if (idx > STYLE_RANGE[style].start) setTextSizes(prev => ({ ...prev, [currentPostIndex]: TEXT_SCALE[idx - 1] }));
-                                                }}
-                                                className="h-5 w-5 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                                                title="Increase font size"
-                                            >
-                                                <Plus size={12} />
-                                            </button>
+                                    <div className="relative group">
+                                        <div ref={editingPostIndex === currentPostIndex ? undefined : previewRef}>
+                                            <VisualPreview
+                                                content={editablePosts[currentPostIndex]}
+                                                displayName={displayName}
+                                                handle={handle}
+                                                avatarUrl={avatarUrl}
+                                                avatarCrop={avatarCrop}
+                                                theme={theme}
+                                                style={style}
+                                                stats={stats}
+                                                roundedCorners={corners === 'rounded'}
+                                                gradient={gradient}
+                                                textSize={textSizes[currentPostIndex] || null}
+                                                onOverflowChange={setIsCurrentPostOverflowing}
+                                                isEditing={editingPostIndex === currentPostIndex}
+                                                editValue={editDraft}
+                                                onEditChange={setEditDraft}
+                                            />
                                         </div>
-                                        {isCurrentPostOverflowing && (
-                                            <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 ml-0.5" title="Text is too large for the card">
-                                                <AlertTriangle size={11} />
-                                                Overflowing
-                                            </span>
+                                        {editingPostIndex !== currentPostIndex && (
+                                            <div
+                                                className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors rounded-2xl cursor-pointer"
+                                                onClick={() => {
+                                                    setEditDraft(editablePosts[currentPostIndex]);
+                                                    setEditingPostIndex(currentPostIndex);
+                                                }}
+                                            >
+                                                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Pencil size={14} className="text-gray-700" />
+                                                    <span className="text-sm font-medium text-gray-700">Edit text</span>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
+                                    {/* Bottom bar: edit controls or text size toggle */}
+                                    {editingPostIndex === currentPostIndex ? (
+                                        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full bg-white border border-blue-300 shadow-sm px-2 py-1">
+                                            <button
+                                                onClick={() => setEditingPostIndex(null)}
+                                                className="text-[10px] font-medium text-gray-600 hover:text-gray-800 px-2 py-0.5 rounded-full hover:bg-gray-100 transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setEditablePosts(prev => {
+                                                        const next = [...prev];
+                                                        next[currentPostIndex] = editDraft;
+                                                        return next;
+                                                    });
+                                                    setEditingPostIndex(null);
+                                                }}
+                                                className="flex items-center gap-1 text-[10px] font-medium text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-0.5 rounded-full transition-colors"
+                                            >
+                                                <Check size={10} />
+                                                Apply
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full bg-white border shadow-sm px-2 py-1 ${isCurrentPostOverflowing ? 'border-amber-300' : 'border-gray-200'}`}>
+                                            <Type size={12} className="text-gray-400" />
+                                            <span className="text-[10px] font-medium text-gray-500">Font size</span>
+                                            <div className="flex items-center gap-0.5 ml-0.5">
+                                                <button
+                                                    onClick={() => {
+                                                        const current = textSizes[currentPostIndex] || TEXT_SCALE[STYLE_RANGE[style].start];
+                                                        const idx = TEXT_SCALE.indexOf(current as TextSize);
+                                                        if (idx < STYLE_RANGE[style].end) setTextSizes(prev => ({ ...prev, [currentPostIndex]: TEXT_SCALE[idx + 1] }));
+                                                    }}
+                                                    className="h-5 w-5 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                                                    title="Decrease font size"
+                                                >
+                                                    <Minus size={12} />
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        if (textSizes[currentPostIndex]) {
+                                                            setTextSizes(prev => {
+                                                                const next = { ...prev };
+                                                                delete next[currentPostIndex];
+                                                                return next;
+                                                            });
+                                                        }
+                                                    }}
+                                                    className={`text-[10px] font-bold min-w-[28px] text-center ${textSizes[currentPostIndex] ? 'text-blue-600 hover:text-blue-800 cursor-pointer' : 'text-gray-700'}`}
+                                                    title={textSizes[currentPostIndex] ? 'Click to reset to Auto' : ''}
+                                                >
+                                                    {TEXT_SIZE_LABELS[textSizes[currentPostIndex]] || 'Auto'}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const current = textSizes[currentPostIndex] || TEXT_SCALE[STYLE_RANGE[style].start];
+                                                        const idx = TEXT_SCALE.indexOf(current as TextSize);
+                                                        if (idx > STYLE_RANGE[style].start) setTextSizes(prev => ({ ...prev, [currentPostIndex]: TEXT_SCALE[idx - 1] }));
+                                                    }}
+                                                    className="h-5 w-5 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                                                    title="Increase font size"
+                                                >
+                                                    <Plus size={12} />
+                                                </button>
+                                            </div>
+                                            {isCurrentPostOverflowing && (
+                                                <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 ml-0.5" title="Text is too large for the card">
+                                                    <AlertTriangle size={11} />
+                                                    Overflowing
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Right chevron */}
-                                {posts.length > 1 ? (
+                                {editablePosts.length > 1 ? (
                                     <button
-                                        onClick={() => setCurrentPostIndex((i) => Math.min(posts.length - 1, i + 1))}
-                                        disabled={currentPostIndex === posts.length - 1}
+                                        onClick={() => setCurrentPostIndex((i) => Math.min(editablePosts.length - 1, i + 1))}
+                                        disabled={currentPostIndex === editablePosts.length - 1}
                                         className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                     >
                                         <ChevronRight size={22} />
                                     </button>
                                 ) : null}
                             </div>
+
                         </>
                     ) : (
                         <div className="relative">
