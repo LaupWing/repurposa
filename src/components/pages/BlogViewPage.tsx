@@ -41,7 +41,7 @@ import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { RepurposePanel } from '@/components/repurpose/RepurposePanel';
 import ImagePickerModal from '@/components/ImagePickerModal';
 import { getBlog, updateBlog, deleteBlog, regenerateBlog, generateOutline, generateTopics, getVersions, createVersion, restoreVersion, refineText } from '@/services/blogApi';
-import type { TopicSuggestion, BlogGenerationMode, BlogPost, OutlineSection, PostVersion } from '@/types';
+import type { TopicSuggestion, BlogGenerationMode, BlogPost, PostVersion } from '@/types';
 
 import { useProfileStore } from '@/store/profileStore';
 import {
@@ -487,7 +487,7 @@ function RegenerateModal({
                         >
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-semibold text-gray-900">Main Info</span>
-                                {!openSection === 'info' && topic && (
+                                {openSection !== 'info' && topic && (
                                     <span className="text-xs text-gray-400 truncate max-w-[200px]">{topic}</span>
                                 )}
                             </div>
@@ -733,7 +733,7 @@ function RegenerateModal({
                         >
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-semibold text-gray-900">Generation Mode</span>
-                                {!openSection === 'mode' && (
+                                {openSection !== 'mode' && (
                                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
                                         generationMode === 'quick'
                                             ? 'bg-gray-100 text-gray-600'
@@ -896,11 +896,13 @@ function BlogEditor({
     isGenerating,
     onPublished,
     onRegenerate,
+    onSaved,
 }: {
     post: BlogPost;
     isGenerating: boolean;
     onPublished: (postId: number, postUrl: string) => void;
     onRegenerate: () => void;
+    onSaved?: (title: string, content: string) => void;
 }) {
     const [title, setTitle] = useState(post.title);
     const [content, setContent] = useState(post.content);
@@ -1034,6 +1036,7 @@ function BlogEditor({
             setSavedTitle(title);
             setSavedContent(content);
             setSavedThumbnail(thumbnail);
+            onSaved?.(title, content);
             toast.success('Draft saved successfully');
         } catch (error) {
             console.error('Failed to save:', error);
@@ -1068,6 +1071,7 @@ function BlogEditor({
             await updateBlog(post.id, { wp_status: 'published', published_post_id: response.post_id, published_post_url: response.post_url });
 
             onPublished(response.post_id, response.post_url);
+            onSaved?.(title, content);
 
             toast.success(
                 response.updated
@@ -1737,6 +1741,9 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                                     published_post_id: publishedPostId,
                                     published_post_url: publishedPostUrl,
                                 } : prev);
+                            }}
+                            onSaved={(title, content) => {
+                                setPost(prev => prev ? { ...prev, title, content } : prev);
                             }}
                             onRegenerate={() => setIsRegenerateModalOpen(true)}
                         />
