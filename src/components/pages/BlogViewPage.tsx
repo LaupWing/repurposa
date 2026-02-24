@@ -1768,6 +1768,12 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                                 setPost(prev => prev ? { ...prev, visuals: [...(prev.visuals || []), visual] } : prev);
                                 setHighlightVisualId(visual.id);
                             }}
+                            onThreadsGenerated={(threads) => {
+                                setPost(prev => prev ? { ...prev, threads } : prev);
+                            }}
+                            onShortPostsGenerated={(shortPosts) => {
+                                setPost(prev => prev ? { ...prev, short_posts: shortPosts } : prev);
+                            }}
                             onHighlightVisual={setHighlightVisualId}
                             initialHighlightVisualId={highlightVisualId}
                             initialShortPosts={post.short_posts}

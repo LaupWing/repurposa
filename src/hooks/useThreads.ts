@@ -7,6 +7,7 @@ export function useThreads(
     initialThreads: ThreadItem[] | undefined,
     blogId: number | undefined,
     blogContent: string | undefined,
+    onThreadsGenerated?: (threads: ThreadItem[]) => void,
 ) {
     const [threads, setThreads] = useState<ThreadItem[]>(initialThreads || []);
     const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
@@ -22,6 +23,7 @@ export function useThreads(
         try {
             const response = await generateThreads(blogId, blogContent);
             setThreads(response.threads);
+            onThreadsGenerated?.(response.threads);
             toast.success(`${response.threads.length} threads generated`);
         } catch (error) {
             console.error('Failed to generate threads:', error);

@@ -43,15 +43,17 @@ interface RepurposePanelProps {
     onSwitchTab?: (tab: TabType) => void;
     onVisualCreated?: (visual: Visual) => void;
     onHighlightVisual?: (visualId: number) => void;
+    onThreadsGenerated?: (threads: ThreadItem[]) => void;
+    onShortPostsGenerated?: (shortPosts: ShortPost[]) => void;
     initialHighlightVisualId?: number | null;
     initialShortPosts?: ShortPost[];
     initialThreads?: ThreadItem[];
     initialVisuals?: Visual[];
 }
 
-export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab, onVisualCreated, onHighlightVisual, initialHighlightVisualId, initialShortPosts, initialThreads, initialVisuals }: RepurposePanelProps) {
-    const sp = useShortPosts(initialShortPosts, blogId, blogContent, isPublished, publishedPostUrl);
-    const th = useThreads(initialThreads, blogId, blogContent);
+export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPublished, publishedPostUrl, editShortPostId, onSwitchTab, onVisualCreated, onHighlightVisual, onThreadsGenerated, onShortPostsGenerated, initialHighlightVisualId, initialShortPosts, initialThreads, initialVisuals }: RepurposePanelProps) {
+    const sp = useShortPosts(initialShortPosts, blogId, blogContent, isPublished, publishedPostUrl, onShortPostsGenerated);
+    const th = useThreads(initialThreads, blogId, blogContent, onThreadsGenerated);
     const vis = useVisuals(initialVisuals, initialHighlightVisualId);
     const sched = useScheduling();
 

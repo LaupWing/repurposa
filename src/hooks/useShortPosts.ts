@@ -26,6 +26,7 @@ export function useShortPosts(
     blogContent: string | undefined,
     isPublished: boolean | undefined,
     publishedPostUrl: string | null | undefined,
+    onShortPostsGenerated?: (shortPosts: ShortPost[]) => void,
 ) {
     const [shortPosts, setShortPosts] = useState<ShortPostPattern[]>(() =>
         (initialShortPosts || []).map(shortPostToPattern)
@@ -66,6 +67,7 @@ export function useShortPosts(
             const ctaLink = includeCta && publishedPostUrl ? publishedPostUrl : undefined;
             const response = await generateShortPosts(blogId, blogContent, ctaLink);
             setShortPosts(response.short_posts.map(shortPostToPattern));
+            onShortPostsGenerated?.(response.short_posts);
             toast.success(`${response.short_posts.length} short posts generated`);
         } catch (error) {
             console.error('Failed to generate short posts:', error);
