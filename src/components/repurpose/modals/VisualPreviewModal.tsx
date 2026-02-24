@@ -772,8 +772,44 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                 <div className="flex-1 overflow-y-auto p-6">
                     {modalTab === 'visual' ? (
                         <>
+                            {/* Controls */}
+                            <div className="flex flex-wrap items-end gap-3 mb-4">
+                                <SelectDropdown
+                                    label="Style"
+                                    options={[
+                                        { label: 'Basic', value: 'basic' as Style },
+                                        { label: 'Minimal', value: 'minimal' as Style },
+                                        { label: 'Detailed', value: 'detailed' as Style },
+                                    ]}
+                                    value={style}
+                                    onChange={setStyle}
+                                />
+                                <ToggleGroup
+                                    options={[
+                                        { label: 'Light', value: 'light' as Theme },
+                                        { label: 'Dark', value: 'dark' as Theme },
+                                    ]}
+                                    value={theme}
+                                    onChange={setTheme}
+                                />
+                                {style !== 'basic' && (
+                                    <ToggleGroup
+                                        options={[
+                                            { label: 'Rounded', value: 'rounded' as Corners },
+                                            { label: 'Square', value: 'square' as Corners },
+                                        ]}
+                                        value={corners}
+                                        onChange={setCorners}
+                                    />
+                                )}
+                                {style !== 'basic' && (
+                                    <GradientPicker gradient={gradient} onChange={setGradient} />
+                                )}
+                                {style === 'detailed' && <StatsEditor stats={stats} onChange={setStats} />}
+                            </div>
+
                             {/* Profile inputs */}
-                            <div className="flex items-center gap-3 mb-4">
+                            <div className="flex items-center gap-3 mb-6">
                                 <div>
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Avatar</label>
                                     <div className="relative">
@@ -894,42 +930,6 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                         />
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Controls */}
-                            <div className="flex flex-wrap items-end gap-3 mb-6">
-                                <SelectDropdown
-                                    label="Style"
-                                    options={[
-                                        { label: 'Basic', value: 'basic' as Style },
-                                        { label: 'Minimal', value: 'minimal' as Style },
-                                        { label: 'Detailed', value: 'detailed' as Style },
-                                    ]}
-                                    value={style}
-                                    onChange={setStyle}
-                                />
-                                <ToggleGroup
-                                    options={[
-                                        { label: 'Light', value: 'light' as Theme },
-                                        { label: 'Dark', value: 'dark' as Theme },
-                                    ]}
-                                    value={theme}
-                                    onChange={setTheme}
-                                />
-                                {style !== 'basic' && (
-                                    <ToggleGroup
-                                        options={[
-                                            { label: 'Rounded', value: 'rounded' as Corners },
-                                            { label: 'Square', value: 'square' as Corners },
-                                        ]}
-                                        value={corners}
-                                        onChange={setCorners}
-                                    />
-                                )}
-                                {style !== 'basic' && (
-                                    <GradientPicker gradient={gradient} onChange={setGradient} />
-                                )}
-                                {style === 'detailed' && <StatsEditor stats={stats} onChange={setStats} />}
                             </div>
 
                             {/* Preview */}
