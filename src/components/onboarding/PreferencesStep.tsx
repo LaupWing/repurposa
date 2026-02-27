@@ -1,4 +1,5 @@
 import { Loader2, MessageCircle, Shield, Flame } from 'lucide-react';
+import { stagger } from './stagger';
 
 const LANGUAGES = [
     { value: 'en', label: 'English' },
@@ -6,6 +7,7 @@ const LANGUAGES = [
 ] as const;
 
 interface PreferencesStepProps {
+    leaving: boolean;
     brandVoice: string;
     contentLang: string;
     setBrandVoice: (voice: string) => void;
@@ -15,16 +17,16 @@ interface PreferencesStepProps {
     onComplete: () => void;
 }
 
-export default function PreferencesStep({ brandVoice, contentLang, setBrandVoice, setContentLang, errors, sending, onComplete }: PreferencesStepProps) {
+export default function PreferencesStep({ leaving, brandVoice, contentLang, setBrandVoice, setContentLang, errors, sending, onComplete }: PreferencesStepProps) {
     return (
         <div className="flex flex-col items-center gap-6 w-full">
-            <div className="space-y-2 text-center">
+            <div {...stagger(0, leaving)} className="space-y-2 text-center">
                 <h2 className="text-xl font-bold tracking-tight text-gray-900">Almost done!</h2>
                 <p className="text-sm text-gray-500">Set your content preferences</p>
             </div>
 
             <div className="w-full max-w-sm space-y-4">
-                <div className="space-y-2">
+                <div {...stagger(1, leaving)} className="space-y-2">
                     <label className="block text-sm font-medium text-gray-500">Brand voice</label>
                     <div className="grid grid-cols-3 gap-2">
                         {([
@@ -49,7 +51,7 @@ export default function PreferencesStep({ brandVoice, contentLang, setBrandVoice
                     </div>
                 </div>
 
-                <div className="space-y-2">
+                <div {...stagger(2, leaving)} className="space-y-2">
                     <label htmlFor="content-lang" className="block text-sm font-medium text-gray-500">
                         Content language
                     </label>
@@ -70,6 +72,7 @@ export default function PreferencesStep({ brandVoice, contentLang, setBrandVoice
                 {errors.general && <p className="text-sm text-red-600 text-center">{errors.general}</p>}
 
                 <button
+                    {...stagger(3, leaving)}
                     onClick={onComplete}
                     disabled={sending}
                     className="w-full h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"

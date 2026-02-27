@@ -70,6 +70,65 @@
   animation: shimmer 3s linear infinite alternate;
 }
 
+/* Onboarding step stagger animations */
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stagger-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+[data-stagger-in] {
+  opacity: 0;
+  animation: stagger-in 350ms ease-out forwards;
+  animation-delay: calc(var(--stagger) * 80ms);
+}
+
+[data-stagger-out] {
+  animation: stagger-out 200ms ease-in forwards;
+  animation-delay: calc(var(--stagger) * 50ms);
+}
+
+/* Onboarding modal open animations */
+@keyframes modal-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-content-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-modal-overlay {
+  animation: modal-overlay-in 500ms ease-out forwards;
+}
+
+.animate-modal-content {
+  animation: modal-content-in 500ms ease-out forwards;
+}
+
 /**
  * TipTap Editor Styles
  */

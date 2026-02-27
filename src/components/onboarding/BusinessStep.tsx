@@ -1,16 +1,19 @@
+import { stagger } from './stagger';
+
 interface BusinessFormData {
     niche: string;
     target_audience: string;
 }
 
 interface BusinessStepProps {
+    leaving: boolean;
     formData: BusinessFormData;
     setFormData: (data: BusinessFormData) => void;
     onSave: (data: Record<string, unknown>) => void;
     onNext: () => void;
 }
 
-export default function BusinessStep({ formData, setFormData, onSave, onNext }: BusinessStepProps) {
+export default function BusinessStep({ leaving, formData, setFormData, onSave, onNext }: BusinessStepProps) {
     const handleContinue = () => {
         onSave({ niche: formData.niche, target_audience: formData.target_audience });
         onNext();
@@ -18,7 +21,7 @@ export default function BusinessStep({ formData, setFormData, onSave, onNext }: 
 
     return (
         <div className="flex flex-col items-center gap-6 w-full">
-            <div className="space-y-2 text-center">
+            <div {...stagger(0, leaving)} className="space-y-2 text-center">
                 <h2 className="text-xl font-bold tracking-tight text-gray-900">
                     Tell us about your business
                 </h2>
@@ -26,7 +29,7 @@ export default function BusinessStep({ formData, setFormData, onSave, onNext }: 
             </div>
 
             <div className="w-full max-w-sm space-y-4">
-                <div className="space-y-2">
+                <div {...stagger(1, leaving)} className="space-y-2">
                     <label htmlFor="niche" className="block text-sm font-medium text-gray-500">
                         What's your specialty?
                     </label>
@@ -39,7 +42,7 @@ export default function BusinessStep({ formData, setFormData, onSave, onNext }: 
                     />
                 </div>
 
-                <div className="space-y-2">
+                <div {...stagger(2, leaving)} className="space-y-2">
                     <label htmlFor="target_audience" className="block text-sm font-medium text-gray-500">
                         Who's it for?
                     </label>
@@ -53,6 +56,7 @@ export default function BusinessStep({ formData, setFormData, onSave, onNext }: 
                 </div>
 
                 <button
+                    {...stagger(3, leaving)}
                     onClick={handleContinue}
                     disabled={!formData.niche.trim() || !formData.target_audience.trim()}
                     className="w-full h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

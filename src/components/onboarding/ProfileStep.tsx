@@ -3,8 +3,10 @@ import { Spinner } from '@wordpress/components';
 import Avatar from 'boring-avatars';
 import { Pencil } from 'lucide-react';
 import { uploadAvatar } from '@/services/profileApi';
+import { stagger } from './stagger';
 
 interface ProfileStepProps {
+    leaving: boolean;
     name: string;
     setName: (name: string) => void;
     email: string;
@@ -14,7 +16,7 @@ interface ProfileStepProps {
     onNext: () => void;
 }
 
-export default function ProfileStep({ name, setName, email, avatarUrl, onAvatarChange, onSave, onNext }: ProfileStepProps) {
+export default function ProfileStep({ leaving, name, setName, email, avatarUrl, onAvatarChange, onSave, onNext }: ProfileStepProps) {
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -37,14 +39,14 @@ export default function ProfileStep({ name, setName, email, avatarUrl, onAvatarC
 
     return (
         <div className="flex flex-col items-center gap-6 w-full">
-            <div className="space-y-2 text-center">
+            <div {...stagger(0, leaving)} className="space-y-2 text-center">
                 <h2 className="text-xl font-bold tracking-tight text-gray-900">Set up your profile</h2>
                 <p className="text-sm text-gray-500">How you'll appear on Repurposa</p>
             </div>
 
             <div className="w-full max-w-sm space-y-4">
                 {/* Avatar */}
-                <div className="flex flex-col items-center gap-2">
+                <div {...stagger(1, leaving)} className="flex flex-col items-center gap-2">
                     <button
                         type="button"
                         className="group relative rounded-full"
@@ -95,7 +97,7 @@ export default function ProfileStep({ name, setName, email, avatarUrl, onAvatarC
                 </div>
 
                 {/* Name */}
-                <div className="space-y-2">
+                <div {...stagger(2, leaving)} className="space-y-2">
                     <label htmlFor="profile-name" className="block text-sm font-medium text-gray-500">Name</label>
                     <input
                         id="profile-name"
@@ -114,6 +116,7 @@ export default function ProfileStep({ name, setName, email, avatarUrl, onAvatarC
                 </div>
 
                 <button
+                    {...stagger(3, leaving)}
                     onClick={handleContinue}
                     disabled={!name.trim()}
                     className="w-full h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

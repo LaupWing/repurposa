@@ -53,6 +53,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     };
 
     const [step, setStep] = useState<Step>(getInitialStep);
+    const [leaving, setLeaving] = useState(false);
     const [name, setName] = useState(user?.name ?? '');
     const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar ?? null);
     const [email, setEmail] = useState('');
@@ -77,6 +78,14 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
         : provider === 'email'
           ? 'setup-profile'
           : 'setup-business';
+
+    const goTo = (next: Step) => {
+        setLeaving(true);
+        setTimeout(() => {
+            setStep(next);
+            setLeaving(false);
+        }, 250);
+    };
 
     const saveStepData = async (data: Record<string, unknown>) => {
         const { apiUrl, token } = getConfig();
@@ -155,25 +164,27 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     const renderStep = () => {
         switch (step) {
             case 'welcome':
-                return <WelcomeStep onNext={() => setStep(nextAfterWelcome)} />;
+                return <WelcomeStep leaving={leaving} onNext={() => goTo(nextAfterWelcome)} />;
             case 'setup-profile':
-                return <ProfileStep name={name} setName={setName} email={user?.email ?? ''} avatarUrl={avatarUrl} onAvatarChange={setAvatarUrl} onSave={saveStepData} onNext={() => setStep('setup-connect')} />;
+                return <ProfileStep leaving={leaving} name={name} setName={setName} email={user?.email ?? ''} avatarUrl={avatarUrl} onAvatarChange={setAvatarUrl} onSave={saveStepData} onNext={() => goTo('setup-connect')} />;
             case 'setup-email':
-                return <EmailStep email={email} setEmail={setEmail} errors={errors} onSave={saveStepData} onNext={() => setStep('setup-business')} />;
+                return <EmailStep leaving={leaving} email={email} setEmail={setEmail} errors={errors} onSave={saveStepData} onNext={() => goTo('setup-business')} />;
             case 'setup-connect':
-                return <ConnectStep connectedPlatforms={connectedPlatforms} connectingPlatform={connectingPlatform} onConnect={handleConnectPlatform} onNext={() => setStep('setup-business')} />;
+                return <ConnectStep leaving={leaving} connectedPlatforms={connectedPlatforms} connectingPlatform={connectingPlatform} onConnect={handleConnectPlatform} onNext={() => goTo('setup-business')} />;
             case 'setup-business':
                 return (
                     <BusinessStep
+                        leaving={leaving}
                         formData={{ niche: formData.niche, target_audience: formData.target_audience }}
                         setFormData={(data) => setFormData({ ...formData, ...data })}
                         onSave={saveStepData}
-                        onNext={() => setStep('setup-preferences')}
+                        onNext={() => goTo('setup-preferences')}
                     />
                 );
             case 'setup-preferences':
                 return (
                     <PreferencesStep
+                        leaving={leaving}
                         brandVoice={formData.brand_voice}
                         contentLang={formData.content_lang}
                         setBrandVoice={(voice) => setFormData({ ...formData, brand_voice: voice })}
@@ -188,9 +199,9 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-modal-overlay" />
 
-            <div className="relative overflow-hidden border border-gray-200 bg-white/95 shadow-[0_4px_24px_rgba(0,0,0,0.08)] backdrop-blur rounded-xl w-full max-w-xl mx-4 aspect-[5/4]">
+            <div className="relative overflow-hidden border border-gray-200 bg-white/95 shadow-[0_4px_24px_rgba(0,0,0,0.08)] backdrop-blur rounded-xl w-full max-w-xl mx-4 aspect-[5/4] animate-modal-content">
                 <div className="pointer-events-none absolute -top-20 left-1/2 h-40 w-[400px] -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400/20 via-violet-400/20 to-fuchsia-400/20 blur-3xl" />
 
                 <div className="relative flex h-full flex-col items-center justify-center gap-8">

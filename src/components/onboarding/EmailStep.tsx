@@ -1,4 +1,7 @@
+import { stagger } from './stagger';
+
 interface EmailStepProps {
+    leaving: boolean;
     email: string;
     setEmail: (email: string) => void;
     errors: Record<string, string>;
@@ -6,7 +9,7 @@ interface EmailStepProps {
     onNext: () => void;
 }
 
-export default function EmailStep({ email, setEmail, errors, onSave, onNext }: EmailStepProps) {
+export default function EmailStep({ leaving, email, setEmail, errors, onSave, onNext }: EmailStepProps) {
     const handleContinue = () => {
         onSave({ email });
         onNext();
@@ -14,13 +17,13 @@ export default function EmailStep({ email, setEmail, errors, onSave, onNext }: E
 
     return (
         <div className="flex flex-col items-center gap-6 w-full">
-            <div className="space-y-2 text-center">
+            <div {...stagger(0, leaving)} className="space-y-2 text-center">
                 <h2 className="text-xl font-bold tracking-tight text-gray-900">What's your email?</h2>
                 <p className="text-sm text-gray-500">We'll use this for notifications and account recovery</p>
             </div>
 
             <div className="w-full max-w-sm space-y-4">
-                <div className="space-y-2">
+                <div {...stagger(1, leaving)} className="space-y-2">
                     <label htmlFor="setup-email" className="block text-sm font-medium text-gray-500">Email</label>
                     <input
                         id="setup-email"
@@ -42,11 +45,12 @@ export default function EmailStep({ email, setEmail, errors, onSave, onNext }: E
                     {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
                 </div>
 
-                <p className="text-center text-sm text-gray-500">
+                <p {...stagger(2, leaving)} className="text-center text-sm text-gray-500">
                     You'll still log in with <span className="font-semibold text-gray-900">X (Twitter)</span>.
                 </p>
 
                 <button
+                    {...stagger(3, leaving)}
                     onClick={handleContinue}
                     disabled={!email.trim()}
                     className="w-full h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

@@ -1,17 +1,19 @@
 import { Loader2, Check } from 'lucide-react';
 import { CONNECT_PLATFORMS } from '@/constants/platforms';
+import { stagger } from './stagger';
 
 interface ConnectStepProps {
+    leaving: boolean;
     connectedPlatforms: string[];
     connectingPlatform: string | null;
     onConnect: (platformId: string) => void;
     onNext: () => void;
 }
 
-export default function ConnectStep({ connectedPlatforms, connectingPlatform, onConnect, onNext }: ConnectStepProps) {
+export default function ConnectStep({ leaving, connectedPlatforms, connectingPlatform, onConnect, onNext }: ConnectStepProps) {
     return (
         <div className="flex flex-col items-center gap-6 w-full">
-            <div className="space-y-1 text-center">
+            <div {...stagger(0, leaving)} className="space-y-1 text-center">
                 <h2 className="text-xl font-bold tracking-tight text-gray-900">
                     Connect an account where you want to publish
                 </h2>
@@ -19,13 +21,14 @@ export default function ConnectStep({ connectedPlatforms, connectingPlatform, on
             </div>
 
             <div className="grid grid-cols-3 gap-3 w-full max-w-sm">
-                {CONNECT_PLATFORMS.map((platform) => {
+                {CONNECT_PLATFORMS.map((platform, i) => {
                     const isConnected = connectedPlatforms.includes(platform.id);
                     const isConnecting = connectingPlatform === platform.id;
 
                     return (
                         <button
                             key={platform.id}
+                            {...stagger(i + 1, leaving)}
                             disabled={isConnected || isConnecting}
                             onClick={() => onConnect(platform.id)}
                             className={`relative flex flex-col items-center gap-2.5 py-5 rounded-lg border text-xs font-medium transition-colors ${
