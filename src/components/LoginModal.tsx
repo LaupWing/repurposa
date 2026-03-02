@@ -49,7 +49,7 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
 
         const url = platform === 'email'
             ? `${apiUrl}/auth/wordpress/email-login?origin=${encodeURIComponent(origin)}`
-            : `${apiUrl}/social/${platform}/login?origin=${encodeURIComponent(origin)}&source=wordpress`;
+            : `${apiUrl}/api/auth/social/${platform}?origin=${encodeURIComponent(origin)}`;
 
         openPopup(url, platform);
     };
