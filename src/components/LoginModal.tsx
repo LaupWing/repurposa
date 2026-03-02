@@ -19,7 +19,7 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ onConnected }: LoginModalProps) {
-    const [view, setView] = useState<'buttons' | 'email'>('buttons');
+    const [view, setView] = useState<'buttons' | 'email' | 'otp'>('buttons');
     const [email, setEmail] = useState('');
     const [emailError, setEmailError] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -48,6 +48,32 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
             }
         },
     });
+
+    const handleSendCode = async () => {
+        setEmailError('');
+        setIsSending(true);
+
+        try {
+            const { apiUrl } = getConfig();
+            const response = await fetch(`${apiUrl}/api/auth/email/send-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                setEmailError(data.errors?.email || 'Something went wrong.');
+                return;
+            }
+
+            setView('otp');
+        } catch {
+            setEmailError('Something went wrong. Please try again.');
+        } finally {
+            setIsSending(false);
+        }
+    };
 
     const openLogin = (platform: string) => {
         const { apiUrl } = getConfig();
@@ -80,6 +106,7 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
                                     type="email"
                                     value={email}
                                     onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+                                    onKeyDown={(e) => e.key === 'Enter' && email.trim() && handleSendCode()}
                                     placeholder="you@example.com"
                                     className="w-full h-10 px-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                                     autoFocus
@@ -88,6 +115,7 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
                                     <p className="text-sm text-red-500">{emailError}</p>
                                 )}
                                 <button
+                                    onClick={handleSendCode}
                                     disabled={!email.trim() || isSending}
                                     className="w-full h-10 text-sm font-medium text-white bg-violet-600 rounded-lg cursor-pointer hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                                 >
