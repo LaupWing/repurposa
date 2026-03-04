@@ -532,21 +532,12 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
           {currentStep === 3 && (
             <div className="relative flex items-center gap-1">
               <button
-                onClick={() => setShowRefinePopover(!showRefinePopover)}
+                onClick={() => setShowRefinePopover(true)}
                 disabled={isGeneratingBlog || isRefiningOutline || data.outline.length === 0}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 border border-gray-200 disabled:opacity-50 transition-colors"
               >
-                {isRefiningOutline ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Refining...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} className="text-blue-600" />
-                    Refine Outline
-                  </>
-                )}
+                <Sparkles size={16} className="text-blue-600" />
+                Refine Outline
               </button>
               <button
                 onClick={() => setShowConfirmModal(true)}
@@ -566,56 +557,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
                 )}
               </button>
 
-              {/* Refine Popover */}
-              {showRefinePopover && (
-                <div className="absolute bottom-full right-0 mb-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl p-4 space-y-3 z-10">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">Refine outline</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Tell AI how to adjust your outline</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setShowRefinePopover(false); setRefineInstruction(""); }}
-                      className="p-1 text-gray-400 hover:text-gray-600 rounded"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                  <textarea
-                    value={refineInstruction}
-                    onChange={(e) => setRefineInstruction(e.target.value)}
-                    placeholder="e.g., split section 3 into two parts, add a section about common mistakes..."
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleRefineOutline();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRefineOutline}
-                    disabled={isRefiningOutline || !refineInstruction.trim()}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isRefiningOutline ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        Refining...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={14} />
-                        Apply
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -627,159 +568,248 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         onConfirm={handleGenerateBlog}
       />
 
-      {/* Refined Outline Preview Modal */}
-      {refinedOutline && (() => {
-        const maxLen = Math.max(data.outline.length, refinedOutline.length);
+      {/* Refine Outline Modal */}
+      {showRefinePopover && (() => {
+        // Build diff rows when we have a refined result
         type DiffRow =
           | { type: "unchanged"; index: number; section: OutlineSection }
           | { type: "modified"; index: number; old: OutlineSection; new: OutlineSection }
           | { type: "added"; index: number; section: OutlineSection }
           | { type: "removed"; index: number; section: OutlineSection };
 
-        const rows: DiffRow[] = [];
-        for (let i = 0; i < maxLen; i++) {
-          const oldS = data.outline[i];
-          const newS = refinedOutline[i];
-          if (oldS && newS) {
-            if (oldS.title === newS.title && oldS.purpose === newS.purpose) {
-              rows.push({ type: "unchanged", index: i, section: newS });
-            } else {
-              rows.push({ type: "modified", index: i, old: oldS, new: newS });
+        let rows: DiffRow[] | null = null;
+        let modifiedCount = 0;
+        let addedCount = 0;
+        let removedCount = 0;
+
+        if (refinedOutline) {
+          rows = [];
+          const maxLen = Math.max(data.outline.length, refinedOutline.length);
+          for (let i = 0; i < maxLen; i++) {
+            const oldS = data.outline[i];
+            const newS = refinedOutline[i];
+            if (oldS && newS) {
+              if (oldS.title === newS.title && oldS.purpose === newS.purpose) {
+                rows.push({ type: "unchanged", index: i, section: newS });
+              } else {
+                rows.push({ type: "modified", index: i, old: oldS, new: newS });
+              }
+            } else if (newS) {
+              rows.push({ type: "added", index: i, section: newS });
+            } else if (oldS) {
+              rows.push({ type: "removed", index: i, section: oldS });
             }
-          } else if (newS) {
-            rows.push({ type: "added", index: i, section: newS });
-          } else if (oldS) {
-            rows.push({ type: "removed", index: i, section: oldS });
           }
+          modifiedCount = rows.filter((r) => r.type === "modified").length;
+          addedCount = rows.filter((r) => r.type === "added").length;
+          removedCount = rows.filter((r) => r.type === "removed").length;
         }
 
-        const modifiedCount = rows.filter((r) => r.type === "modified").length;
-        const addedCount = rows.filter((r) => r.type === "added").length;
-        const removedCount = rows.filter((r) => r.type === "removed").length;
+        const handleClose = () => {
+          setShowRefinePopover(false);
+          setRefinedOutline(null);
+          setRefineInstruction("");
+        };
 
         return (
           <div className="fixed inset-0 z-100000 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleDiscardRefinedOutline} />
-            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={!isRefiningOutline ? handleClose : undefined} />
+            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                 <div>
-                  <h3 className="font-semibold text-lg text-gray-900">Refined Outline</h3>
-                  <p className="text-sm text-gray-500 mt-0.5">Review the changes before applying</p>
+                  <h3 className="font-semibold text-lg text-gray-900">
+                    {refinedOutline ? "Review Changes" : "Refine Outline"}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    {refinedOutline ? "Review the AI suggestions before applying" : "Tell AI how to adjust your outline"}
+                  </p>
                 </div>
                 <button
-                  onClick={handleDiscardRefinedOutline}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  onClick={handleClose}
+                  disabled={isRefiningOutline}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              {/* Diff list */}
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
-                {rows.map((row, i) => {
-                  if (row.type === "unchanged") {
-                    return (
-                      <div key={i} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                        <div className="flex items-start gap-2">
+              {/* Content — scrollable outline or diff */}
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+                {!refinedOutline ? (
+                  <>
+                    {/* Current outline (read-only) */}
+                    <div className="space-y-1">
+                      {data.outline.map((section, i) => (
+                        <div key={section.id} className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5">
                           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-300 text-[10px] font-bold text-white">
-                            {row.index + 1}
+                            {i + 1}
                           </span>
                           <div>
-                            <p className="text-sm font-semibold text-gray-500">{row.section.title}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">{row.section.purpose}</p>
+                            <p className="text-sm font-medium text-gray-700">{section.title}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{section.purpose}</p>
                           </div>
                         </div>
-                      </div>
-                    );
-                  }
-
-                  if (row.type === "modified") {
-                    return (
-                      <div key={i} className="rounded-lg border border-blue-200 bg-blue-50/50 p-3">
-                        <div className="flex items-start gap-2">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-                            {row.index + 1}
-                          </span>
-                          <div className="space-y-1.5">
-                            {row.old.title !== row.new.title ? (
-                              <>
-                                <p className="text-sm font-semibold text-red-600/70 line-through">{row.old.title}</p>
-                                <p className="text-sm font-semibold text-green-700">{row.new.title}</p>
-                              </>
-                            ) : (
-                              <p className="text-sm font-semibold text-gray-900">{row.new.title}</p>
-                            )}
-                            {row.old.purpose !== row.new.purpose ? (
-                              <>
-                                <p className="text-xs text-red-400 line-through">{row.old.purpose}</p>
-                                <p className="text-xs text-green-600">{row.new.purpose}</p>
-                              </>
-                            ) : (
-                              <p className="text-xs text-gray-500">{row.new.purpose}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (row.type === "added") {
-                    return (
-                      <div key={i} className="rounded-lg border border-green-200 bg-green-50 p-3">
-                        <div className="flex items-start gap-2">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white">
-                            +
-                          </span>
-                          <div>
-                            <p className="text-sm font-semibold text-green-800">{row.section.title}</p>
-                            <p className="text-xs text-green-600 mt-0.5">{row.section.purpose}</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // removed
-                  return (
-                    <div key={i} className="rounded-lg border border-red-200 bg-red-50 p-3 opacity-60">
-                      <div className="flex items-start gap-2">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-400 text-[10px] font-bold text-white">
-                          &minus;
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold text-red-700 line-through">{row.section.title}</p>
-                          <p className="text-xs text-red-400 mt-0.5 line-through">{row.section.purpose}</p>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Diff view */}
+                    <div className="space-y-2">
+                      {rows!.map((row, i) => {
+                        if (row.type === "unchanged") {
+                          return (
+                            <div key={i} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                              <div className="flex items-start gap-2">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-300 text-[10px] font-bold text-white">
+                                  {row.index + 1}
+                                </span>
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-500">{row.section.title}</p>
+                                  <p className="text-xs text-gray-400 mt-0.5">{row.section.purpose}</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
 
-              {/* Summary */}
-              <div className="px-6 py-2 text-xs text-gray-400 flex items-center gap-3">
-                <span>{data.outline.length} &rarr; {refinedOutline.length} sections</span>
-                {modifiedCount > 0 && <span className="text-blue-500">{modifiedCount} modified</span>}
-                {addedCount > 0 && <span className="text-green-500">{addedCount} added</span>}
-                {removedCount > 0 && <span className="text-red-400">{removedCount} removed</span>}
+                        if (row.type === "modified") {
+                          return (
+                            <div key={i} className="rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+                              <div className="flex items-start gap-2">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                                  {row.index + 1}
+                                </span>
+                                <div className="space-y-1.5">
+                                  {row.old.title !== row.new.title ? (
+                                    <>
+                                      <p className="text-sm font-semibold text-red-600/70 line-through">{row.old.title}</p>
+                                      <p className="text-sm font-semibold text-green-700">{row.new.title}</p>
+                                    </>
+                                  ) : (
+                                    <p className="text-sm font-semibold text-gray-900">{row.new.title}</p>
+                                  )}
+                                  {row.old.purpose !== row.new.purpose ? (
+                                    <>
+                                      <p className="text-xs text-red-400 line-through">{row.old.purpose}</p>
+                                      <p className="text-xs text-green-600">{row.new.purpose}</p>
+                                    </>
+                                  ) : (
+                                    <p className="text-xs text-gray-500">{row.new.purpose}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (row.type === "added") {
+                          return (
+                            <div key={i} className="rounded-lg border border-green-200 bg-green-50 p-3">
+                              <div className="flex items-start gap-2">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white">
+                                  +
+                                </span>
+                                <div>
+                                  <p className="text-sm font-semibold text-green-800">{row.section.title}</p>
+                                  <p className="text-xs text-green-600 mt-0.5">{row.section.purpose}</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // removed
+                        return (
+                          <div key={i} className="rounded-lg border border-red-200 bg-red-50 p-3 opacity-60">
+                            <div className="flex items-start gap-2">
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-400 text-[10px] font-bold text-white">
+                                &minus;
+                              </span>
+                              <div>
+                                <p className="text-sm font-semibold text-red-700 line-through">{row.section.title}</p>
+                                <p className="text-xs text-red-400 mt-0.5 line-through">{row.section.purpose}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Summary */}
+                    <div className="text-xs text-gray-400 flex items-center gap-3">
+                      <span>{data.outline.length} &rarr; {refinedOutline.length} sections</span>
+                      {modifiedCount > 0 && <span className="text-blue-500">{modifiedCount} modified</span>}
+                      {addedCount > 0 && <span className="text-green-500">{addedCount} added</span>}
+                      {removedCount > 0 && <span className="text-red-400">{removedCount} removed</span>}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-200">
-                <button
-                  onClick={handleDiscardRefinedOutline}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Discard
-                </button>
-                <button
-                  onClick={handleAcceptRefinedOutline}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Check size={16} />
-                  Accept Changes
-                </button>
+              <div className="px-6 py-4 border-t border-gray-200 space-y-3">
+                {!refinedOutline ? (
+                  <>
+                    <textarea
+                      value={refineInstruction}
+                      onChange={(e) => setRefineInstruction(e.target.value)}
+                      placeholder="e.g., split section 3 into two parts, add a section about common mistakes..."
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleRefineOutline();
+                        }
+                      }}
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={handleClose}
+                        disabled={isRefiningOutline}
+                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleRefineOutline}
+                        disabled={isRefiningOutline || !refineInstruction.trim()}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isRefiningOutline ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            Refining...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={16} />
+                            Refine
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => setRefinedOutline(null)}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      Try Again
+                    </button>
+                    <button
+                      onClick={() => { handleAcceptRefinedOutline(); setShowRefinePopover(false); }}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Check size={16} />
+                      Accept Changes
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
