@@ -21,6 +21,7 @@ import { GeneratingOverlay } from "@/components/GeneratingOverlay";
 // API & Context
 import {
   generateOutline,
+  refineOutline,
   generateBlog,
   createEmptyBlog,
   getWizard,
@@ -257,16 +258,36 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     }
   };
 
-  // Refine outline with AI (placeholder — hook up API later)
+  // Refine outline with AI
   const handleRefineOutline = async (): Promise<void> => {
     if (!refineInstruction.trim()) return;
     setIsRefiningOutline(true);
     try {
-      // TODO: call refine-outline API endpoint
-      toast.info("Refine outline API not connected yet");
+      const outlineForApi = data.outline.map((s) => ({
+        title: s.title,
+        purpose: s.purpose,
+      }));
+
+      const response = await refineOutline(
+        data.topic,
+        outlineForApi,
+        refineInstruction,
+        { target_audience: data.targetAudience || profile?.target_audience },
+      );
+
+      const outlineWithIds = response.sections.map((section, index) => ({
+        id: `section-${index + 1}`,
+        title: section.title,
+        purpose: section.purpose,
+      }));
+
+      setData((prev) => ({ ...prev, outline: outlineWithIds }));
+      toast.success("Outline refined!");
     } catch (error) {
       console.error("Failed to refine outline:", error);
-      toast.error("Failed to refine outline");
+      toast.error("Failed to refine outline", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
     } finally {
       setIsRefiningOutline(false);
       setShowRefinePopover(false);

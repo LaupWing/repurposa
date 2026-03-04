@@ -67,6 +67,20 @@ export async function regenerateBlog(
     });
 }
 
+export async function refineOutline(
+    topic: string,
+    outline: OutlineSection[],
+    instruction: string,
+    options?: { target_audience?: string }
+): Promise<GenerateOutlineResponse> {
+    return apiRequest<GenerateOutlineResponse>('/blog/refine-outline', {
+        topic,
+        outline,
+        instruction,
+        target_audience: options?.target_audience,
+    });
+}
+
 export async function refineText(
     text: string,
     instruction: string
