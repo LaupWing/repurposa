@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useRef } from "@wordpress/element";
-import { ArrowRight, ArrowLeft, Sparkles, Loader2, SkipForward, Check } from "lucide-react";
+import { ArrowRight, ArrowLeft, Sparkles, Loader2, SkipForward, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 // Steps
@@ -68,6 +68,9 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
   const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showRefinePopover, setShowRefinePopover] = useState(false);
+  const [refineInstruction, setRefineInstruction] = useState("");
+  const [isRefiningOutline, setIsRefiningOutline] = useState(false);
   const [data, setData] = useState<WizardData>({
     topic: "",
     targetAudience: profile?.target_audience || "",
@@ -251,6 +254,23 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
       });
     } finally {
       setIsGeneratingBlog(false);
+    }
+  };
+
+  // Refine outline with AI (placeholder — hook up API later)
+  const handleRefineOutline = async (): Promise<void> => {
+    if (!refineInstruction.trim()) return;
+    setIsRefiningOutline(true);
+    try {
+      // TODO: call refine-outline API endpoint
+      toast.info("Refine outline API not connected yet");
+    } catch (error) {
+      console.error("Failed to refine outline:", error);
+      toast.error("Failed to refine outline");
+    } finally {
+      setIsRefiningOutline(false);
+      setShowRefinePopover(false);
+      setRefineInstruction("");
     }
   };
 
@@ -471,23 +491,93 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
           )}
 
           {currentStep === 3 && (
-            <button
-              onClick={() => setShowConfirmModal(true)}
-              disabled={isGeneratingBlog || data.outline.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {isGeneratingBlog ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} />
-                  Generate Blog
-                </>
+            <div className="relative flex items-center gap-1">
+              <button
+                onClick={() => setShowRefinePopover(!showRefinePopover)}
+                disabled={isGeneratingBlog || isRefiningOutline || data.outline.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 border border-gray-200 disabled:opacity-50 transition-colors"
+              >
+                {isRefiningOutline ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Refining...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} className="text-blue-600" />
+                    Refine Outline
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setShowConfirmModal(true)}
+                disabled={isGeneratingBlog || isRefiningOutline || data.outline.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {isGeneratingBlog ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} />
+                    Generate Blog
+                  </>
+                )}
+              </button>
+
+              {/* Refine Popover */}
+              {showRefinePopover && (
+                <div className="absolute bottom-full right-0 mb-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl p-4 space-y-3 z-10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Refine outline</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Tell AI how to adjust your outline</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setShowRefinePopover(false); setRefineInstruction(""); }}
+                      className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <textarea
+                    value={refineInstruction}
+                    onChange={(e) => setRefineInstruction(e.target.value)}
+                    placeholder="e.g., split section 3 into two parts, add a section about common mistakes..."
+                    rows={2}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleRefineOutline();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRefineOutline}
+                    disabled={isRefiningOutline || !refineInstruction.trim()}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isRefiningOutline ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        Refining...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} />
+                        Apply
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
-            </button>
+            </div>
           )}
         </div>
       </div>

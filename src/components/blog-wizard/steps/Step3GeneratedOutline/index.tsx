@@ -252,7 +252,7 @@ export default function Step3GeneratedOutline({
             >
                 <Plus size={16} />
                 Add section
-            </button>
+
 
             {/* Tip */}
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
