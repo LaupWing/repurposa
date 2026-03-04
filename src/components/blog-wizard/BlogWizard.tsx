@@ -294,10 +294,13 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     }
   };
 
-  // Accept refined outline
+  // Accept refined outline — update local state + persist to wizard
   const handleAcceptRefinedOutline = () => {
     if (refinedOutline) {
       setData((prev) => ({ ...prev, outline: refinedOutline }));
+      updateWizard({
+        outline: refinedOutline.map((s) => ({ title: s.title, purpose: s.purpose })),
+      }).catch((err) => console.error("Failed to save refined outline:", err));
       toast.success("Outline updated!");
     }
     setRefinedOutline(null);
