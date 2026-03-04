@@ -283,7 +283,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
       }));
 
       setRefinedOutline(outlineWithIds);
-      setShowRefinePopover(false);
     } catch (error) {
       console.error("Failed to refine outline:", error);
       toast.error("Failed to refine outline", {
@@ -615,6 +614,18 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
           <div className="fixed inset-0 z-100000 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={!isRefiningOutline ? handleClose : undefined} />
             <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
+              {/* Refining overlay */}
+              {isRefiningOutline && (
+                <GeneratingOverlay
+                  title="Refining Your Outline"
+                  descriptions={[
+                    'Analyzing your instructions...',
+                    'Restructuring sections...',
+                    'Optimizing the flow...',
+                    'Finalizing changes...',
+                  ]}
+                />
+              )}
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                 <div>
@@ -752,11 +763,14 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
               <div className="px-6 py-4 border-t border-gray-200 space-y-3">
                 {!refinedOutline ? (
                   <>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Instructions</p>
+                    </div>
                     <textarea
                       value={refineInstruction}
                       onChange={(e) => setRefineInstruction(e.target.value)}
                       placeholder="e.g., split section 3 into two parts, add a section about common mistakes..."
-                      rows={2}
+                      rows={3}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       autoFocus
                       onKeyDown={(e) => {
