@@ -72,13 +72,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
   const [showRefinePopover, setShowRefinePopover] = useState(false);
   const [refineInstruction, setRefineInstruction] = useState("");
   const [isRefiningOutline, setIsRefiningOutline] = useState(false);
-  const [refinedOutline, setRefinedOutline] = useState<OutlineSection[] | null>([
-    { id: "section-1", title: "Why Most People Fail at Content (It's Not What You Think)", purpose: "Hook with a bold claim that challenges common assumptions about content creation" },
-    { id: "section-2", title: "The Consistency Myth vs. The System Truth", purpose: "Reframe the problem — it's not discipline, it's the lack of a system" },
-    { id: "section-3", title: "How One Blog Becomes 10 Posts", purpose: "Explain the repurposing framework step by step" },
-    { id: "section-4", title: "Platform Psychology: Why the Same Idea Hits Different", purpose: "Break down how to adapt content for each platform" },
-    { id: "section-5", title: "Your First Week: The 15-Minute Content Routine", purpose: "Actionable steps to implement immediately" },
-  ]);
+  const [refinedOutline, setRefinedOutline] = useState<OutlineSection[] | null>(null);
   const [data, setData] = useState<WizardData>({
     topic: "",
     targetAudience: profile?.target_audience || "",
