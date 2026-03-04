@@ -28,7 +28,7 @@ import {
   createWizard,
   updateWizard,
 } from "@/services/blogApi";
-import type { TopicSuggestion, TopicHistoryEntry, BlogGenerationMode } from "@/types";
+import type { TopicSuggestion, BlogGenerationMode } from "@/types";
 import { useProfileStore } from "@/store/profileStore";
 
 // ============================================
@@ -45,8 +45,6 @@ export interface WizardData {
   topic: string;
   targetAudience: string;
   generatedTopics: TopicSuggestion[];
-  topicHistory: TopicHistoryEntry[];
-  topicHistoryIndex: number;
   roughOutline: string[];
   outline: OutlineSection[];
   generatedBlogId?: number;
@@ -77,8 +75,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     topic: "",
     targetAudience: profile?.target_audience || "",
     generatedTopics: [],
-    topicHistory: [],
-    topicHistoryIndex: 0,
     roughOutline: [],
     outline: [],
   });
@@ -99,8 +95,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
           targetAudience:
             wizard.target_audience || profile?.target_audience || "",
           generatedTopics: wizard.generated_topics || [],
-          topicHistory: wizard.topic_history || [],
-          topicHistoryIndex: wizard.topic_history_index || 0,
           roughOutline: wizard.rough_outline || [],
           outline: (wizard.outline || []).map((s, i) => ({
             id: `section-${i + 1}`,
@@ -189,8 +183,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     updateWizard({
       topic: data.topic,
       target_audience: data.targetAudience,
-      topic_history: data.topicHistory.length > 0 ? data.topicHistory : null,
-      topic_history_index: data.topicHistoryIndex,
       current_step: 2,
     }).catch((err) => console.error("Failed to save wizard:", err));
   };
@@ -433,15 +425,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
               generatedTopics={data.generatedTopics}
               onGeneratedTopicsChange={(topics) =>
                 setData((prev) => ({ ...prev, generatedTopics: topics }))
-              }
-              topicHistory={data.topicHistory}
-              topicHistoryIndex={data.topicHistoryIndex}
-              onTopicHistoryUpdate={(history, index) =>
-                setData((prev) => ({
-                  ...prev,
-                  topicHistory: history,
-                  topicHistoryIndex: index,
-                }))
               }
             />
           )}

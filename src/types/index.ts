@@ -33,19 +33,12 @@ export interface GenerateBlogResponse {
     seo_description?: string;
 }
 
-export interface TopicHistoryEntry {
-    text: string;
-    label: string;
-}
-
 export interface WizardData {
     id: number;
     user_id: number;
     topic: string | null;
     target_audience: string | null;
     generated_topics: TopicSuggestion[] | null;
-    topic_history: TopicHistoryEntry[] | null;
-    topic_history_index: number;
     rough_outline: string[] | null;
     outline: OutlineSection[] | null;
     current_step: number;

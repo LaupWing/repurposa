@@ -132,7 +132,7 @@ export async function createWizard(): Promise<WizardData> {
 }
 
 export async function updateWizard(
-    data: Partial<Pick<WizardData, 'topic' | 'target_audience' | 'generated_topics' | 'topic_history' | 'topic_history_index' | 'rough_outline' | 'outline' | 'current_step'>>
+    data: Partial<Pick<WizardData, 'topic' | 'target_audience' | 'generated_topics' | 'rough_outline' | 'outline' | 'current_step'>>
 ): Promise<WizardData> {
     return apiRequest<WizardData>('/wizard', data as Record<string, unknown>, 'PUT');
 }

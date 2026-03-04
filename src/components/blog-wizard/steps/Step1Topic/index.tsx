@@ -13,13 +13,10 @@ import {
     HelpCircle,
     X,
     Loader2,
-    Undo2,
-    Redo2,
-    Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { generateTopics, refineText } from "@/services/blogApi";
-import type { TopicSuggestion, TopicHistoryEntry } from "@/types";
+import type { TopicSuggestion } from "@/types";
 import { useProfileStore } from "@/store/profileStore";
 import { AITextPopup } from "@/components/AITextPopup";
 import { GeneratingOverlay } from "@/components/GeneratingOverlay";
@@ -35,9 +32,6 @@ interface Step1TopicProps {
     onTargetAudienceChange: (value: string) => void;
     generatedTopics: TopicSuggestion[];
     onGeneratedTopicsChange: (topics: TopicSuggestion[]) => void;
-    topicHistory: TopicHistoryEntry[];
-    topicHistoryIndex: number;
-    onTopicHistoryUpdate: (history: TopicHistoryEntry[], index: number) => void;
 }
 
 // ============================================
@@ -51,9 +45,6 @@ export default function Step1Topic({
     onTargetAudienceChange,
     generatedTopics,
     onGeneratedTopicsChange,
-    topicHistory,
-    topicHistoryIndex,
-    onTopicHistoryUpdate,
 }: Step1TopicProps) {
     const { profile } = useProfileStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,48 +55,7 @@ export default function Step1Topic({
     const [showRefineTooltip, setShowRefineTooltip] = useState(false);
     const [showEditPopover, setShowEditPopover] = useState(false);
     const [editInstruction, setEditInstruction] = useState("");
-    const [showHistory, setShowHistory] = useState(false);
-    const historyRef = useRef<HTMLDivElement>(null);
     const topicTextareaRef = useRef<HTMLTextAreaElement>(null);
-
-    // Close history popover on outside click
-    useEffect(() => {
-        if (!showHistory) return;
-        const handleClick = (e: MouseEvent) => {
-            if (
-                historyRef.current &&
-                !historyRef.current.contains(e.target as Node)
-            ) {
-                setShowHistory(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClick);
-        return () => document.removeEventListener("mousedown", handleClick);
-    }, [showHistory]);
-
-    const hasHistory = topicHistory.length > 1;
-    const canUndo = topicHistoryIndex > 0;
-    const canRedo = topicHistoryIndex < topicHistory.length - 1;
-
-    const handleUndo = () => {
-        if (!canUndo) return;
-        const newIndex = topicHistoryIndex - 1;
-        onTopicHistoryUpdate(topicHistory, newIndex);
-        onTopicChange(topicHistory[newIndex].text);
-    };
-
-    const handleRedo = () => {
-        if (!canRedo) return;
-        const newIndex = topicHistoryIndex + 1;
-        onTopicHistoryUpdate(topicHistory, newIndex);
-        onTopicChange(topicHistory[newIndex].text);
-    };
-
-    const handleHistorySelect = (index: number) => {
-        onTopicHistoryUpdate(topicHistory, index);
-        onTopicChange(topicHistory[index].text);
-        setShowHistory(false);
-    };
 
     const handleEditPrompt = async () => {
         if (!editInstruction.trim()) return;
@@ -113,16 +63,6 @@ export default function Step1Topic({
         setIsRefining(true);
         try {
             const response = await refineText(topic, editInstruction);
-
-            // Build history locally (server auto-saves topic_history via refine-text)
-            let newHistory = topicHistory.slice(0, topicHistoryIndex + 1);
-            if (newHistory.length === 0) {
-                newHistory = [{ text: topic, label: "Original" }];
-            }
-
-            newHistory.push({ text: response.text, label: editInstruction });
-            onTopicHistoryUpdate(newHistory, newHistory.length - 1);
-
             onTopicChange(response.text);
             setShowEditPopover(false);
             setEditInstruction("");
@@ -174,14 +114,6 @@ export default function Step1Topic({
     };
 
     const handleSelectTopic = (selectedTopic: string) => {
-        // Track in history
-        let newHistory = topicHistory.slice(0, topicHistoryIndex + 1);
-        if (newHistory.length === 0 && topic.trim()) {
-            newHistory = [{ text: topic, label: "Original" }];
-        }
-        newHistory.push({ text: selectedTopic, label: "Generated topic" });
-        onTopicHistoryUpdate(newHistory, newHistory.length - 1);
-
         onTopicChange(selectedTopic);
         handleCloseModal();
     };
@@ -223,77 +155,6 @@ export default function Step1Topic({
                     rows={4}
                     className="w-full px-4 py-3 pb-10 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 />
-                {/* History controls — bottom left */}
-                {hasHistory && (
-                    <div className="absolute bottom-2 left-2 flex items-center gap-0.5">
-                        <button
-                            onClick={handleUndo}
-                            disabled={!canUndo}
-                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Previous version"
-                        >
-                            <Undo2 size={14} />
-                        </button>
-                        <button
-                            onClick={handleRedo}
-                            disabled={!canRedo}
-                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Next version"
-                        >
-                            <Redo2 size={14} />
-                        </button>
-                        <div className="relative" ref={historyRef}>
-                            <button
-                                onClick={() => setShowHistory(!showHistory)}
-                                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                                title="View all versions"
-                            >
-                                <Clock size={14} />
-                            </button>
-
-                            {/* History dropdown */}
-                            {showHistory && (
-                                <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
-                                    <div className="px-3 py-2 border-b border-gray-100">
-                                        <p className="text-xs font-semibold text-gray-900">
-                                            Edit history
-                                        </p>
-                                    </div>
-                                    <div className="max-h-48 overflow-y-auto">
-                                        {topicHistory.map((entry, index) => (
-                                            <button
-                                                key={index}
-                                                onClick={() =>
-                                                    handleHistorySelect(index)
-                                                }
-                                                className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
-                                                    index === topicHistoryIndex
-                                                        ? "bg-blue-50 text-blue-700"
-                                                        : "text-gray-700"
-                                                }`}
-                                            >
-                                                <p
-                                                    className={`font-medium truncate ${
-                                                        index ===
-                                                        topicHistoryIndex
-                                                            ? "text-blue-700"
-                                                            : "text-gray-900"
-                                                    }`}
-                                                >
-                                                    {entry.label}
-                                                </p>
-                                                <p className="text-gray-400 truncate mt-0.5">
-                                                    {entry.text}
-                                                </p>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
                 {/* Edit with AI — bottom right */}
                 <div className="absolute bottom-2 right-2">
                     <button
