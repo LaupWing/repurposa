@@ -72,6 +72,13 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
   const [showRefinePopover, setShowRefinePopover] = useState(false);
   const [refineInstruction, setRefineInstruction] = useState("");
   const [isRefiningOutline, setIsRefiningOutline] = useState(false);
+  const [refinedOutline, setRefinedOutline] = useState<OutlineSection[] | null>([
+    { id: "section-1", title: "Why Most People Fail at Content (It's Not What You Think)", purpose: "Hook with a bold claim that challenges common assumptions about content creation" },
+    { id: "section-2", title: "The Consistency Myth vs. The System Truth", purpose: "Reframe the problem — it's not discipline, it's the lack of a system" },
+    { id: "section-3", title: "How One Blog Becomes 10 Posts", purpose: "Explain the repurposing framework step by step" },
+    { id: "section-4", title: "Platform Psychology: Why the Same Idea Hits Different", purpose: "Break down how to adapt content for each platform" },
+    { id: "section-5", title: "Your First Week: The 15-Minute Content Routine", purpose: "Actionable steps to implement immediately" },
+  ]);
   const [data, setData] = useState<WizardData>({
     topic: "",
     targetAudience: profile?.target_audience || "",
@@ -258,7 +265,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     }
   };
 
-  // Refine outline with AI
+  // Refine outline with AI — fetch preview
   const handleRefineOutline = async (): Promise<void> => {
     if (!refineInstruction.trim()) return;
     setIsRefiningOutline(true);
@@ -281,8 +288,8 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         purpose: section.purpose,
       }));
 
-      setData((prev) => ({ ...prev, outline: outlineWithIds }));
-      toast.success("Outline refined!");
+      setRefinedOutline(outlineWithIds);
+      setShowRefinePopover(false);
     } catch (error) {
       console.error("Failed to refine outline:", error);
       toast.error("Failed to refine outline", {
@@ -290,9 +297,23 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
       });
     } finally {
       setIsRefiningOutline(false);
-      setShowRefinePopover(false);
-      setRefineInstruction("");
     }
+  };
+
+  // Accept refined outline
+  const handleAcceptRefinedOutline = () => {
+    if (refinedOutline) {
+      setData((prev) => ({ ...prev, outline: refinedOutline }));
+      toast.success("Outline updated!");
+    }
+    setRefinedOutline(null);
+    setRefineInstruction("");
+  };
+
+  // Discard refined outline
+  const handleDiscardRefinedOutline = () => {
+    setRefinedOutline(null);
+    setRefineInstruction("");
   };
 
   // Generate full blog from outline
@@ -608,6 +629,165 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleGenerateBlog}
       />
+
+      {/* Refined Outline Preview Modal */}
+      {refinedOutline && (() => {
+        const maxLen = Math.max(data.outline.length, refinedOutline.length);
+        type DiffRow =
+          | { type: "unchanged"; index: number; section: OutlineSection }
+          | { type: "modified"; index: number; old: OutlineSection; new: OutlineSection }
+          | { type: "added"; index: number; section: OutlineSection }
+          | { type: "removed"; index: number; section: OutlineSection };
+
+        const rows: DiffRow[] = [];
+        for (let i = 0; i < maxLen; i++) {
+          const oldS = data.outline[i];
+          const newS = refinedOutline[i];
+          if (oldS && newS) {
+            if (oldS.title === newS.title && oldS.purpose === newS.purpose) {
+              rows.push({ type: "unchanged", index: i, section: newS });
+            } else {
+              rows.push({ type: "modified", index: i, old: oldS, new: newS });
+            }
+          } else if (newS) {
+            rows.push({ type: "added", index: i, section: newS });
+          } else if (oldS) {
+            rows.push({ type: "removed", index: i, section: oldS });
+          }
+        }
+
+        const modifiedCount = rows.filter((r) => r.type === "modified").length;
+        const addedCount = rows.filter((r) => r.type === "added").length;
+        const removedCount = rows.filter((r) => r.type === "removed").length;
+
+        return (
+          <div className="fixed inset-0 z-100000 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleDiscardRefinedOutline} />
+            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div>
+                  <h3 className="font-semibold text-lg text-gray-900">Refined Outline</h3>
+                  <p className="text-sm text-gray-500 mt-0.5">Review the changes before applying</p>
+                </div>
+                <button
+                  onClick={handleDiscardRefinedOutline}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Diff list */}
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+                {rows.map((row, i) => {
+                  if (row.type === "unchanged") {
+                    return (
+                      <div key={i} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                        <div className="flex items-start gap-2">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-300 text-[10px] font-bold text-white">
+                            {row.index + 1}
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-500">{row.section.title}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{row.section.purpose}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (row.type === "modified") {
+                    return (
+                      <div key={i} className="rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+                        <div className="flex items-start gap-2">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                            {row.index + 1}
+                          </span>
+                          <div className="space-y-1.5">
+                            {row.old.title !== row.new.title ? (
+                              <>
+                                <p className="text-sm font-semibold text-red-600/70 line-through">{row.old.title}</p>
+                                <p className="text-sm font-semibold text-green-700">{row.new.title}</p>
+                              </>
+                            ) : (
+                              <p className="text-sm font-semibold text-gray-900">{row.new.title}</p>
+                            )}
+                            {row.old.purpose !== row.new.purpose ? (
+                              <>
+                                <p className="text-xs text-red-400 line-through">{row.old.purpose}</p>
+                                <p className="text-xs text-green-600">{row.new.purpose}</p>
+                              </>
+                            ) : (
+                              <p className="text-xs text-gray-500">{row.new.purpose}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (row.type === "added") {
+                    return (
+                      <div key={i} className="rounded-lg border border-green-200 bg-green-50 p-3">
+                        <div className="flex items-start gap-2">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white">
+                            +
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold text-green-800">{row.section.title}</p>
+                            <p className="text-xs text-green-600 mt-0.5">{row.section.purpose}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // removed
+                  return (
+                    <div key={i} className="rounded-lg border border-red-200 bg-red-50 p-3 opacity-60">
+                      <div className="flex items-start gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-400 text-[10px] font-bold text-white">
+                          &minus;
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-red-700 line-through">{row.section.title}</p>
+                          <p className="text-xs text-red-400 mt-0.5 line-through">{row.section.purpose}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Summary */}
+              <div className="px-6 py-2 text-xs text-gray-400 flex items-center gap-3">
+                <span>{data.outline.length} &rarr; {refinedOutline.length} sections</span>
+                {modifiedCount > 0 && <span className="text-blue-500">{modifiedCount} modified</span>}
+                {addedCount > 0 && <span className="text-green-500">{addedCount} added</span>}
+                {removedCount > 0 && <span className="text-red-400">{removedCount} removed</span>}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-200">
+                <button
+                  onClick={handleDiscardRefinedOutline}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={handleAcceptRefinedOutline}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Check size={16} />
+                  Accept Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
