@@ -5,14 +5,24 @@
  * Includes AI-powered topic generation (modal).
  */
 
-import { useState, useRef, useEffect } from '@wordpress/element';
-import { FileText, Sparkles, HelpCircle, X, Loader2, Undo2, Redo2, Clock } from 'lucide-react';
-import { toast } from 'sonner';
-import { generateTopics, refineText } from '@/services/blogApi';
-import type { TopicSuggestion, TopicHistoryEntry } from '@/types';
-import { useProfileStore } from '@/store/profileStore';
-import { AITextPopup } from '@/components/AITextPopup';
-import { AnimatedText } from '@/components/AnimatedText';
+import { useState, useRef, useEffect } from "@wordpress/element";
+import { Spinner } from "@wordpress/components";
+import {
+    FileText,
+    Sparkles,
+    HelpCircle,
+    X,
+    Loader2,
+    Undo2,
+    Redo2,
+    Clock,
+} from "lucide-react";
+import { toast } from "sonner";
+import { generateTopics, refineText } from "@/services/blogApi";
+import type { TopicSuggestion, TopicHistoryEntry } from "@/types";
+import { useProfileStore } from "@/store/profileStore";
+import { AITextPopup } from "@/components/AITextPopup";
+import { GeneratingOverlay } from "@/components/GeneratingOverlay";
 
 // ============================================
 // TYPES
@@ -47,13 +57,13 @@ export default function Step1Topic({
 }: Step1TopicProps) {
     const { profile } = useProfileStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [prompt, setPrompt] = useState('');
+    const [prompt, setPrompt] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const [isRefining, setIsRefining] = useState(false);
     const [showRefineTooltip, setShowRefineTooltip] = useState(false);
     const [showEditPopover, setShowEditPopover] = useState(false);
-    const [editInstruction, setEditInstruction] = useState('');
+    const [editInstruction, setEditInstruction] = useState("");
     const [showHistory, setShowHistory] = useState(false);
     const historyRef = useRef<HTMLDivElement>(null);
     const topicTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -62,12 +72,15 @@ export default function Step1Topic({
     useEffect(() => {
         if (!showHistory) return;
         const handleClick = (e: MouseEvent) => {
-            if (historyRef.current && !historyRef.current.contains(e.target as Node)) {
+            if (
+                historyRef.current &&
+                !historyRef.current.contains(e.target as Node)
+            ) {
                 setShowHistory(false);
             }
         };
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
     }, [showHistory]);
 
     const hasHistory = topicHistory.length > 1;
@@ -104,7 +117,7 @@ export default function Step1Topic({
             // Build history locally (server auto-saves topic_history via refine-text)
             let newHistory = topicHistory.slice(0, topicHistoryIndex + 1);
             if (newHistory.length === 0) {
-                newHistory = [{ text: topic, label: 'Original' }];
+                newHistory = [{ text: topic, label: "Original" }];
             }
 
             newHistory.push({ text: response.text, label: editInstruction });
@@ -112,11 +125,11 @@ export default function Step1Topic({
 
             onTopicChange(response.text);
             setShowEditPopover(false);
-            setEditInstruction('');
-            toast.success('Prompt updated!');
+            setEditInstruction("");
+            toast.success("Prompt updated!");
         } catch (error) {
-            console.error('Failed to edit prompt:', error);
-            toast.error('Failed to edit prompt');
+            console.error("Failed to edit prompt:", error);
+            toast.error("Failed to edit prompt");
         } finally {
             setIsRefining(false);
         }
@@ -129,13 +142,13 @@ export default function Step1Topic({
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
-        setPrompt('');
+        setPrompt("");
     };
 
     const handleGenerate = async () => {
         const searchTerm = prompt.trim() || topic.trim();
         if (!searchTerm) {
-            toast.error('Enter a topic idea first');
+            toast.error("Enter a topic idea first");
             return;
         }
 
@@ -148,9 +161,12 @@ export default function Step1Topic({
             });
             onGeneratedTopicsChange(response.suggestions);
         } catch (error) {
-            console.error('Failed to generate topics:', error);
-            toast.error('Failed to generate topics', {
-                description: error instanceof Error ? error.message : 'Please try again.',
+            console.error("Failed to generate topics:", error);
+            toast.error("Failed to generate topics", {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Please try again.",
             });
         } finally {
             setIsGenerating(false);
@@ -161,9 +177,9 @@ export default function Step1Topic({
         // Track in history
         let newHistory = topicHistory.slice(0, topicHistoryIndex + 1);
         if (newHistory.length === 0 && topic.trim()) {
-            newHistory = [{ text: topic, label: 'Original' }];
+            newHistory = [{ text: topic, label: "Original" }];
         }
-        newHistory.push({ text: selectedTopic, label: 'Generated topic' });
+        newHistory.push({ text: selectedTopic, label: "Generated topic" });
         onTopicHistoryUpdate(newHistory, newHistory.length - 1);
 
         onTopicChange(selectedTopic);
@@ -194,7 +210,11 @@ export default function Step1Topic({
 
             {/* Textarea with refine button */}
             <div className="relative">
-                <AITextPopup textareaRef={topicTextareaRef} value={topic} onChange={onTopicChange} />
+                <AITextPopup
+                    textareaRef={topicTextareaRef}
+                    value={topic}
+                    onChange={onTopicChange}
+                />
                 <textarea
                     ref={topicTextareaRef}
                     value={topic}
@@ -235,18 +255,31 @@ export default function Step1Topic({
                             {showHistory && (
                                 <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
                                     <div className="px-3 py-2 border-b border-gray-100">
-                                        <p className="text-xs font-semibold text-gray-900">Edit history</p>
+                                        <p className="text-xs font-semibold text-gray-900">
+                                            Edit history
+                                        </p>
                                     </div>
                                     <div className="max-h-48 overflow-y-auto">
                                         {topicHistory.map((entry, index) => (
                                             <button
                                                 key={index}
-                                                onClick={() => handleHistorySelect(index)}
+                                                onClick={() =>
+                                                    handleHistorySelect(index)
+                                                }
                                                 className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
-                                                    index === topicHistoryIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                                    index === topicHistoryIndex
+                                                        ? "bg-blue-50 text-blue-700"
+                                                        : "text-gray-700"
                                                 }`}
                                             >
-                                                <p className={`font-medium truncate ${index === topicHistoryIndex ? 'text-blue-700' : 'text-gray-900'}`}>
+                                                <p
+                                                    className={`font-medium truncate ${
+                                                        index ===
+                                                        topicHistoryIndex
+                                                            ? "text-blue-700"
+                                                            : "text-gray-900"
+                                                    }`}
+                                                >
                                                     {entry.label}
                                                 </p>
                                                 <p className="text-gray-400 truncate mt-0.5">
@@ -266,7 +299,9 @@ export default function Step1Topic({
                     <button
                         onClick={() => setShowEditPopover(!showEditPopover)}
                         disabled={!topic.trim()}
-                        onMouseEnter={() => !showEditPopover && setShowRefineTooltip(true)}
+                        onMouseEnter={() =>
+                            !showEditPopover && setShowRefineTooltip(true)
+                        }
                         onMouseLeave={() => setShowRefineTooltip(false)}
                         className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
@@ -277,7 +312,9 @@ export default function Step1Topic({
                     {showRefineTooltip && !showEditPopover && (
                         <div className="absolute bottom-full right-0 mb-2 w-48 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-lg pointer-events-none">
                             <p className="font-semibold">Edit text</p>
-                            <p className="text-gray-300 mt-0.5">Modify with AI</p>
+                            <p className="text-gray-300 mt-0.5">
+                                Modify with AI
+                            </p>
                         </div>
                     )}
 
@@ -285,24 +322,33 @@ export default function Step1Topic({
                     {showEditPopover && (
                         <div className="absolute bottom-full right-0 mb-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl p-3 z-10">
                             <div className="flex items-center justify-between mb-2">
-                                <p className="text-sm font-semibold text-gray-900">Edit text</p>
+                                <p className="text-sm font-semibold text-gray-900">
+                                    Edit text
+                                </p>
                                 <button
-                                    onClick={() => { setShowEditPopover(false); setEditInstruction(''); }}
+                                    onClick={() => {
+                                        setShowEditPopover(false);
+                                        setEditInstruction("");
+                                    }}
                                     className="p-1 text-gray-400 hover:text-gray-600 rounded"
                                 >
                                     <X size={14} />
                                 </button>
                             </div>
-                            <p className="text-xs text-gray-500 mb-2">Tell AI how to modify your text</p>
+                            <p className="text-xs text-gray-500 mb-2">
+                                Tell AI how to modify your text
+                            </p>
                             <textarea
                                 value={editInstruction}
-                                onChange={(e) => setEditInstruction(e.target.value)}
+                                onChange={(e) =>
+                                    setEditInstruction(e.target.value)
+                                }
                                 placeholder="e.g., make it more specific, focus on beginners, add a number..."
                                 rows={2}
                                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
                                 autoFocus
                                 onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                    if (e.key === "Enter" && !e.shiftKey) {
                                         e.preventDefault();
                                         handleEditPrompt();
                                     }
@@ -315,7 +361,10 @@ export default function Step1Topic({
                             >
                                 {isRefining ? (
                                     <>
-                                        <Loader2 size={14} className="animate-spin" />
+                                        <Loader2
+                                            size={14}
+                                            className="animate-spin"
+                                        />
                                         Updating...
                                     </>
                                 ) : (
@@ -346,7 +395,21 @@ export default function Step1Topic({
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
                     {/* Modal Content */}
-                    <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+                    <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 min-h-[280px]">
+                        {/* Generating Overlay */}
+                        {isGenerating && (
+                            <GeneratingOverlay
+                                title="Finding Topic Ideas"
+                                descriptions={[
+                                    "Searching trending topics...",
+                                    "Analyzing top-performing content...",
+                                    "Finding what's working right now...",
+                                    "Checking Google trends...",
+                                    "Curating the best ideas...",
+                                ]}
+                            />
+                        )}
+
                         {/* Header */}
                         <div className="flex items-center justify-between mb-4">
                             <div>
@@ -383,17 +446,8 @@ export default function Step1Topic({
                         >
                             {isGenerating ? (
                                 <>
-                                    <Loader2 size={16} className="animate-spin" />
-                                    <AnimatedText
-                                        texts={[
-                                            'Searching trending topics...',
-                                            'Analyzing top-performing content...',
-                                            'Finding what\'s working right now...',
-                                            'Checking Google trends...',
-                                            'Curating the best ideas...',
-                                        ]}
-                                        interval={2500}
-                                    />
+                                    <Spinner />
+                                    Generating...
                                 </>
                             ) : (
                                 <>
@@ -415,14 +469,22 @@ export default function Step1Topic({
                                         className="relative flex items-start gap-2 group"
                                     >
                                         <button
-                                            onClick={() => handleSelectTopic(suggestion.title)}
+                                            onClick={() =>
+                                                handleSelectTopic(
+                                                    suggestion.title,
+                                                )
+                                            }
                                             className="flex-1 text-left text-sm p-3 rounded-lg bg-gray-50 hover:bg-blue-50 hover:text-blue-700 transition-colors text-gray-700 border border-transparent hover:border-blue-200"
                                         >
                                             {suggestion.title}
                                         </button>
                                         <button
-                                            onMouseEnter={() => setHoveredIndex(index)}
-                                            onMouseLeave={() => setHoveredIndex(null)}
+                                            onMouseEnter={() =>
+                                                setHoveredIndex(index)
+                                            }
+                                            onMouseLeave={() =>
+                                                setHoveredIndex(null)
+                                            }
                                             className="shrink-0 p-2 text-gray-400 hover:text-gray-600 mt-1"
                                         >
                                             <HelpCircle size={14} />
@@ -431,7 +493,9 @@ export default function Step1Topic({
                                         {/* Tooltip */}
                                         {hoveredIndex === index && (
                                             <div className="absolute right-8 top-0 z-10 w-52 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
-                                                <p className="font-semibold mb-1">Why it works</p>
+                                                <p className="font-semibold mb-1">
+                                                    Why it works
+                                                </p>
                                                 <p className="text-gray-300 leading-relaxed">
                                                     {suggestion.why_it_works}
                                                 </p>
@@ -448,9 +512,9 @@ export default function Step1Topic({
             {/* Tip Box */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
                 <p className="text-sm text-gray-700">
-                    <span className="font-semibold text-blue-600">Tip:</span>{' '}
-                    Be specific! Instead of "weight loss tips", try
-                    "5 mistakes busy moms make when trying to lose weight"
+                    <span className="font-semibold text-blue-600">Tip:</span> Be
+                    specific! Instead of "weight loss tips", try "5 mistakes
+                    busy moms make when trying to lose weight"
                 </p>
             </div>
         </div>
