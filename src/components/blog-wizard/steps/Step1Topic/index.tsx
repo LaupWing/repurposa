@@ -6,13 +6,13 @@
  */
 
 import { useState, useRef, useEffect } from '@wordpress/element';
-import { Spinner } from '@wordpress/components';
 import { FileText, Sparkles, HelpCircle, X, Loader2, Undo2, Redo2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateTopics, refineText } from '@/services/blogApi';
 import type { TopicSuggestion, TopicHistoryEntry } from '@/types';
 import { useProfileStore } from '@/store/profileStore';
 import { AITextPopup } from '@/components/AITextPopup';
+import { AnimatedText } from '@/components/AnimatedText';
 
 // ============================================
 // TYPES
@@ -383,8 +383,17 @@ export default function Step1Topic({
                         >
                             {isGenerating ? (
                                 <>
-                                    <Spinner />
-                                    Generating...
+                                    <Loader2 size={16} className="animate-spin" />
+                                    <AnimatedText
+                                        texts={[
+                                            'Searching trending topics...',
+                                            'Analyzing top-performing content...',
+                                            'Finding what\'s working right now...',
+                                            'Checking Google trends...',
+                                            'Curating the best ideas...',
+                                        ]}
+                                        interval={2500}
+                                    />
                                 </>
                             ) : (
                                 <>
