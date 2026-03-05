@@ -139,7 +139,7 @@ export function RegenerateModal({
 }: {
     onClose: () => void;
     post: BlogPost;
-    onRegenerated: (title: string, content: string) => void;
+    onRegenerated: () => void;
 }) {
     const { profile } = useProfileStore();
     const [activeStep, setActiveStep] = useState<'rough' | 'outline'>('rough');
@@ -270,15 +270,14 @@ export function RegenerateModal({
                 .filter(s => s.title.trim())
                 .map(s => ({ title: s.title, purpose: s.purpose }));
 
-            const response = await regenerateBlog(post.id, {
+            await regenerateBlog(post.id, {
                 topic,
                 outline: outlineForApi,
                 target_audience: targetAudience || undefined,
                 mode: generationMode,
             });
 
-            onRegenerated(response.title, response.content);
-            toast.success('Blog regenerated successfully');
+            onRegenerated();
         } catch (error) {
             console.error('Failed to regenerate:', error);
             toast.error('Failed to regenerate blog', {

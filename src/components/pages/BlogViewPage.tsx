@@ -15,9 +15,11 @@ import {
     Image,
     Video,
     Settings,
+    AlertTriangle,
+    RefreshCw,
 } from 'lucide-react';
 import { RepurposePanel } from '@/components/repurpose/RepurposePanel';
-import { getBlog } from '@/services/blogApi';
+import { getBlog, pollPostStatus } from '@/services/blogApi';
 import type { BlogPost } from '@/types';
 import type { ContentTab, BlogViewPageProps } from '@/components/blog-view/types';
 import { BlogEditor } from '@/components/blog-view/BlogEditor';
@@ -59,6 +61,34 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
 
         fetchBlog();
     }, [postId]);
+
+    // Poll for generation status when post is generating
+    useEffect(() => {
+        if (!post || post.status !== 'generating') return;
+
+        const stopPolling = pollPostStatus(post.id, (status) => {
+            if (status.status === 'draft') {
+                setPost(prev => prev ? {
+                    ...prev,
+                    status: 'draft',
+                    title: status.title || '',
+                    content: status.content || '',
+                    seo_description: status.seo_description,
+                } : prev);
+                setEditorKey(k => k + 1);
+                toast.success('Blog generated!', {
+                    description: 'Your blog post is ready to edit.',
+                });
+            } else if (status.status === 'failed') {
+                setPost(prev => prev ? { ...prev, status: 'failed' } : prev);
+                toast.error('Generation failed', {
+                    description: 'Something went wrong. You can try again.',
+                });
+            }
+        });
+
+        return stopPolling;
+    }, [post?.id, post?.status]);
 
     // Navigation back to blogs list
     const handleBack = () => {
@@ -186,11 +216,36 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                         </div>
                     )}
 
-                    {activeTab === 'blog' && (
+                    {activeTab === 'blog' && post.status === 'failed' && (
+                        <div className="flex h-full flex-col items-center justify-center bg-white">
+                            <div className="flex flex-col items-center gap-4 p-8 text-center">
+                                <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center">
+                                    <AlertTriangle size={28} className="text-red-400" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                                        Generation failed
+                                    </h2>
+                                    <p className="text-sm text-gray-500 max-w-xs mb-4">
+                                        Something went wrong while generating your blog post. You can try again.
+                                    </p>
+                                    <button
+                                        onClick={() => setIsRegenerateModalOpen(true)}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                        <RefreshCw size={16} />
+                                        Try Again
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'blog' && post.status !== 'failed' && (
                         <BlogEditor
                             key={editorKey}
                             post={post}
-                            isGenerating={false}
+                            isGenerating={post.status === 'generating'}
                             onPublished={(publishedPostId, publishedPostUrl) => {
                                 setPost(prev => prev ? {
                                     ...prev,
@@ -211,9 +266,8 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                         <RegenerateModal
                             onClose={() => setIsRegenerateModalOpen(false)}
                             post={post}
-                            onRegenerated={(title, content) => {
-                                setPost(prev => prev ? { ...prev, title, content } : prev);
-                                setEditorKey(k => k + 1);
+                            onRegenerated={() => {
+                                setPost(prev => prev ? { ...prev, status: 'generating' } : prev);
                                 setIsRegenerateModalOpen(false);
                             }}
                         />

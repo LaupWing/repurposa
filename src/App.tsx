@@ -6,7 +6,7 @@
  */
 
 import { useEffect } from '@wordpress/element';
-import { Toaster, toast } from 'sonner';
+import { Toaster } from 'sonner';
 import { useProfileStore } from './store/profileStore';
 import BlogWizard from './components/blog-wizard/BlogWizard';
 import BlogsPage from './components/pages/BlogsPage';
@@ -45,11 +45,7 @@ export default function App({ initialPage, postId }: AppProps) {
     }, [fetchProfile]);
 
     const handleWizardComplete = (data: WizardData) => {
-        toast.success('Blog created!', {
-            description: 'Your blog has been saved as a draft.',
-        });
-
-        // Redirect to blog view page with the Laravel post ID
+        // Redirect to blog view page — it will poll for generation status
         window.location.href = `admin.php?page=blog-repurpose-blogs&post_id=${data.generatedBlogId}`;
     };
 

@@ -28,8 +28,14 @@ export interface GenerateOutlineResponse {
 
 export interface GenerateBlogResponse {
     id: number;
-    title: string;
-    content: string;
+    status: 'generating';
+}
+
+export interface PostStatusResponse {
+    id: number;
+    status: BlogPost['status'];
+    title?: string;
+    content?: string;
     seo_description?: string;
 }
 

@@ -324,8 +324,6 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
       onComplete({
         ...data,
         generatedBlogId: response.id,
-        generatedTitle: response.title,
-        generatedContent: response.content,
       });
     } catch (error) {
       console.error("Failed to generate blog:", error);

@@ -3,6 +3,7 @@ import type {
     GenerateTopicsResponse,
     GenerateOutlineResponse,
     GenerateBlogResponse,
+    PostStatusResponse,
     OutlineSection,
     BlogGenerationMode,
     RefineTextResponse,
@@ -65,6 +66,39 @@ export async function regenerateBlog(
         target_audience: options.target_audience,
         mode: options.mode || 'quick',
     });
+}
+
+export async function getPostStatus(id: number): Promise<PostStatusResponse> {
+    return apiRequest<PostStatusResponse>(`/blogs/${id}/status`, {}, 'GET');
+}
+
+export function pollPostStatus(
+    id: number,
+    onUpdate: (status: PostStatusResponse) => void,
+    intervalMs = 4000,
+): () => void {
+    let timer: ReturnType<typeof setInterval>;
+
+    const check = async () => {
+        try {
+            const status = await getPostStatus(id);
+            onUpdate(status);
+
+            // Stop polling when generation is done
+            if (status.status !== 'generating') {
+                clearInterval(timer);
+            }
+        } catch (error) {
+            console.error('Polling failed:', error);
+        }
+    };
+
+    // Check immediately, then every intervalMs
+    check();
+    timer = setInterval(check, intervalMs);
+
+    // Return cleanup function
+    return () => clearInterval(timer);
 }
 
 export async function refineOutline(
