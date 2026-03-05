@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
 import { getSocialAccounts } from '@/services/profileApi';
 import { publishNow } from '@/services/scheduleApi';
-import type { SocialAccount } from '@/types';
+import type { SocialAccount, ShortPostSchedule } from '@/types';
 import type { ShortPostPattern } from '@/components/repurpose/cards/ShortPostCard';
 import {
     type SchedulePlatform,
@@ -58,6 +58,12 @@ export default function PublishNowModal({
     if (!isOpen || !post) return null;
 
     const connectedPlatformIds = socialAccounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
+
+    // Check which platforms this content was already published to
+    const getPublishedInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
+        const apiPlatform = UI_TO_API_PLATFORM[platformId];
+        return post.scheduled_posts?.find((sp) => sp.platform === apiPlatform && sp.status === 'published');
+    };
 
     const togglePlatform = (id: SchedulePlatform) => {
         const unsupported = getUnsupportedReason(id, contentType);
@@ -207,11 +213,25 @@ export default function PublishNowModal({
                                             }`}>
                                                 {p.icon}
                                             </div>
-                                            <span className={`text-sm font-medium flex-1 text-left ${
-                                                !connected ? 'text-gray-300' : 'text-gray-900'
-                                            }`}>
-                                                {p.name}
-                                            </span>
+                                            <div className="flex-1 text-left">
+                                                <span className={`text-sm font-medium ${
+                                                    !connected ? 'text-gray-300' : 'text-gray-900'
+                                                }`}>
+                                                    {p.name}
+                                                </span>
+                                                {(() => {
+                                                    const published = getPublishedInfo(p.id);
+                                                    if (published) {
+                                                        const date = new Date(published.scheduled_at);
+                                                        return (
+                                                            <span className="block text-xs text-green-600">
+                                                                Published {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
+                                            </div>
                                             {!connected && (
                                                 <span className="text-xs text-gray-400">Not connected</span>
                                             )}

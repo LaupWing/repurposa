@@ -147,6 +147,12 @@ export default function SchedulePostModal({
         }) || null;
     };
 
+    // Check which platforms this content was already published to
+    const getPublishedInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
+        const apiPlatform = UI_TO_API_PLATFORM[platformId];
+        return post.scheduled_posts?.find((sp) => sp.platform === apiPlatform && sp.status === 'published');
+    };
+
     const togglePlatform = (id: SchedulePlatform) => {
         const unsupported = getUnsupportedReason(id, contentType, contentLength, threadPosts);
         if (unsupported) return;
@@ -383,6 +389,33 @@ export default function SchedulePostModal({
                         </div>
                     )}
 
+                    {/* Already published platforms */}
+                    {(() => {
+                        const publishedPosts = post.scheduled_posts?.filter((sp) => sp.status === 'published') || [];
+                        if (publishedPosts.length === 0) return null;
+                        return (
+                            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-green-300 bg-green-50">
+                                <Check size={16} className="text-green-500 shrink-0" />
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-green-700">
+                                    <span>Already published on</span>
+                                    {publishedPosts.map((sp) => {
+                                        const uiId = API_TO_UI_PLATFORM[sp.platform] || sp.platform;
+                                        const name = SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || sp.platform;
+                                        const date = new Date(sp.scheduled_at);
+                                        return (
+                                            <Tooltip key={sp.id} text={`Published on ${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`} delay={0} placement="top">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 border border-green-200 text-green-700 font-medium cursor-default">
+                                                    {SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.icon}
+                                                    {name} · {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                </span>
+                                            </Tooltip>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* Upcoming slots from schedule */}
                     {loadingSlots ? (
                         <div className="flex items-center justify-center py-4 text-sm text-gray-400">
@@ -456,32 +489,39 @@ export default function SchedulePostModal({
                                                                 </Tooltip>
                                                             );
                                                         }
+                                                        const published = getPublishedInfo(p.id);
                                                         return (
-                                                            <button
-                                                                key={p.id}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (isTaken) return;
-                                                                    if (!isSelected) handleSelectSlot(absoluteIdx);
-                                                                    togglePlatform(p.id);
-                                                                }}
-                                                                disabled={isTaken}
-                                                                className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
-                                                                    isTaken
-                                                                        ? 'bg-gray-100 text-gray-200 cursor-not-allowed'
-                                                                        : !connected
-                                                                            ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
-                                                                            : isSelected
-                                                                                ? active
-                                                                                    ? `${p.bg} text-white`
-                                                                                    : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
-                                                                                : inSlot
-                                                                                    ? `${p.bg} text-white`
-                                                                                    : 'bg-gray-100 text-gray-300'
-                                                                }`}
-                                                            >
-                                                                {p.icon}
-                                                            </button>
+                                                            <Tooltip key={p.id} text={published ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''} delay={0} placement="top">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (isTaken) return;
+                                                                        if (!isSelected) handleSelectSlot(absoluteIdx);
+                                                                        togglePlatform(p.id);
+                                                                    }}
+                                                                    disabled={isTaken}
+                                                                    className={`relative inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
+                                                                        isTaken
+                                                                            ? 'bg-gray-100 text-gray-200 cursor-not-allowed'
+                                                                            : !connected
+                                                                                ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
+                                                                                : isSelected
+                                                                                    ? active
+                                                                                        ? `${p.bg} text-white`
+                                                                                        : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
+                                                                                    : inSlot
+                                                                                        ? `${p.bg} text-white`
+                                                                                        : 'bg-gray-100 text-gray-300'
+                                                                    }`}
+                                                                >
+                                                                    {p.icon}
+                                                                    {published && (
+                                                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                                                                            <Check size={8} className="text-white" />
+                                                                        </span>
+                                                                    )}
+                                                                </button>
+                                                            </Tooltip>
                                                         );
                                                     })}
                                                 </div>
@@ -549,21 +589,24 @@ export default function SchedulePostModal({
                                                 </Tooltip>
                                             );
                                         }
+                                        const published = getPublishedInfo(p.id);
                                         return (
-                                            <button
-                                                key={p.id}
-                                                onClick={() => togglePlatform(p.id)}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                                    !connected
-                                                        ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                                                        : active
-                                                            ? `${p.bg} text-white`
-                                                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
-                                                }`}
-                                            >
-                                                {p.icon}
-                                                {p.name}
-                                            </button>
+                                            <Tooltip key={p.id} text={published ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''} delay={0} placement="top">
+                                                <button
+                                                    onClick={() => togglePlatform(p.id)}
+                                                    className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                        !connected
+                                                            ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                            : active
+                                                                ? `${p.bg} text-white`
+                                                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                                                    }`}
+                                                >
+                                                    {p.icon}
+                                                    {p.name}
+                                                    {published && <Check size={12} className={active ? 'text-white/70' : 'text-green-500'} />}
+                                                </button>
+                                            </Tooltip>
                                         );
                                     })}
                                 </div>
@@ -608,21 +651,25 @@ export default function SchedulePostModal({
 
                 {/* Footer */}
                 <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200 bg-gray-50">
-                    {/* Left - Unschedule */}
+                    {/* Left - Unschedule (only for pending posts) */}
                     <div>
-                        {post.scheduled_posts && post.scheduled_posts.length > 0 && (
-                            <button
-                                onClick={async () => {
-                                    await Promise.all(post.scheduled_posts!.map(sp => handleUnschedule(sp.id)));
-                                    onClose();
-                                }}
-                                disabled={removingId !== null}
-                                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                            >
-                                <Trash2 size={14} />
-                                {removingId !== null ? 'Removing...' : 'Unschedule'}
-                            </button>
-                        )}
+                        {(() => {
+                            const pendingPosts = post.scheduled_posts?.filter((sp) => sp.status === 'pending') || [];
+                            if (pendingPosts.length === 0) return null;
+                            return (
+                                <button
+                                    onClick={async () => {
+                                        await Promise.all(pendingPosts.map(sp => handleUnschedule(sp.id)));
+                                        onClose();
+                                    }}
+                                    disabled={removingId !== null}
+                                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    <Trash2 size={14} />
+                                    {removingId !== null ? 'Removing...' : 'Unschedule'}
+                                </button>
+                            );
+                        })()}
                     </div>
                     {/* Right - Cancel + Schedule */}
                     <div className="flex items-center gap-3">
