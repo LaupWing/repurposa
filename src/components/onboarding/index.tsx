@@ -57,7 +57,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     const [leaving, setLeaving] = useState(false);
     const [name, setName] = useState(user?.name ?? '');
     const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar ?? null);
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState(user?.email ?? '');
     const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
     const [formData, setFormData] = useState({
         niche: '',
@@ -74,7 +74,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
 
     const currentStepIndex = steps.indexOf(step);
 
-    const nextAfterWelcome: Step = provider === 'twitter'
+    const nextAfterWelcome: Step = provider === 'twitter' || provider === 'linkedin'
         ? 'setup-email'
         : provider === 'email'
           ? 'setup-profile'
