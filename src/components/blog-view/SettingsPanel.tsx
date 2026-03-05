@@ -42,11 +42,13 @@ export function SettingsPanel({
     };
 
     const statusLabels: Record<string, string> = {
+        generating: 'Generating',
         draft: 'Draft',
         published: 'Published',
         'out-of-sync': 'Out of Sync',
     };
     const statusColors: Record<string, string> = {
+        generating: 'text-blue-700 bg-blue-50 border-blue-200',
         draft: 'text-orange-700 bg-orange-50 border-orange-200',
         published: 'text-green-700 bg-green-50 border-green-200',
         'out-of-sync': 'text-yellow-700 bg-yellow-50 border-yellow-200',
@@ -74,8 +76,8 @@ export function SettingsPanel({
                         <div>
                             <dt className="text-xs font-medium text-gray-500 mb-1">Status</dt>
                             <dd>
-                                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded border ${statusColors[post.wp_status] || statusColors.draft}`}>
-                                    {statusLabels[post.wp_status] || post.wp_status}
+                                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded border ${statusColors[post.status] || statusColors.draft}`}>
+                                    {statusLabels[post.status] || post.status}
                                 </span>
                             </dd>
                         </div>

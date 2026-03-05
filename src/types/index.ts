@@ -58,7 +58,7 @@ export interface BlogPost {
     content: string;
     seo_description?: string;
     thumbnail?: string;
-    wp_status: 'draft' | 'published' | 'out-of-sync';
+    status: 'generating' | 'draft' | 'published' | 'out-of-sync';
     published_post_id?: number | null;
     published_post_url?: string | null;
     topic?: string;

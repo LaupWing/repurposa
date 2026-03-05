@@ -43,14 +43,16 @@ function truncateContent(content: string | null, maxLength: number = 100): strin
 // SUB-COMPONENTS
 // ============================================
 
-function StatusDot({ status }: { status: BlogPost['wp_status'] }) {
+function StatusDot({ status }: { status: BlogPost['status'] }) {
     const colors = {
+        generating: 'bg-blue-500',
         published: 'bg-green-500',
         'out-of-sync': 'bg-yellow-500',
         draft: 'bg-orange-500',
     };
 
     const glowColors = {
+        generating: 'bg-blue-400',
         published: 'bg-green-400',
         'out-of-sync': 'bg-yellow-400',
         draft: 'bg-orange-400',
@@ -70,6 +72,7 @@ function StatusDot({ status }: { status: BlogPost['wp_status'] }) {
 
 function PostCard({ post, onEdit, onDelete }: { post: BlogPost; onEdit: (id: number) => void; onDelete: (id: number) => void }) {
     const statusColors = {
+        generating: 'text-blue-600',
         published: 'text-green-600',
         'out-of-sync': 'text-yellow-600',
         draft: 'text-orange-600',
@@ -103,7 +106,7 @@ function PostCard({ post, onEdit, onDelete }: { post: BlogPost; onEdit: (id: num
                 {/* Header: Status + Date + Delete */}
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                        <StatusDot status={post.wp_status} />
+                        <StatusDot status={post.status} />
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                             {post.created_at ? `${formatDate(post.created_at)} at ${formatTime(post.created_at)}` : '—'}
                         </span>
@@ -128,8 +131,8 @@ function PostCard({ post, onEdit, onDelete }: { post: BlogPost; onEdit: (id: num
 
                 {/* Footer: Status + Edit */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <span className={`text-xs font-medium capitalize ${statusColors[post.wp_status]}`}>
-                        {post.wp_status}
+                    <span className={`text-xs font-medium capitalize ${statusColors[post.status]}`}>
+                        {post.status}
                     </span>
                     <button
                         onClick={(e) => { e.stopPropagation(); onEdit(post.id); }}
@@ -232,7 +235,7 @@ export default function BlogsPage() {
             post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             post.content?.toLowerCase().includes(searchQuery.toLowerCase());
 
-        const matchesStatus = statusFilter === 'all' || post.wp_status === statusFilter;
+        const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
 
         return matchesSearch && matchesStatus;
     });

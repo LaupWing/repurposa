@@ -196,8 +196,8 @@ export function BlogEditor({
                 data: { title, content, thumbnail },
             });
 
-            // Update wp_status on Laravel
-            await updateBlog(post.id, { wp_status: 'published', published_post_id: response.post_id, published_post_url: response.post_url });
+            // Update status on Laravel
+            await updateBlog(post.id, { status: 'published', published_post_id: response.post_id, published_post_url: response.post_url });
 
             onPublished(response.post_id, response.post_url);
             onSaved?.(title, content);
