@@ -27,7 +27,7 @@ function visualToPattern(visual: Visual): ShortPostPattern {
         media: [],
         cta_content: '',
         cta_media: [],
-        scheduled_posts: [],
+        scheduled_posts: visual.scheduled_posts || [],
         visualCount: 0,
     };
 }
