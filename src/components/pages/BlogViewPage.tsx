@@ -21,6 +21,7 @@ import {
 import { RepurposePanel } from '@/components/repurpose/RepurposePanel';
 import { getBlog, pollPostStatus } from '@/services/blogApi';
 import type { BlogPost } from '@/types';
+import { GeneratingOverlay } from '@/components/GeneratingOverlay';
 import type { ContentTab, BlogViewPageProps } from '@/components/blog-view/types';
 import { BlogEditor } from '@/components/blog-view/BlogEditor';
 import { RegenerateModal } from '@/components/blog-view/RegenerateModal';
@@ -216,6 +217,19 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                         </div>
                     )}
 
+                    {activeTab === 'blog' && post.status === 'generating' && (
+                        <div className="relative h-full">
+                            <GeneratingOverlay
+                                title="Generating your blog..."
+                                descriptions={[
+                                    'Crafting your blog post with AI',
+                                    'Researching and writing content',
+                                    'This may take a moment',
+                                ]}
+                            />
+                        </div>
+                    )}
+
                     {activeTab === 'blog' && post.status === 'failed' && (
                         <div className="flex h-full flex-col items-center justify-center bg-white">
                             <div className="flex flex-col items-center gap-4 p-8 text-center">
@@ -241,11 +255,11 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                         </div>
                     )}
 
-                    {activeTab === 'blog' && post.status !== 'failed' && (
+                    {activeTab === 'blog' && post.status !== 'generating' && post.status !== 'failed' && (
                         <BlogEditor
                             key={editorKey}
                             post={post}
-                            isGenerating={post.status === 'generating'}
+                            isGenerating={false}
                             onPublished={(publishedPostId, publishedPostUrl) => {
                                 setPost(prev => prev ? {
                                     ...prev,
