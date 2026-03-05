@@ -421,6 +421,11 @@ export default function SettingsPage() {
                         <Check size={14} />
                         Connected as @{platform.username}
                       </p>
+                      {platform.id === 'facebook' && platform.meta?.pages && platform.meta.pages.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Posting to <strong>{platform.meta.pages[0].name}</strong>
+                        </p>
+                      )}
                       {platform.id === 'facebook' && (!platform.meta?.pages || platform.meta.pages.length === 0) && (
                         <p className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
                           <AlertTriangle size={12} />
