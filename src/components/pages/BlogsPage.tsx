@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
-import { FileText, Search, Filter, Plus, Trash2, Pencil, Check } from 'lucide-react';
+import { FileText, Search, Filter, Plus, Trash2, Pencil, Check, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogs, deleteBlog } from '@/services/blogApi';
 import type { BlogPost } from '@/types';
@@ -91,7 +91,55 @@ function PostCard({ post, onEdit, onDelete }: { post: BlogPost; onEdit: (id: num
             className="group relative flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all cursor-pointer"
         >
             {/* Thumbnail */}
-            {post.thumbnail ? (
+            {post.status === 'generating' ? (
+                <div className="h-32 bg-gray-50 flex items-center justify-center">
+                    <div className="relative h-14 w-14">
+                        {/* Spinning gradient ring using SVG for crisp rendering */}
+                        <svg className="absolute inset-0 h-14 w-14 animate-spin" viewBox="0 0 56 56" fill="none">
+                            <defs>
+                                <linearGradient id="cardRingGradient" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stopColor="#06b6d4" />
+                                    <stop offset="25%" stopColor="#3b82f6" />
+                                    <stop offset="50%" stopColor="#8b5cf6" />
+                                    <stop offset="75%" stopColor="#d946ef" />
+                                    <stop offset="100%" stopColor="#f43f5e" />
+                                </linearGradient>
+                            </defs>
+                            <circle cx="28" cy="28" r="24" stroke="#e5e7eb" strokeWidth="2.5" />
+                            <circle cx="28" cy="28" r="24" stroke="url(#cardRingGradient)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="100 51" />
+                        </svg>
+                        {/* Center sparkle icon */}
+                        <svg className="absolute inset-0 m-auto h-5 w-5 animate-pulse" viewBox="0 0 24 24" fill="none">
+                            <defs>
+                                <linearGradient id="cardSparkles" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#06b6d4" />
+                                    <stop offset="33%" stopColor="#3b82f6" />
+                                    <stop offset="66%" stopColor="#8b5cf6" />
+                                    <stop offset="100%" stopColor="#d946ef" />
+                                </linearGradient>
+                            </defs>
+                            <path
+                                d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"
+                                stroke="url(#cardSparkles)"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                            <path
+                                d="M5 3v4M19 17v4M3 5h4M17 19h4"
+                                stroke="url(#cardSparkles)"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </div>
+                </div>
+            ) : post.status === 'failed' ? (
+                <div className="h-32 bg-gray-50 flex items-center justify-center">
+                    <AlertTriangle size={32} className="text-red-400" />
+                </div>
+            ) : post.thumbnail ? (
                 <div className="h-32 bg-gray-100 overflow-hidden">
                     <img
                         src={post.thumbnail}
@@ -100,7 +148,7 @@ function PostCard({ post, onEdit, onDelete }: { post: BlogPost; onEdit: (id: num
                     />
                 </div>
             ) : (
-                <div className="h-32 bg-gray-100 flex items-center justify-center">
+                <div className="h-32 bg-gray-50 flex items-center justify-center">
                     <FileText size={32} className="text-gray-300" />
                 </div>
             )}
@@ -214,12 +262,32 @@ export default function BlogsPage() {
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+    // TODO: Remove boilerplate posts after testing
+    const boilerplatePosts: BlogPost[] = [
+        {
+            id: 9998,
+            title: '',
+            content: '',
+            status: 'generating',
+            topic: 'how to build muscle after 40',
+            created_at: new Date().toISOString(),
+        },
+        {
+            id: 9999,
+            title: '',
+            content: '',
+            status: 'failed',
+            topic: 'sleep optimization for fat loss',
+            created_at: new Date().toISOString(),
+        },
+    ];
+
     // Fetch blogs from API
     useEffect(() => {
         const fetchBlogs = async () => {
             try {
                 const blogs = await getBlogs();
-                setPosts(blogs);
+                setPosts([...blogs, ...boilerplatePosts]);
             } catch (error) {
                 console.error('Failed to fetch blogs:', error);
                 toast.error('Failed to load blogs');
