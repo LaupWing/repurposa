@@ -424,7 +424,7 @@ export default function SettingsPage() {
                       {platform.id === 'facebook' && (!platform.meta?.pages || platform.meta.pages.length === 0) && (
                         <p className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
                           <AlertTriangle size={12} />
-                          No Facebook Pages found. Create a Page to publish.
+                          No Facebook Pages found. Create a Page on Facebook, then reconnect to publish.
                         </p>
                       )}
                     </>
