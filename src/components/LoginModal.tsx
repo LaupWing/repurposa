@@ -51,7 +51,7 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
         if (platform === 'email') {
             openPopup(`${apiUrl}/auth/wordpress/email-login?origin=${encodeURIComponent(origin)}`, platform);
         } else {
-            openPopup(`${apiUrl}/api/auth/social/${platform}?origin=${encodeURIComponent(origin)}`, platform);
+            openPopup(`${apiUrl}/auth/wordpress/social/${platform}?origin=${encodeURIComponent(origin)}`, platform);
         }
     };
 
