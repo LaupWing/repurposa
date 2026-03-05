@@ -147,10 +147,15 @@ export default function SchedulePostModal({
         }) || null;
     };
 
-    // Check which platforms this content was already published to
+    // Check which platforms this content was already published to or failed
     const getPublishedInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
         const apiPlatform = UI_TO_API_PLATFORM[platformId];
         return post.scheduled_posts?.find((sp) => sp.platform === apiPlatform && sp.status === 'published');
+    };
+
+    const getFailedInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
+        const apiPlatform = UI_TO_API_PLATFORM[platformId];
+        return post.scheduled_posts?.find((sp) => sp.platform === apiPlatform && sp.status === 'failed');
     };
 
     const togglePlatform = (id: SchedulePlatform) => {
@@ -416,6 +421,30 @@ export default function SchedulePostModal({
                         );
                     })()}
 
+                    {/* Failed platforms */}
+                    {(() => {
+                        const failedPosts = post.scheduled_posts?.filter((sp) => sp.status === 'failed') || [];
+                        if (failedPosts.length === 0) return null;
+                        return (
+                            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-red-300 bg-red-50">
+                                <AlertTriangle size={16} className="text-red-500 shrink-0" />
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-red-700">
+                                    <span>Failed on</span>
+                                    {failedPosts.map((sp) => {
+                                        const uiId = API_TO_UI_PLATFORM[sp.platform] || sp.platform;
+                                        const name = SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || sp.platform;
+                                        return (
+                                            <span key={sp.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 border border-red-200 text-red-700 font-medium cursor-default">
+                                                {SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.icon}
+                                                {name}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* Upcoming slots from schedule */}
                     {loadingSlots ? (
                         <div className="flex items-center justify-center py-4 text-sm text-gray-400">
@@ -490,8 +519,12 @@ export default function SchedulePostModal({
                                                             );
                                                         }
                                                         const published = getPublishedInfo(p.id);
+                                                        const failed = getFailedInfo(p.id);
+                                                        const tooltipText = published
+                                                            ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                                                            : failed ? 'Failed — retry by selecting this platform' : '';
                                                         return (
-                                                            <Tooltip key={p.id} text={published ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''} delay={0} placement="top">
+                                                            <Tooltip key={p.id} text={tooltipText} delay={0} placement="top">
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
@@ -518,6 +551,11 @@ export default function SchedulePostModal({
                                                                     {published && (
                                                                         <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
                                                                             <Check size={8} className="text-white" />
+                                                                        </span>
+                                                                    )}
+                                                                    {failed && !published && (
+                                                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                                                                            <AlertTriangle size={7} className="text-white" />
                                                                         </span>
                                                                     )}
                                                                 </button>
@@ -590,8 +628,12 @@ export default function SchedulePostModal({
                                             );
                                         }
                                         const published = getPublishedInfo(p.id);
+                                        const failed = getFailedInfo(p.id);
+                                        const tooltipText = published
+                                            ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                                            : failed ? 'Failed — retry by selecting this platform' : '';
                                         return (
-                                            <Tooltip key={p.id} text={published ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''} delay={0} placement="top">
+                                            <Tooltip key={p.id} text={tooltipText} delay={0} placement="top">
                                                 <button
                                                     onClick={() => togglePlatform(p.id)}
                                                     className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -605,6 +647,7 @@ export default function SchedulePostModal({
                                                     {p.icon}
                                                     {p.name}
                                                     {published && <Check size={12} className={active ? 'text-white/70' : 'text-green-500'} />}
+                                                    {failed && !published && <AlertTriangle size={12} className={active ? 'text-white/70' : 'text-red-500'} />}
                                                 </button>
                                             </Tooltip>
                                         );

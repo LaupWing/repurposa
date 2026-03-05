@@ -1,5 +1,5 @@
 import { createElement, useState, useEffect, useRef, useCallback } from '@wordpress/element';
-import { Calendar, Pencil, Trash2, MoreHorizontal, Copy, Check, Download, Send } from 'lucide-react';
+import { AlertTriangle, Calendar, Pencil, Trash2, MoreHorizontal, Copy, Check, Download, Send } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
@@ -134,19 +134,33 @@ export default function VisualCard({
 
             {/* Schedule status badge - top right */}
             {visual.scheduled_posts && visual.scheduled_posts.length > 0 && (() => {
-                const uniquePlatforms = [...new Set(visual.scheduled_posts.map(sp => sp.platform))];
+                const statusByPlatform = new Map<string, string>();
+                for (const sp of visual.scheduled_posts) {
+                    statusByPlatform.set(sp.platform, sp.status);
+                }
+                const hasFailed = visual.scheduled_posts.some(sp => sp.status === 'failed');
+                const allPublished = visual.scheduled_posts.every(sp => sp.status === 'published');
                 const s = visual.scheduled_posts[0];
                 const dt = new Date(s.scheduled_at);
                 const timeStr = dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                const badgeStyle = hasFailed
+                    ? 'text-red-600 bg-red-50 border-red-200 hover:bg-red-100'
+                    : allPublished
+                        ? 'text-green-600 bg-green-50 border-green-200 hover:bg-green-100'
+                        : 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100';
+                const statusColor = (status: string) =>
+                    status === 'failed' ? 'text-red-500' : status === 'published' ? 'text-green-500' : 'text-blue-500';
                 return (
                     <button
                         onClick={onSchedule}
-                        className="absolute -top-2 right-2 flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors z-10 text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                        className={`absolute -top-2 right-2 flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm border cursor-pointer transition-colors z-10 ${badgeStyle}`}
                     >
-                        <Calendar size={10} />
-                        {timeStr}
+                        {hasFailed ? <AlertTriangle size={10} /> : allPublished ? <Check size={10} /> : <Calendar size={10} />}
+                        {hasFailed ? 'Failed' : allPublished ? 'Published' : timeStr}
                         <span className="flex items-center gap-0.5">
-                            {uniquePlatforms.map(p => <span key={p}>{platformIcons[p]}</span>)}
+                            {[...statusByPlatform.entries()].map(([p, status]) => (
+                                <span key={p} className={statusColor(status)}>{platformIcons[p]}</span>
+                            ))}
                         </span>
                     </button>
                 );

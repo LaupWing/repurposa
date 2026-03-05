@@ -71,10 +71,15 @@ export default function PublishNowModal({
     const visualSlides = visual ? (Array.isArray(visual.content) ? visual.content : [visual.content]) : [];
     const gradientPreset = visual ? (GRADIENT_PRESETS.find(g => g.id === visual.settings.gradient_id) || GRADIENT_PRESETS[0]) : GRADIENT_PRESETS[0];
 
-    // Check which platforms this content was already published to
+    // Check which platforms this content was already published to or failed
     const getPublishedInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
         const apiPlatform = UI_TO_API_PLATFORM[platformId];
         return post.scheduled_posts?.find((sp) => sp.platform === apiPlatform && sp.status === 'published');
+    };
+
+    const getFailedInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
+        const apiPlatform = UI_TO_API_PLATFORM[platformId];
+        return post.scheduled_posts?.find((sp) => sp.platform === apiPlatform && sp.status === 'failed');
     };
 
     const togglePlatform = (id: SchedulePlatform) => {
@@ -279,11 +284,19 @@ export default function PublishNowModal({
                                                 </span>
                                                 {(() => {
                                                     const published = getPublishedInfo(p.id);
+                                                    const failed = getFailedInfo(p.id);
                                                     if (published) {
                                                         const date = new Date(published.scheduled_at);
                                                         return (
                                                             <span className="block text-xs text-green-600">
                                                                 Published {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                            </span>
+                                                        );
+                                                    }
+                                                    if (failed) {
+                                                        return (
+                                                            <span className="block text-xs text-red-600 flex items-center gap-0.5">
+                                                                <AlertTriangle size={10} /> Failed — retry
                                                             </span>
                                                         );
                                                     }
