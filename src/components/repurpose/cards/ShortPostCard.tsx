@@ -495,7 +495,7 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                                     <MoreHorizontal size={14} />
                                 </button>
                                 {menuOpen && (
-                                    <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-10">
+                                    <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-20">
                                         <button
                                             onClick={() => { handleCopy(); setMenuOpen(false); }}
                                             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
