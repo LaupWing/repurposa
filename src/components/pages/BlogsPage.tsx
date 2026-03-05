@@ -262,32 +262,12 @@ export default function BlogsPage() {
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-    // TODO: Remove boilerplate posts after testing
-    const boilerplatePosts: BlogPost[] = [
-        {
-            id: 9998,
-            title: '',
-            content: '',
-            status: 'generating',
-            topic: 'how to build muscle after 40',
-            created_at: new Date().toISOString(),
-        },
-        {
-            id: 9999,
-            title: '',
-            content: '',
-            status: 'failed',
-            topic: 'sleep optimization for fat loss',
-            created_at: new Date().toISOString(),
-        },
-    ];
-
     // Fetch blogs from API
     useEffect(() => {
         const fetchBlogs = async () => {
             try {
                 const blogs = await getBlogs();
-                setPosts([...blogs, ...boilerplatePosts]);
+                setPosts(blogs);
             } catch (error) {
                 console.error('Failed to fetch blogs:', error);
                 toast.error('Failed to load blogs');
