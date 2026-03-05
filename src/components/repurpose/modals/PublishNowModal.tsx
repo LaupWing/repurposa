@@ -1,16 +1,19 @@
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import {
     Check,
     AlertTriangle,
     X,
     Send,
 } from 'lucide-react';
+import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
 import { getSocialAccounts } from '@/services/profileApi';
 import { publishNow } from '@/services/scheduleApi';
-import type { SocialAccount, ShortPostSchedule } from '@/types';
+import { renderVisual } from '@/services/repurposeApi';
+import type { SocialAccount, ShortPostSchedule, Visual } from '@/types';
 import type { ShortPostPattern } from '@/components/repurpose/cards/ShortPostCard';
+import { VisualPreview, GRADIENT_PRESETS } from './VisualPreviewModal';
 import {
     type SchedulePlatform,
     type ScheduleContentType,
@@ -24,6 +27,7 @@ interface PublishNowModalProps {
     isOpen: boolean;
     post: ShortPostPattern | null;
     contentType?: ScheduleContentType;
+    visual?: Visual | null;
     onClose: () => void;
     onPublished?: (publishedPosts: ShortPostSchedule[]) => void;
 }
@@ -32,6 +36,7 @@ export default function PublishNowModal({
     isOpen,
     post,
     contentType = 'short_post',
+    visual,
     onClose,
     onPublished,
 }: PublishNowModalProps) {
@@ -39,6 +44,7 @@ export default function PublishNowModal({
     const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
     const [loading, setLoading] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
+    const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -60,6 +66,10 @@ export default function PublishNowModal({
     if (!isOpen || !post) return null;
 
     const connectedPlatformIds = socialAccounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
+
+    // Computed visual data for offscreen rendering
+    const visualSlides = visual ? (Array.isArray(visual.content) ? visual.content : [visual.content]) : [];
+    const gradientPreset = visual ? (GRADIENT_PRESETS.find(g => g.id === visual.settings.gradient_id) || GRADIENT_PRESETS[0]) : GRADIENT_PRESETS[0];
 
     // Check which platforms this content was already published to
     const getPublishedInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
@@ -91,6 +101,22 @@ export default function PublishNowModal({
         setIsPublishing(true);
 
         try {
+            // For visuals: capture offscreen slides as PNGs and upload before publishing
+            if (contentType === 'visual' && visual) {
+                const blobs: Blob[] = [];
+                for (let i = 0; i < slideRefs.current.length; i++) {
+                    const el = slideRefs.current[i];
+                    if (!el) continue;
+                    const dataUrl = await toPng(el, { quality: 1, pixelRatio: 2 });
+                    const res = await fetch(dataUrl);
+                    blobs.push(await res.blob());
+                }
+                if (blobs.length === 0) {
+                    throw new Error('Failed to render visual slides');
+                }
+                await renderVisual(visual.id, blobs);
+            }
+
             const accountIds = selectedPlatforms
                 .map((platformId) => {
                     const apiPlatform = UI_TO_API_PLATFORM[platformId];
@@ -148,6 +174,27 @@ export default function PublishNowModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Offscreen visual slide rendering for PNG capture */}
+            {visual && (
+                <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+                    {visualSlides.map((text, i) => (
+                        <div key={i} ref={(el) => { slideRefs.current[i] = el; }}>
+                            <VisualPreview
+                                content={text}
+                                displayName={visual.settings.display_name}
+                                handle={visual.settings.handle}
+                                avatarUrl={visual.settings.avatar_url}
+                                theme={visual.settings.theme}
+                                style={visual.settings.style}
+                                stats={visual.settings.stats || { views: 0, reposts: 0, quotes: 0, likes: 0, bookmarks: 0 }}
+                                roundedCorners={visual.settings.corners === 'rounded'}
+                                gradient={gradientPreset}
+                                textSize={(visual.settings.text_sizes?.[i] as any) || null}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
             <div className="absolute inset-0 bg-black/50" onClick={onClose} />
             <div className="relative bg-white rounded-xl shadow-xl w-full max-w-xl mx-4 overflow-hidden">
                 {/* Header */}
@@ -275,7 +322,7 @@ export default function PublishNowModal({
                         className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
                     >
                         <Send size={14} />
-                        {isPublishing ? 'Publishing...' : 'Publish Now'}
+                        {isPublishing ? (visual ? 'Rendering & Publishing...' : 'Publishing...') : 'Publish Now'}
                     </button>
                 </div>
             </div>

@@ -39,6 +39,7 @@ export function useScheduling() {
     const [schedulingThreadPosts, setSchedulingThreadPosts] = useState<string[] | null>(null);
     const [publishingPost, setPublishingPost] = useState<ShortPostPattern | null>(null);
     const [publishingContentType, setPublishingContentType] = useState<ScheduleContentType>('short_post');
+    const [publishingVisual, setPublishingVisual] = useState<Visual | null>(null);
 
     const scheduleShortPost = (pattern: ShortPostPattern) => {
         setSchedulingPost(pattern);
@@ -69,6 +70,7 @@ export function useScheduling() {
 
     const publishVisual = (visual: Visual) => {
         setPublishingContentType('visual');
+        setPublishingVisual(visual);
         setPublishingPost(visualToPattern(visual));
     };
 
@@ -80,6 +82,7 @@ export function useScheduling() {
 
     const clearPublishing = () => {
         setPublishingPost(null);
+        setPublishingVisual(null);
     };
 
     const handleScheduled = (newScheduledPosts?: ShortPostSchedule[]): {
@@ -132,6 +135,7 @@ export function useScheduling() {
         schedulingThreadPosts,
         publishingPost,
         publishingContentType,
+        publishingVisual,
         scheduleShortPost,
         scheduleThread,
         scheduleVisual,
