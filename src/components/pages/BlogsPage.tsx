@@ -49,6 +49,7 @@ function StatusDot({ status }: { status: BlogPost['status'] }) {
         published: 'bg-green-500',
         'out-of-sync': 'bg-yellow-500',
         draft: 'bg-orange-500',
+        failed: 'bg-red-500',
     };
 
     const glowColors = {
@@ -56,6 +57,7 @@ function StatusDot({ status }: { status: BlogPost['status'] }) {
         published: 'bg-green-400',
         'out-of-sync': 'bg-yellow-400',
         draft: 'bg-orange-400',
+        failed: 'bg-red-400',
     };
 
     return (
@@ -76,6 +78,7 @@ function PostCard({ post, onEdit, onDelete }: { post: BlogPost; onEdit: (id: num
         published: 'text-green-600',
         'out-of-sync': 'text-yellow-600',
         draft: 'text-orange-600',
+        failed: 'text-red-600',
     };
 
     const handleCardClick = () => {
