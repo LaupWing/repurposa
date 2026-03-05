@@ -9,6 +9,7 @@ import { useState, useEffect } from '@wordpress/element';
 import { FileText, Search, Filter, Plus, Trash2, Pencil, Check, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogs, deleteBlog } from '@/services/blogApi';
+import { usePostPolling } from '@/hooks/usePostPolling';
 import type { BlogPost } from '@/types';
 
 // ============================================
@@ -72,7 +73,21 @@ function StatusDot({ status }: { status: BlogPost['status'] }) {
     );
 }
 
-function PostCard({ post, onEdit, onDelete }: { post: BlogPost; onEdit: (id: number) => void; onDelete: (id: number) => void }) {
+function PostCard({ post, onEdit, onDelete, onStatusUpdate }: { post: BlogPost; onEdit: (id: number) => void; onDelete: (id: number) => void; onStatusUpdate: (postId: number, updates: Partial<BlogPost>) => void }) {
+    // Poll when this card's post is generating
+    usePostPolling(post.id, post.status, (status) => {
+        if (status.status === 'draft') {
+            onStatusUpdate(post.id, {
+                status: 'draft',
+                title: status.title || '',
+                content: status.content || '',
+                seo_description: status.seo_description,
+            });
+        } else if (status.status === 'failed') {
+            onStatusUpdate(post.id, { status: 'failed' });
+        }
+    });
+
     const statusColors = {
         generating: 'text-blue-600',
         published: 'text-green-600',
@@ -308,6 +323,10 @@ export default function BlogsPage() {
         }
     };
 
+    const handleStatusUpdate = (postId: number, updates: Partial<BlogPost>) => {
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, ...updates } : p));
+    };
+
     const handleCreateNew = () => {
         window.location.href = 'admin.php?page=blog-repurpose';
     };
@@ -395,6 +414,7 @@ export default function BlogsPage() {
                                 post={post}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
+                                onStatusUpdate={handleStatusUpdate}
                             />
                         ))}
                     </div>
