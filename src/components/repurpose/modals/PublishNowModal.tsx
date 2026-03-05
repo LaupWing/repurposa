@@ -56,8 +56,23 @@ export default function PublishNowModal({
             .then((accounts) => {
                 setSocialAccounts(accounts);
                 const connected = accounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
-                const firstSupported = connected.find((id) => !getUnsupportedReason(id, contentType, undefined, undefined, accounts));
-                if (firstSupported) setSelectedPlatforms([firstSupported]);
+                const supported = connected.filter((id) => !getUnsupportedReason(id, contentType, undefined, undefined, accounts));
+
+                // Auto-select failed platforms for retry; exclude already published
+                const failedPlatforms = supported.filter((id) => {
+                    const apiPlatform = UI_TO_API_PLATFORM[id];
+                    return post?.scheduled_posts?.some((sp) => sp.platform === apiPlatform && sp.status === 'failed');
+                });
+                const publishedPlatforms = new Set(
+                    (post?.scheduled_posts || []).filter((sp) => sp.status === 'published').map((sp) => API_TO_UI_PLATFORM[sp.platform])
+                );
+
+                if (failedPlatforms.length > 0) {
+                    setSelectedPlatforms(failedPlatforms);
+                } else {
+                    const unpublished = supported.filter((id) => !publishedPlatforms.has(id));
+                    setSelectedPlatforms(unpublished.length > 0 ? [unpublished[0]] : supported.length > 0 ? [supported[0]] : []);
+                }
             })
             .catch(() => {})
             .finally(() => setLoading(false));
