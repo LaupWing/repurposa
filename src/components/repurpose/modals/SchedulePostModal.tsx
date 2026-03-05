@@ -99,11 +99,19 @@ export default function SchedulePostModal({
                         return !scheduled.some((sp) => Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000);
                     });
                     const filterSupported = (ids: SchedulePlatform[]) => ids.filter((id) => !getUnsupportedReason(id, contentType, post?.content.length, threadPosts, accounts));
+
+                    // If post has failed platforms, select ALL connected failed ones (not just slot ones)
+                    const allConnected = accounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
+                    const failedIds = (post?.scheduled_posts || [])
+                        .filter((sp) => sp.status === 'failed')
+                        .map((sp) => API_TO_UI_PLATFORM[sp.platform])
+                        .filter((id) => allConnected.includes(id) && !getUnsupportedReason(id, contentType, post?.content.length, threadPosts, accounts));
+
                     if (firstAvailable !== -1) {
                         setSelectedSlotIndex(firstAvailable);
-                        setSelectedPlatforms(filterSupported(slots[firstAvailable].platforms));
+                        setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupported(slots[firstAvailable].platforms));
                     } else if (slots.length > 0) {
-                        setSelectedPlatforms(filterSupported(slots[0].platforms));
+                        setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupported(slots[0].platforms));
                     } else {
                         setSelectedPlatforms(['x']);
                     }
@@ -184,7 +192,9 @@ export default function SchedulePostModal({
     const handleSelectSlot = (absoluteIndex: number) => {
         setSelectedSlotIndex(absoluteIndex);
         setUseCustom(false);
-        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType, contentLength, threadPosts, socialAccounts)));
+        // If post has failed platforms, keep those selected; otherwise use slot defaults
+        const failedIds = connectedPlatformIds.filter((id) => getFailedInfo(id) && !getUnsupportedReason(id, contentType, contentLength, threadPosts, socialAccounts));
+        setSelectedPlatforms(failedIds.length > 0 ? failedIds : upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType, contentLength, threadPosts, socialAccounts)));
     };
 
     const handleUseCustom = () => {
@@ -463,9 +473,8 @@ export default function SchedulePostModal({
                             {useCustom && upcomingSlots.length > 0 && (
                                 <button
                                     onClick={() => { setUseCustom(false); if (selectedSlotIndex === null) handleSelectSlot(0); }}
-                                    className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                                    className="text-left px-3 py-2 rounded-lg border border-dashed border-gray-300 text-xs font-medium text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-all"
                                 >
-                                    <ChevronLeft size={14} />
                                     Back to available slots
                                 </button>
                             )}
@@ -635,9 +644,13 @@ export default function SchedulePostModal({
                                                                                     ? active
                                                                                         ? `${p.bg} text-white`
                                                                                         : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
-                                                                                    : inSlot
+                                                                                    : failed
                                                                                         ? `${p.bg} text-white`
-                                                                                        : 'bg-gray-100 text-gray-300'
+                                                                                        : published
+                                                                                            ? 'bg-gray-100 text-gray-300'
+                                                                                            : inSlot
+                                                                                                ? `${p.bg} text-white`
+                                                                                                : 'bg-gray-100 text-gray-300'
                                                                     }`}
                                                                 >
                                                                     {p.icon}
