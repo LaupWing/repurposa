@@ -99,6 +99,8 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             sp.addScheduledPosts(result.postId, result.publishedPosts);
         } else if (result.contentType === 'thread') {
             th.addScheduledPosts(result.postId, result.publishedPosts);
+        } else if (result.contentType === 'visual') {
+            vis.addScheduledPosts(result.postId, result.publishedPosts);
         }
     };
 
@@ -275,6 +277,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                                     }}
                                     onEdit={() => vis.setViewingVisual(visual)}
                                     onSchedule={() => sched.scheduleVisual(visual)}
+                                    onPublishNow={() => sched.publishVisual(visual)}
                                     onDelete={() => vis.setDeletingVisualId(visual.id)}
                                 />
                             ))}

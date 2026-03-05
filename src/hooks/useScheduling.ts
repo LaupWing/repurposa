@@ -67,6 +67,11 @@ export function useScheduling() {
         setPublishingPost(threadToPattern(thread));
     };
 
+    const publishVisual = (visual: Visual) => {
+        setPublishingContentType('visual');
+        setPublishingPost(visualToPattern(visual));
+    };
+
     const clearScheduling = () => {
         setSchedulingPost(null);
         setSchedulingVisual(null);
@@ -132,6 +137,7 @@ export function useScheduling() {
         scheduleVisual,
         publishShortPost,
         publishThread,
+        publishVisual,
         clearScheduling,
         clearPublishing,
         handleScheduled,
