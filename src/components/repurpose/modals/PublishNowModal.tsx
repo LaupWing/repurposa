@@ -25,6 +25,7 @@ interface PublishNowModalProps {
     post: ShortPostPattern | null;
     contentType?: ScheduleContentType;
     onClose: () => void;
+    onPublished?: (publishedPosts: ShortPostSchedule[]) => void;
 }
 
 export default function PublishNowModal({
@@ -32,6 +33,7 @@ export default function PublishNowModal({
     post,
     contentType = 'short_post',
     onClose,
+    onPublished,
 }: PublishNowModalProps) {
     const [selectedPlatforms, setSelectedPlatforms] = useState<SchedulePlatform[]>([]);
     const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
@@ -123,6 +125,15 @@ export default function PublishNowModal({
                     return SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || r.platform;
                 }).join(', ');
                 toast.error(`Failed on ${names}`, { description: failed[0].error || 'Please try again.' });
+            }
+
+            if (succeeded.length > 0) {
+                onPublished?.(succeeded.map((r) => ({
+                    id: 0, // not returned from publish API
+                    platform: r.platform,
+                    status: 'published' as const,
+                    scheduled_at: new Date().toISOString(),
+                })));
             }
 
             onClose();
