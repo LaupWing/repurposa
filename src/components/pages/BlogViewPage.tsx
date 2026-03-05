@@ -19,7 +19,8 @@ import {
     RefreshCw,
 } from 'lucide-react';
 import { RepurposePanel } from '@/components/repurpose/RepurposePanel';
-import { getBlog, pollPostStatus } from '@/services/blogApi';
+import { getBlog } from '@/services/blogApi';
+import { usePostPolling } from '@/hooks/usePostPolling';
 import type { BlogPost } from '@/types';
 import { GeneratingOverlay } from '@/components/GeneratingOverlay';
 import type { ContentTab, BlogViewPageProps } from '@/components/blog-view/types';
@@ -64,32 +65,26 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
     }, [postId]);
 
     // Poll for generation status when post is generating
-    useEffect(() => {
-        if (!post || post.status !== 'generating') return;
-
-        const stopPolling = pollPostStatus(post.id, (status) => {
-            if (status.status === 'draft') {
-                setPost(prev => prev ? {
-                    ...prev,
-                    status: 'draft',
-                    title: status.title || '',
-                    content: status.content || '',
-                    seo_description: status.seo_description,
-                } : prev);
-                setEditorKey(k => k + 1);
-                toast.success('Blog generated!', {
-                    description: 'Your blog post is ready to edit.',
-                });
-            } else if (status.status === 'failed') {
-                setPost(prev => prev ? { ...prev, status: 'failed' } : prev);
-                toast.error('Generation failed', {
-                    description: 'Something went wrong. You can try again.',
-                });
-            }
-        });
-
-        return stopPolling;
-    }, [post?.id, post?.status]);
+    usePostPolling(post?.id, post?.status, (status) => {
+        if (status.status === 'draft') {
+            setPost(prev => prev ? {
+                ...prev,
+                status: 'draft',
+                title: status.title || '',
+                content: status.content || '',
+                seo_description: status.seo_description,
+            } : prev);
+            setEditorKey(k => k + 1);
+            toast.success('Blog generated!', {
+                description: 'Your blog post is ready to edit.',
+            });
+        } else if (status.status === 'failed') {
+            setPost(prev => prev ? { ...prev, status: 'failed' } : prev);
+            toast.error('Generation failed', {
+                description: 'Something went wrong. You can try again.',
+            });
+        }
+    });
 
     // Navigation back to blogs list
     const handleBack = () => {
