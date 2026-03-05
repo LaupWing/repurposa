@@ -450,12 +450,105 @@ export default function SchedulePostModal({
                         <div className="flex items-center justify-center py-4 text-sm text-gray-400">
                             Loading your schedule...
                         </div>
-                    ) : upcomingSlots.length === 0 ? (
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
-                            <Calendar size={16} className="text-gray-400 shrink-0" />
-                            <p className="text-xs text-gray-500">
-                                No publishing schedule set up yet. <a href="admin.php?page=blog-repurpose-schedule" className="text-blue-600 hover:underline">Configure your times</a> to see quick-pick slots here.
-                            </p>
+                    ) : upcomingSlots.length === 0 || useCustom ? (
+                        <div className="space-y-4">
+                            {upcomingSlots.length === 0 && (
+                                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                                    <Calendar size={16} className="text-gray-400 shrink-0" />
+                                    <p className="text-xs text-gray-500">
+                                        No publishing schedule set up yet. <a href="admin.php?page=blog-repurpose-schedule" className="text-blue-600 hover:underline">Configure your times</a> to see quick-pick slots here.
+                                    </p>
+                                </div>
+                            )}
+                            {useCustom && upcomingSlots.length > 0 && (
+                                <button
+                                    onClick={() => { setUseCustom(false); if (selectedSlotIndex === null) handleSelectSlot(0); }}
+                                    className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                                >
+                                    <ChevronLeft size={14} />
+                                    Back to available slots
+                                </button>
+                            )}
+
+                            {/* Platform selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Platforms</label>
+                                <div className="flex items-center gap-2">
+                                    {SCHEDULE_PLATFORMS.map((p) => {
+                                        const active = selectedPlatforms.includes(p.id);
+                                        const connected = connectedPlatformIds.includes(p.id);
+                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts, socialAccounts);
+                                        if (unsupported) {
+                                            return (
+                                                <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-amber-400 text-gray-300 cursor-not-allowed">
+                                                        {p.icon}
+                                                        {p.name}
+                                                        <AlertTriangle size={14} className="text-amber-500" />
+                                                    </div>
+                                                </Tooltip>
+                                            );
+                                        }
+                                        const published = getPublishedInfo(p.id);
+                                        const failed = getFailedInfo(p.id);
+                                        const tooltipText = published
+                                            ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                                            : failed ? 'Failed — retry by selecting this platform' : '';
+                                        return (
+                                            <Tooltip key={p.id} text={tooltipText} delay={0} placement="top">
+                                                <button
+                                                    onClick={() => togglePlatform(p.id)}
+                                                    className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                        !connected
+                                                            ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                            : active
+                                                                ? `${p.bg} text-white`
+                                                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                                                    }`}
+                                                >
+                                                    {p.icon}
+                                                    {p.name}
+                                                    {published && <Check size={12} className={active ? 'text-white/70' : 'text-green-500'} />}
+                                                    {failed && !published && <AlertTriangle size={12} className={active ? 'text-white/70' : 'text-red-500'} />}
+                                                </button>
+                                            </Tooltip>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Date & Time */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        <span className="flex items-center gap-1.5">
+                                            <Calendar size={14} className="text-gray-400" />
+                                            Date
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        min={getDefaultDate()}
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        <span className="flex items-center gap-1.5">
+                                            <Clock size={14} className="text-gray-400" />
+                                            Time
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="time"
+                                        value={time}
+                                        onChange={(e) => setTime(e.target.value)}
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         <div>
@@ -601,91 +694,6 @@ export default function SchedulePostModal({
                                         </button>
                                     </div>
                                 )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Custom date/time picker - show when no schedule or custom selected */}
-                    {(useCustom || upcomingSlots.length === 0) && !loadingSlots && (
-                        <div className="space-y-4">
-                            {/* Platform selection */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Platforms</label>
-                                <div className="flex items-center gap-2">
-                                    {SCHEDULE_PLATFORMS.map((p) => {
-                                        const active = selectedPlatforms.includes(p.id);
-                                        const connected = connectedPlatformIds.includes(p.id);
-                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts, socialAccounts);
-                                        if (unsupported) {
-                                            return (
-                                                <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
-                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-amber-400 text-gray-300 cursor-not-allowed">
-                                                        {p.icon}
-                                                        {p.name}
-                                                        <AlertTriangle size={14} className="text-amber-500" />
-                                                    </div>
-                                                </Tooltip>
-                                            );
-                                        }
-                                        const published = getPublishedInfo(p.id);
-                                        const failed = getFailedInfo(p.id);
-                                        const tooltipText = published
-                                            ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-                                            : failed ? 'Failed — retry by selecting this platform' : '';
-                                        return (
-                                            <Tooltip key={p.id} text={tooltipText} delay={0} placement="top">
-                                                <button
-                                                    onClick={() => togglePlatform(p.id)}
-                                                    className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                                        !connected
-                                                            ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                                                            : active
-                                                                ? `${p.bg} text-white`
-                                                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
-                                                    }`}
-                                                >
-                                                    {p.icon}
-                                                    {p.name}
-                                                    {published && <Check size={12} className={active ? 'text-white/70' : 'text-green-500'} />}
-                                                    {failed && !published && <AlertTriangle size={12} className={active ? 'text-white/70' : 'text-red-500'} />}
-                                                </button>
-                                            </Tooltip>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Date & Time */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        <span className="flex items-center gap-1.5">
-                                            <Calendar size={14} className="text-gray-400" />
-                                            Date
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={date}
-                                        onChange={(e) => setDate(e.target.value)}
-                                        min={getDefaultDate()}
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        <span className="flex items-center gap-1.5">
-                                            <Clock size={14} className="text-gray-400" />
-                                            Time
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="time"
-                                        value={time}
-                                        onChange={(e) => setTime(e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
-                                    />
-                                </div>
                             </div>
                         </div>
                     )}
