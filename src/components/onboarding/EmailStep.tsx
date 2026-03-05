@@ -7,9 +7,10 @@ interface EmailStepProps {
     errors: Record<string, string>;
     onSave: (data: Record<string, unknown>) => void;
     onNext: () => void;
+    provider?: string;
 }
 
-export default function EmailStep({ leaving, email, setEmail, errors, onSave, onNext }: EmailStepProps) {
+export default function EmailStep({ leaving, email, setEmail, errors, onSave, onNext, provider }: EmailStepProps) {
     const handleContinue = () => {
         onSave({ email });
         onNext();
@@ -46,7 +47,7 @@ export default function EmailStep({ leaving, email, setEmail, errors, onSave, on
                 </div>
 
                 <p {...stagger(2, leaving)} className="text-center text-sm text-gray-500">
-                    You'll still log in with <span className="font-semibold text-gray-900">X (Twitter)</span>.
+                    You'll still log in with <span className="font-semibold text-gray-900">{provider === 'linkedin' ? 'LinkedIn' : 'X (Twitter)'}</span>.
                 </p>
 
                 <button

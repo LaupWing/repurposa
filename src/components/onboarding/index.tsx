@@ -27,6 +27,7 @@ const getConfig = () => window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000', 
 function getStepsForProvider(provider?: string): Step[] {
     switch (provider) {
         case 'twitter':
+        case 'linkedin':
             return ['welcome', 'setup-email', 'setup-business', 'setup-preferences'];
         case 'email':
             return ['welcome', 'setup-profile', 'setup-connect', 'setup-business', 'setup-preferences'];
@@ -168,7 +169,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             case 'setup-profile':
                 return <ProfileStep leaving={leaving} name={name} setName={setName} email={user?.email ?? ''} avatarUrl={avatarUrl} onAvatarChange={setAvatarUrl} onSave={saveStepData} onNext={() => goTo('setup-connect')} />;
             case 'setup-email':
-                return <EmailStep leaving={leaving} email={email} setEmail={setEmail} errors={errors} onSave={saveStepData} onNext={() => goTo('setup-business')} />;
+                return <EmailStep leaving={leaving} email={email} setEmail={setEmail} errors={errors} onSave={saveStepData} onNext={() => goTo('setup-business')} provider={provider} />;
             case 'setup-connect':
                 return <ConnectStep leaving={leaving} connectedPlatforms={connectedPlatforms} connectingPlatform={connectingPlatform} onConnect={handleConnectPlatform} onNext={() => goTo('setup-business')} />;
             case 'setup-business':
