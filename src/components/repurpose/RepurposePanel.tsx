@@ -91,6 +91,17 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
         }
     };
 
+    const handlePublished = (publishedPosts: import('@/types').ShortPostSchedule[]) => {
+        const result = sched.handlePublished(publishedPosts);
+        if (!result) return;
+
+        if (result.contentType === 'short_post') {
+            sp.addScheduledPosts(result.postId, result.publishedPosts);
+        } else if (result.contentType === 'thread') {
+            th.addScheduledPosts(result.postId, result.publishedPosts);
+        }
+    };
+
     const handleShortPostVisualSaved = (pattern: { id: number }, visual: Visual) => {
         vis.addVisual(visual);
         sp.incrementVisualCount(pattern.id);
@@ -374,6 +385,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 post={sched.publishingPost}
                 contentType={sched.publishingContentType}
                 onClose={sched.clearPublishing}
+                onPublished={handlePublished}
             />
             <ConfirmDeleteModal
                 isOpen={vis.deletingVisualId !== null}

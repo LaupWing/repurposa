@@ -99,6 +99,20 @@ export function useScheduling() {
         return result;
     };
 
+    const handlePublished = (publishedPosts: ShortPostSchedule[]): {
+        contentType: ScheduleContentType;
+        postId: number;
+        publishedPosts: ShortPostSchedule[];
+    } | null => {
+        if (!publishingPost || publishedPosts.length === 0) return null;
+
+        return {
+            contentType: publishingContentType,
+            postId: publishingPost.id,
+            publishedPosts,
+        };
+    };
+
     const removeScheduledFromModal = (scheduledPostId: number) => {
         setSchedulingPost(prev => prev
             ? { ...prev, scheduled_posts: (prev.scheduled_posts || []).filter(sp => sp.id !== scheduledPostId) }
@@ -121,6 +135,7 @@ export function useScheduling() {
         clearScheduling,
         clearPublishing,
         handleScheduled,
+        handlePublished,
         removeScheduledFromModal,
     };
 }
