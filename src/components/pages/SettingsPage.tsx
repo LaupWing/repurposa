@@ -8,7 +8,7 @@
 import { useState, useRef } from "@wordpress/element";
 import { toast } from "sonner";
 import Avatar from "boring-avatars";
-import { Check, ExternalLink, Save, Loader2, Pencil } from "lucide-react";
+import { AlertTriangle, Check, ExternalLink, Save, Loader2, Pencil } from "lucide-react";
 import { TimezonePicker } from "@/components/TimezonePicker";
 import { useProfileStore } from "@/store/profileStore";
 import type { ProfileData } from "@/store/profileStore";
@@ -85,9 +85,9 @@ export default function SettingsPage() {
   const mergedPlatforms = CONNECT_PLATFORMS.map((platform) => {
     const connection = socialConnections.find((c) => c.platform === platform.id);
     if (connection) {
-      return { ...platform, connected: true as const, username: connection.username, profilePicture: connection.profilePicture };
+      return { ...platform, connected: true as const, username: connection.username, profilePicture: connection.profilePicture, meta: connection.meta };
     }
-    return { ...platform, connected: false as const, username: undefined, profilePicture: undefined };
+    return { ...platform, connected: false as const, username: undefined, profilePicture: undefined, meta: undefined };
   });
 
   const handleSaveProfile = async () => {
@@ -416,10 +416,18 @@ export default function SettingsPage() {
                 <div>
                   <h3 className="font-medium text-gray-900">{platform.name}</h3>
                   {platform.connected ? (
-                    <p className="text-sm text-green-600 flex items-center gap-1">
-                      <Check size={14} />
-                      Connected as @{platform.username}
-                    </p>
+                    <>
+                      <p className="text-sm text-green-600 flex items-center gap-1">
+                        <Check size={14} />
+                        Connected as @{platform.username}
+                      </p>
+                      {platform.id === 'facebook' && (!platform.meta?.pages || platform.meta.pages.length === 0) && (
+                        <p className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
+                          <AlertTriangle size={12} />
+                          No Facebook Pages found. Create a Page to publish.
+                        </p>
+                      )}
+                    </>
                   ) : (
                     <p className="text-sm text-gray-500">Not connected</p>
                   )}

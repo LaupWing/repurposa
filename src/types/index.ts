@@ -211,6 +211,7 @@ export interface SocialAccount {
     platform_user_id: string;
     platform_username: string;
     profile_picture: string | null;
+    meta?: { pages?: Array<{ id: string; name: string; picture?: string }> } | null;
     connected_at: string;
 }
 

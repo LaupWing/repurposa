@@ -98,7 +98,7 @@ export default function SchedulePostModal({
                         const slotTime = slot.date.getTime();
                         return !scheduled.some((sp) => Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000);
                     });
-                    const filterSupported = (ids: SchedulePlatform[]) => ids.filter((id) => !getUnsupportedReason(id, contentType, post?.content.length, threadPosts));
+                    const filterSupported = (ids: SchedulePlatform[]) => ids.filter((id) => !getUnsupportedReason(id, contentType, post?.content.length, threadPosts, accounts));
                     if (firstAvailable !== -1) {
                         setSelectedSlotIndex(firstAvailable);
                         setSelectedPlatforms(filterSupported(slots[firstAvailable].platforms));
@@ -154,7 +154,7 @@ export default function SchedulePostModal({
     };
 
     const togglePlatform = (id: SchedulePlatform) => {
-        const unsupported = getUnsupportedReason(id, contentType, contentLength, threadPosts);
+        const unsupported = getUnsupportedReason(id, contentType, contentLength, threadPosts, socialAccounts);
         if (unsupported) return;
         if (!connectedPlatformIds.includes(id)) {
             const name = SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name || id;
@@ -179,7 +179,7 @@ export default function SchedulePostModal({
     const handleSelectSlot = (absoluteIndex: number) => {
         setSelectedSlotIndex(absoluteIndex);
         setUseCustom(false);
-        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType, contentLength, threadPosts)));
+        setSelectedPlatforms(upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType, contentLength, threadPosts, socialAccounts)));
     };
 
     const handleUseCustom = () => {
@@ -478,7 +478,7 @@ export default function SchedulePostModal({
                                                         const inSlot = slot.platforms.includes(p.id);
                                                         const active = isSelected && selectedPlatforms.includes(p.id);
                                                         const connected = connectedPlatformIds.includes(p.id);
-                                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts);
+                                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts, socialAccounts);
                                                         if (unsupported) {
                                                             return (
                                                                 <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
@@ -577,7 +577,7 @@ export default function SchedulePostModal({
                                     {SCHEDULE_PLATFORMS.map((p) => {
                                         const active = selectedPlatforms.includes(p.id);
                                         const connected = connectedPlatformIds.includes(p.id);
-                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts);
+                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts, socialAccounts);
                                         if (unsupported) {
                                             return (
                                                 <Tooltip key={p.id} text={unsupported} delay={0} placement="top">

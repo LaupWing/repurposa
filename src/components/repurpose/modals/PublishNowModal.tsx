@@ -56,7 +56,7 @@ export default function PublishNowModal({
             .then((accounts) => {
                 setSocialAccounts(accounts);
                 const connected = accounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
-                const firstSupported = connected.find((id) => !getUnsupportedReason(id, contentType));
+                const firstSupported = connected.find((id) => !getUnsupportedReason(id, contentType, undefined, undefined, accounts));
                 if (firstSupported) setSelectedPlatforms([firstSupported]);
             })
             .catch(() => {})
@@ -78,7 +78,7 @@ export default function PublishNowModal({
     };
 
     const togglePlatform = (id: SchedulePlatform) => {
-        const unsupported = getUnsupportedReason(id, contentType);
+        const unsupported = getUnsupportedReason(id, contentType, undefined, undefined, socialAccounts);
         if (unsupported) return;
         if (!connectedPlatformIds.includes(id)) {
             const name = SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name || id;
@@ -236,7 +236,7 @@ export default function PublishNowModal({
                                 {SCHEDULE_PLATFORMS.map((p) => {
                                     const active = selectedPlatforms.includes(p.id);
                                     const connected = connectedPlatformIds.includes(p.id);
-                                    const unsupported = getUnsupportedReason(p.id, contentType);
+                                    const unsupported = getUnsupportedReason(p.id, contentType, undefined, undefined, socialAccounts);
                                     if (unsupported) {
                                         return (
                                             <Tooltip key={p.id} text={unsupported} delay={0} placement="top">

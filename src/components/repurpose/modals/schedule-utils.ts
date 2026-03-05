@@ -40,9 +40,17 @@ const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'frida
 // HELPERS
 // ============================================
 
-export function getUnsupportedReason(platformId: SchedulePlatform, contentType: ScheduleContentType, contentLength?: number, threadPosts?: string[] | null): string | null {
+import type { SocialAccount } from '@/types';
+
+export function getUnsupportedReason(platformId: SchedulePlatform, contentType: ScheduleContentType, contentLength?: number, threadPosts?: string[] | null, socialAccounts?: SocialAccount[]): string | null {
     if (platformId === 'instagram' && (contentType === 'short_post' || contentType === 'thread')) {
         return 'Instagram requires an image — use Visuals instead';
+    }
+    if (platformId === 'facebook' && socialAccounts) {
+        const fbAccount = socialAccounts.find((a) => a.platform === 'facebook');
+        if (fbAccount && (!fbAccount.meta?.pages || fbAccount.meta.pages.length === 0)) {
+            return 'No Facebook Page available — connect a Page first';
+        }
     }
     if (contentType === 'thread' && threadPosts && threadPosts.length > 0) {
         const limit = PLATFORM_CHAR_LIMITS[platformId];

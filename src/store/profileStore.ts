@@ -19,6 +19,7 @@ export interface SocialConnection {
     platform: string;
     username: string;
     profilePicture?: string | null;
+    meta?: { pages?: Array<{ id: string; name: string; picture?: string }> } | null;
 }
 
 export interface UserData {
@@ -35,6 +36,7 @@ interface SocialAccountResponse {
     platform_user_id: string;
     platform_username: string;
     profile_picture: string | null;
+    meta?: { pages?: Array<{ id: string; name: string; picture?: string }> } | null;
     connected_at: string;
 }
 
@@ -111,6 +113,7 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
                 platform: account.platform,
                 username: account.platform_username,
                 profilePicture: account.profile_picture,
+                meta: account.meta,
             })),
         });
     },
