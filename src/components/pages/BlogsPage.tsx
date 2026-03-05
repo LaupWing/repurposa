@@ -83,8 +83,14 @@ function PostCard({ post, onEdit, onDelete, onStatusUpdate }: { post: BlogPost; 
                 content: status.content || '',
                 seo_description: status.seo_description,
             });
+            toast.success('Blog generated!', {
+                description: status.title || 'Your blog post is ready to edit.',
+            });
         } else if (status.status === 'failed') {
             onStatusUpdate(post.id, { status: 'failed' });
+            toast.error('Generation failed', {
+                description: 'Something went wrong. Click the post to try again.',
+            });
         }
     });
 
