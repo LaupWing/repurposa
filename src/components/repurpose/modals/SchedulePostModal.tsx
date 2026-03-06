@@ -9,8 +9,6 @@ import {
     X,
     Trash2,
 } from 'lucide-react';
-import { createElement } from '@wordpress/element';
-import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
@@ -201,15 +199,6 @@ export default function SchedulePostModal({
         setUseCustom(true);
         setSelectedSlotIndex(null);
     };
-
-    const platformIcons: Record<string, React.ReactNode> = {
-        twitter: createElement(RiTwitterXFill, { size: 14 }),
-        linkedin: createElement(RiLinkedinFill, { size: 14 }),
-        threads: createElement(RiThreadsFill, { size: 14 }),
-        instagram: createElement(RiInstagramFill, { size: 14 }),
-        facebook: createElement(RiFacebookFill, { size: 14 }),
-    };
-    const platformDisplayNames: Record<string, string> = { twitter: 'X', linkedin: 'LinkedIn', threads: 'Threads', instagram: 'Instagram', facebook: 'Facebook' };
 
     const handleUnschedule = async (scheduledPostId: number) => {
         setRemovingId(scheduledPostId);
