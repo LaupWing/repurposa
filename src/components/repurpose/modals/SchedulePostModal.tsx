@@ -71,6 +71,20 @@ export default function SchedulePostModal({
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
     const slotsPerPage = 6;
 
+    // Failed platforms that can be retried (connected + supported for this content type)
+    const getRetryablePlatforms = (accounts: SocialAccount[]): SchedulePlatform[] => {
+        if (!post) return [];
+        const connected = accounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
+        return (post.scheduled_posts || [])
+            .filter((sp) => sp.status === 'failed')
+            .map((sp) => API_TO_UI_PLATFORM[sp.platform])
+            .filter((id) => connected.includes(id) && !getUnsupportedReason(id, contentType, post.content.length, threadPosts, accounts));
+    };
+
+    // Filter platform IDs to only those supported for this content type
+    const filterSupportedPlatforms = (ids: SchedulePlatform[], accounts: SocialAccount[]): SchedulePlatform[] =>
+        ids.filter((id) => !getUnsupportedReason(id, contentType, post?.content.length, threadPosts, accounts));
+
     // Fetch schedule + social accounts when modal opens
     useEffect(() => {
         if (!isOpen) return;
@@ -96,20 +110,13 @@ export default function SchedulePostModal({
                         const slotTime = slot.date.getTime();
                         return !scheduled.some((sp) => Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000);
                     });
-                    const filterSupported = (ids: SchedulePlatform[]) => ids.filter((id) => !getUnsupportedReason(id, contentType, post?.content.length, threadPosts, accounts));
-
-                    // If post has failed platforms, select ALL connected failed ones (not just slot ones)
-                    const allConnected = accounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
-                    const failedIds = (post?.scheduled_posts || [])
-                        .filter((sp) => sp.status === 'failed')
-                        .map((sp) => API_TO_UI_PLATFORM[sp.platform])
-                        .filter((id) => allConnected.includes(id) && !getUnsupportedReason(id, contentType, post?.content.length, threadPosts, accounts));
+                    const failedIds = getRetryablePlatforms(accounts);
 
                     if (firstAvailable !== -1) {
                         setSelectedSlotIndex(firstAvailable);
-                        setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupported(slots[firstAvailable].platforms));
+                        setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupportedPlatforms(slots[firstAvailable].platforms, accounts));
                     } else if (slots.length > 0) {
-                        setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupported(slots[0].platforms));
+                        setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupportedPlatforms(slots[0].platforms, accounts));
                     } else {
                         setSelectedPlatforms(['x']);
                     }
@@ -190,9 +197,8 @@ export default function SchedulePostModal({
     const handleSelectSlot = (absoluteIndex: number) => {
         setSelectedSlotIndex(absoluteIndex);
         setUseCustom(false);
-        // If post has failed platforms, keep those selected; otherwise use slot defaults
-        const failedIds = connectedPlatformIds.filter((id) => getFailedInfo(id) && !getUnsupportedReason(id, contentType, contentLength, threadPosts, socialAccounts));
-        setSelectedPlatforms(failedIds.length > 0 ? failedIds : upcomingSlots[absoluteIndex].platforms.filter((id) => !getUnsupportedReason(id, contentType, contentLength, threadPosts, socialAccounts)));
+        const failedIds = getRetryablePlatforms(socialAccounts);
+        setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupportedPlatforms(upcomingSlots[absoluteIndex].platforms, socialAccounts));
     };
 
     const handleUseCustom = () => {
