@@ -22,9 +22,11 @@ import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
 import type { ThreadItem, Visual } from '@/types';
 import { AITextPopup } from '@/components/AITextPopup';
+import ImagePickerModal from '@/components/ImagePickerModal';
 import { VisualThreadPreviewModal } from '@/components/repurpose/modals/VisualPreviewModal';
 import { ConfirmDeleteModal } from '@/components/repurpose/modals';
 import { emotionColors } from './ShortPostCard';
+import { ImageGrid } from './ImageGrid';
 import { createElement } from '@wordpress/element';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 
@@ -75,7 +77,7 @@ function InsertPopover({ onInsertPost, onInsertCta }: { onInsertPost: () => void
     );
 }
 
-function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onInsertBelow, autoEdit, onAutoEditHandled, onCreateCta }: {
+function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onInsertBelow, onAddImage, onRemoveImage, onReorderImages, autoEdit, onAutoEditHandled, onCreateCta }: {
     post: ThreadItem['posts'][number];
     idx: number;
     isLast: boolean;
@@ -83,6 +85,9 @@ function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onIns
     onEdit: (content: string) => void;
     onDelete: () => void;
     onInsertBelow: () => void;
+    onAddImage: (imageUrl: string) => void;
+    onRemoveImage: (imageIndex: number) => void;
+    onReorderImages: (from: number, to: number) => void;
     autoEdit?: boolean;
     onAutoEditHandled?: () => void;
     onCreateCta?: () => void;
@@ -102,6 +107,7 @@ function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onIns
     const [postMenuOpen, setPostMenuOpen] = useState(false);
     const postMenuRef = useRef<HTMLDivElement>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showImagePicker, setShowImagePicker] = useState(false);
 
     useEffect(() => {
         if (!postMenuOpen) return;
@@ -183,6 +189,17 @@ function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onIns
                         <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
                             {post.content}
                         </p>
+                        {/* Media */}
+                        {post.images && post.images.length > 0 && (
+                            <div className="mt-2">
+                                <ImageGrid
+                                    media={post.images}
+                                    onRemove={onRemoveImage}
+                                    onReorder={onReorderImages}
+                                    onAddClick={() => setShowImagePicker(true)}
+                                />
+                            </div>
+                        )}
                         {/* Footer */}
                         <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                             <div className="flex items-center gap-3">
@@ -220,11 +237,12 @@ function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onIns
                                                 {copied ? 'Copied!' : 'Copy'}
                                             </button>
                                             <button
-                                                onClick={() => { toast.info('Image support coming soon'); setPostMenuOpen(false); }}
-                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                onClick={() => { setShowImagePicker(true); setPostMenuOpen(false); }}
+                                                disabled={(post.images?.length ?? 0) >= 4}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                             >
                                                 <ImagePlus size={14} />
-                                                Add Image
+                                                Add Image{post.images?.length ? ` (${post.images.length}/4)` : ''}
                                             </button>
                                             <div className="border-t border-gray-100 my-1" />
                                             <button
@@ -249,6 +267,14 @@ function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onIns
                     <InsertPopover onInsertPost={onInsertBelow} onInsertCta={() => onCreateCta?.()} />
                 </div>
             )}
+            <ImagePickerModal
+                isOpen={showImagePicker}
+                onClose={() => setShowImagePicker(false)}
+                onSelect={(imageUrl) => {
+                    onAddImage(imageUrl);
+                    setShowImagePicker(false);
+                }}
+            />
             <ConfirmDeleteModal
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
@@ -276,12 +302,15 @@ interface ThreadCardProps {
     onDelete: () => void;
     onInsertCtaPost: (afterIndex: number, content: string) => void;
     onGenerateCta: (content: string[]) => Promise<string | null>;
+    onAddImage: (postIndex: number, imageUrl: string) => void;
+    onRemoveImage: (postIndex: number, imageIndex: number) => void;
+    onReorderImages: (postIndex: number, from: number, to: number) => void;
     blogId?: number;
     onVisualSaved?: (visual: Visual) => void;
     isPublished?: boolean;
 }
 
-export default function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onPublishNow, onDelete, onInsertCtaPost, onGenerateCta, blogId, onVisualSaved }: ThreadCardProps) {
+export default function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onPublishNow, onDelete, onInsertCtaPost, onGenerateCta, onAddImage, onRemoveImage, onReorderImages, blogId, onVisualSaved }: ThreadCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditingHook, setIsEditingHook] = useState(false);
     const [editHookContent, setEditHookContent] = useState(thread.hook);
@@ -578,6 +607,9 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                     onEdit={(content) => onEditPost(idx, content)}
                                     onDelete={() => handleDeletePost(idx)}
                                     onInsertBelow={() => handleInsertPost(idx)}
+                                    onAddImage={(url) => onAddImage(idx, url)}
+                                    onRemoveImage={(imgIdx) => onRemoveImage(idx, imgIdx)}
+                                    onReorderImages={(from, to) => onReorderImages(idx, from, to)}
                                     autoEdit={autoEditIndex === idx}
                                     onAutoEditHandled={() => setAutoEditIndex(null)}
                                     onCreateCta={() => {

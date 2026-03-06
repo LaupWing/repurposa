@@ -67,7 +67,7 @@ export function useThreads(
             updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
         },
         onInsertPost: (afterIndex: number) => {
-            const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content: '', media: null }, ...thread.posts.slice(afterIndex + 1)];
+            const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content: '', media: null, images: [] }, ...thread.posts.slice(afterIndex + 1)];
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
             ));
@@ -80,12 +80,42 @@ export function useThreads(
         },
         onDelete: () => setThreads(prev => prev.filter(t => t.id !== thread.id)),
         onInsertCtaPost: (afterIndex: number, content: string) => {
-            const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content, media: null }, ...thread.posts.slice(afterIndex + 1)];
+            const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content, media: null, images: [] }, ...thread.posts.slice(afterIndex + 1)];
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
             ));
             updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
             toast.success('CTA saved');
+        },
+        onAddImage: (postIndex: number, imageUrl: string) => {
+            const updatedPosts = thread.posts.map((p, i) =>
+                i === postIndex ? { ...p, images: [...(p.images || []), imageUrl].slice(0, 4) } : p
+            );
+            setThreads(prev => prev.map(t =>
+                t.id === thread.id ? { ...t, posts: updatedPosts } : t
+            ));
+            updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
+        },
+        onRemoveImage: (postIndex: number, imageIndex: number) => {
+            const updatedPosts = thread.posts.map((p, i) =>
+                i === postIndex ? { ...p, images: (p.images || []).filter((_, j) => j !== imageIndex) } : p
+            );
+            setThreads(prev => prev.map(t =>
+                t.id === thread.id ? { ...t, posts: updatedPosts } : t
+            ));
+            updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
+        },
+        onReorderImages: (postIndex: number, from: number, to: number) => {
+            const images = [...(thread.posts[postIndex].images || [])];
+            const [moved] = images.splice(from, 1);
+            images.splice(to, 0, moved);
+            const updatedPosts = thread.posts.map((p, i) =>
+                i === postIndex ? { ...p, images } : p
+            );
+            setThreads(prev => prev.map(t =>
+                t.id === thread.id ? { ...t, posts: updatedPosts } : t
+            ));
+            updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
         },
         onGenerateCta: async (content: string[]): Promise<string | null> => {
             if (!blogId) return null;
