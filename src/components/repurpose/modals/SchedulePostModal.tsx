@@ -197,7 +197,9 @@ export default function SchedulePostModal({
     const getSlotPlatformStyle = (p: typeof SCHEDULE_PLATFORMS[number], { isTaken, connected, isSelected, active, failed, published, inSlot }: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ReturnType<typeof getFailedInfo>; published: ReturnType<typeof getPublishedInfo>; inSlot: boolean }): string => {
         if (isTaken || !connected) return 'bg-gray-100 text-gray-200 cursor-not-allowed';
         if (isSelected) return active ? `${p.bg} text-white` : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400';
-        if (failed || inSlot) return `${p.bg} text-white`;
+        if (failed) return `${p.bg} text-white`;
+        if (published) return 'bg-gray-100 text-gray-300';
+        if (inSlot) return `${p.bg} text-white`;
         return 'bg-gray-100 text-gray-300';
     };
 
