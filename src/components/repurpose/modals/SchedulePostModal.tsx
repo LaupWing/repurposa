@@ -230,6 +230,10 @@ export default function SchedulePostModal({
         }
     };
 
+    const publishedPosts = post.scheduled_posts?.filter((sp) => sp.status === 'published') || [];
+    const failedPosts = post.scheduled_posts?.filter((sp) => sp.status === 'failed') || [];
+    const pendingPosts = post.scheduled_posts?.filter((sp) => sp.status === 'pending') || [];
+
     // Computed visual data for offscreen rendering
     const visualSlides = visual ? (Array.isArray(visual.content) ? visual.content : [visual.content]) : [];
     const gradientPreset = visual ? (GRADIENT_PRESETS.find(g => g.id === visual.settings.gradient_id) || GRADIENT_PRESETS[0]) : GRADIENT_PRESETS[0];
@@ -409,55 +413,47 @@ export default function SchedulePostModal({
                     )}
 
                     {/* Already published platforms */}
-                    {(() => {
-                        const publishedPosts = post.scheduled_posts?.filter((sp) => sp.status === 'published') || [];
-                        if (publishedPosts.length === 0) return null;
-                        return (
-                            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-green-300 bg-green-50">
-                                <Check size={16} className="text-green-500 shrink-0" />
-                                <div className="flex flex-wrap items-center gap-2 text-xs text-green-700">
-                                    <span>Already published on</span>
-                                    {publishedPosts.map((sp) => {
-                                        const uiId = API_TO_UI_PLATFORM[sp.platform] || sp.platform;
-                                        const name = SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || sp.platform;
-                                        const date = new Date(sp.scheduled_at);
-                                        return (
-                                            <Tooltip key={sp.id} text={`Published on ${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`} delay={0} placement="top">
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 border border-green-200 text-green-700 font-medium cursor-default">
-                                                    {SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.icon}
-                                                    {name} · {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                                </span>
-                                            </Tooltip>
-                                        );
-                                    })}
-                                </div>
+                    {publishedPosts.length > 0 && (
+                        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-green-300 bg-green-50">
+                            <Check size={16} className="text-green-500 shrink-0" />
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-green-700">
+                                <span>Already published on</span>
+                                {publishedPosts.map((sp) => {
+                                    const uiId = API_TO_UI_PLATFORM[sp.platform] || sp.platform;
+                                    const name = SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || sp.platform;
+                                    const date = new Date(sp.scheduled_at);
+                                    return (
+                                        <Tooltip key={sp.id} text={`Published on ${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`} delay={0} placement="top">
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 border border-green-200 text-green-700 font-medium cursor-default">
+                                                {SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.icon}
+                                                {name} · {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                            </span>
+                                        </Tooltip>
+                                    );
+                                })}
                             </div>
-                        );
-                    })()}
+                        </div>
+                    )}
 
                     {/* Failed platforms */}
-                    {(() => {
-                        const failedPosts = post.scheduled_posts?.filter((sp) => sp.status === 'failed') || [];
-                        if (failedPosts.length === 0) return null;
-                        return (
-                            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-red-300 bg-red-50">
-                                <AlertTriangle size={16} className="text-red-500 shrink-0" />
-                                <div className="flex flex-wrap items-center gap-2 text-xs text-red-700">
-                                    <span>Failed on</span>
-                                    {failedPosts.map((sp) => {
-                                        const uiId = API_TO_UI_PLATFORM[sp.platform] || sp.platform;
-                                        const name = SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || sp.platform;
-                                        return (
-                                            <span key={sp.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 border border-red-200 text-red-700 font-medium cursor-default">
-                                                {SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.icon}
-                                                {name}
-                                            </span>
-                                        );
-                                    })}
-                                </div>
+                    {failedPosts.length > 0 && (
+                        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-red-300 bg-red-50">
+                            <AlertTriangle size={16} className="text-red-500 shrink-0" />
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-red-700">
+                                <span>Failed on</span>
+                                {failedPosts.map((sp) => {
+                                    const uiId = API_TO_UI_PLATFORM[sp.platform] || sp.platform;
+                                    const name = SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || sp.platform;
+                                    return (
+                                        <span key={sp.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 border border-red-200 text-red-700 font-medium cursor-default">
+                                            {SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.icon}
+                                            {name}
+                                        </span>
+                                    );
+                                })}
                             </div>
-                        );
-                    })()}
+                        </div>
+                    )}
 
                     {/* Upcoming slots from schedule */}
                     {loadingSlots ? (
@@ -705,23 +701,19 @@ export default function SchedulePostModal({
                 <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200 bg-gray-50">
                     {/* Left - Unschedule (only for pending posts) */}
                     <div>
-                        {(() => {
-                            const pendingPosts = post.scheduled_posts?.filter((sp) => sp.status === 'pending') || [];
-                            if (pendingPosts.length === 0) return null;
-                            return (
-                                <button
-                                    onClick={async () => {
-                                        await Promise.all(pendingPosts.map(sp => handleUnschedule(sp.id)));
-                                        onClose();
-                                    }}
-                                    disabled={removingId !== null}
-                                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                >
-                                    <Trash2 size={14} />
-                                    {removingId !== null ? 'Removing...' : 'Unschedule'}
-                                </button>
-                            );
-                        })()}
+                        {pendingPosts.length > 0 && (
+                            <button
+                                onClick={async () => {
+                                    await Promise.all(pendingPosts.map(sp => handleUnschedule(sp.id)));
+                                    onClose();
+                                }}
+                                disabled={removingId !== null}
+                                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                <Trash2 size={14} />
+                                {removingId !== null ? 'Removing...' : 'Unschedule'}
+                            </button>
+                        )}
                     </div>
                     {/* Right - Cancel + Schedule */}
                     <div className="flex items-center gap-3">
