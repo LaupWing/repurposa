@@ -33,6 +33,131 @@ import {
     getDefaultTime,
 } from './schedule-utils';
 
+interface SlotCardProps {
+    slot: UpcomingSlot;
+    isSelected: boolean;
+    occupant: ScheduledPostType | null;
+    selectedPlatforms: SchedulePlatform[];
+    connectedPlatformIds: SchedulePlatform[];
+    contentType: ScheduleContentType;
+    contentLength: number;
+    threadPosts?: string[] | null;
+    socialAccounts: SocialAccount[];
+    getPublishedInfo: (id: SchedulePlatform) => ShortPostSchedule | undefined;
+    getFailedInfo: (id: SchedulePlatform) => ShortPostSchedule | undefined;
+    getSlotPlatformStyle: (p: typeof SCHEDULE_PLATFORMS[number], ctx: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ShortPostSchedule | undefined; published: ShortPostSchedule | undefined; inSlot: boolean }) => string;
+    onSelect: () => void;
+    onTogglePlatform: (id: SchedulePlatform) => void;
+}
+
+function SlotCard({
+    slot,
+    isSelected,
+    occupant,
+    selectedPlatforms,
+    connectedPlatformIds,
+    contentType,
+    contentLength,
+    threadPosts,
+    socialAccounts,
+    getPublishedInfo,
+    getFailedInfo,
+    getSlotPlatformStyle,
+    onSelect,
+    onTogglePlatform,
+}: SlotCardProps) {
+    const isTaken = !!occupant;
+    const occupantPreview = occupant?.schedulable?.content || occupant?.schedulable?.hook || '';
+
+    return (
+        <Tooltip
+            text={isTaken ? `Already taken: "${occupantPreview.slice(0, 80)}${occupantPreview.length > 80 ? '...' : ''}"` : ''}
+            delay={0}
+            placement="top"
+        >
+            <div
+                onClick={() => !isTaken && onSelect()}
+                className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    isTaken
+                        ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-50'
+                        : isSelected
+                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 cursor-pointer'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
+                }`}
+            >
+                {/* Radio check */}
+                <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
+                    isTaken
+                        ? 'border-gray-200 bg-gray-100'
+                        : isSelected
+                            ? 'border-blue-600 bg-blue-600'
+                            : 'border-gray-300 bg-white'
+                }`}>
+                    {isSelected && !isTaken && <Check size={12} className="text-white" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className={`text-sm font-medium ${isTaken ? 'text-gray-400' : 'text-gray-900'}`}>{slot.dateLabel}</div>
+                    <div className={`text-xs mt-0.5 ${isTaken ? 'text-gray-300' : 'text-gray-500'}`}>{slot.timeLabel}</div>
+                    {isTaken && (
+                        <div className="text-[10px] text-gray-400 mt-1 line-clamp-1">
+                            Taken by: {occupantPreview.slice(0, 40)}{occupantPreview.length > 40 ? '...' : ''}
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                    {SCHEDULE_PLATFORMS.map((p) => {
+                        const inSlot = slot.platforms.includes(p.id);
+                        const active = isSelected && selectedPlatforms.includes(p.id);
+                        const connected = connectedPlatformIds.includes(p.id);
+                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts, socialAccounts);
+                        if (unsupported) {
+                            return (
+                                <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
+                                    <div className="relative inline-flex items-center justify-center w-7 h-7 rounded-md border border-amber-400 text-gray-300 cursor-not-allowed">
+                                        {p.icon}
+                                        <AlertTriangle size={12} className="absolute -top-1.5 -right-1.5 text-amber-500 fill-amber-100" />
+                                    </div>
+                                </Tooltip>
+                            );
+                        }
+                        const published = getPublishedInfo(p.id);
+                        const failed = getFailedInfo(p.id);
+                        const tooltipText = published
+                            ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                            : failed ? 'Failed — retry by selecting this platform' : '';
+                        return (
+                            <Tooltip key={p.id} text={tooltipText} delay={0} placement="top">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (isTaken) return;
+                                        if (!isSelected) onSelect();
+                                        onTogglePlatform(p.id);
+                                    }}
+                                    disabled={isTaken}
+                                    className={`relative inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${getSlotPlatformStyle(p, { isTaken, connected, isSelected, active, failed, published, inSlot })}`}
+                                >
+                                    {p.icon}
+                                    {published && (
+                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                                            <Check size={8} className="text-white" />
+                                        </span>
+                                    )}
+                                    {failed && !published && (
+                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                                            <AlertTriangle size={7} className="text-white" />
+                                        </span>
+                                    )}
+                                </button>
+                            </Tooltip>
+                        );
+                    })}
+                </div>
+            </div>
+        </Tooltip>
+    );
+}
+
 interface SchedulePostModalProps {
     isOpen: boolean;
     post: ShortPostPattern | null;
@@ -565,96 +690,24 @@ export default function SchedulePostModal({
                             <div className="grid grid-cols-2 gap-2">
                                 {pageSlots.map((slot, idx) => {
                                     const absoluteIdx = pageStart + idx;
-                                    const isSelected = selectedSlotIndex === absoluteIdx && !useCustom;
-                                    const occupant = getSlotOccupant(slot);
-                                    const isTaken = !!occupant;
                                     return (
-                                        <Tooltip
+                                        <SlotCard
                                             key={absoluteIdx}
-                                            text={isTaken ? `Already taken: "${(occupant.schedulable?.content || occupant.schedulable?.hook || '').slice(0, 80)}${(occupant.schedulable?.content || occupant.schedulable?.hook || '').length > 80 ? '...' : ''}"` : ''}
-                                            delay={0}
-                                            placement="top"
-                                        >
-                                            <div
-                                                onClick={() => !isTaken && handleSelectSlot(absoluteIdx)}
-                                                className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                                                    isTaken
-                                                        ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-50'
-                                                        : isSelected
-                                                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 cursor-pointer'
-                                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
-                                                }`}
-                                            >
-                                                {/* Radio check */}
-                                                <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
-                                                    isTaken
-                                                        ? 'border-gray-200 bg-gray-100'
-                                                        : isSelected
-                                                            ? 'border-blue-600 bg-blue-600'
-                                                            : 'border-gray-300 bg-white'
-                                                }`}>
-                                                    {isSelected && !isTaken && <Check size={12} className="text-white" />}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className={`text-sm font-medium ${isTaken ? 'text-gray-400' : 'text-gray-900'}`}>{slot.dateLabel}</div>
-                                                    <div className={`text-xs mt-0.5 ${isTaken ? 'text-gray-300' : 'text-gray-500'}`}>{slot.timeLabel}</div>
-                                                    {isTaken && (
-                                                        <div className="text-[10px] text-gray-400 mt-1 line-clamp-1">
-                                                            Taken by: {(occupant.schedulable?.content || occupant.schedulable?.hook || '').slice(0, 40)}{(occupant.schedulable?.content || occupant.schedulable?.hook || '').length > 40 ? '...' : ''}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    {SCHEDULE_PLATFORMS.map((p) => {
-                                                        const inSlot = slot.platforms.includes(p.id);
-                                                        const active = isSelected && selectedPlatforms.includes(p.id);
-                                                        const connected = connectedPlatformIds.includes(p.id);
-                                                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts, socialAccounts);
-                                                        if (unsupported) {
-                                                            return (
-                                                                <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
-                                                                    <div className="relative inline-flex items-center justify-center w-7 h-7 rounded-md border border-amber-400 text-gray-300 cursor-not-allowed">
-                                                                        {p.icon}
-                                                                        <AlertTriangle size={12} className="absolute -top-1.5 -right-1.5 text-amber-500 fill-amber-100" />
-                                                                    </div>
-                                                                </Tooltip>
-                                                            );
-                                                        }
-                                                        const published = getPublishedInfo(p.id);
-                                                        const failed = getFailedInfo(p.id);
-                                                        const tooltipText = published
-                                                            ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-                                                            : failed ? 'Failed — retry by selecting this platform' : '';
-                                                        return (
-                                                            <Tooltip key={p.id} text={tooltipText} delay={0} placement="top">
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (isTaken) return;
-                                                                        if (!isSelected) handleSelectSlot(absoluteIdx);
-                                                                        togglePlatform(p.id);
-                                                                    }}
-                                                                    disabled={isTaken}
-                                                                    className={`relative inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${getSlotPlatformStyle(p, { isTaken, connected, isSelected, active, failed, published, inSlot })}`}
-                                                                >
-                                                                    {p.icon}
-                                                                    {published && (
-                                                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
-                                                                            <Check size={8} className="text-white" />
-                                                                        </span>
-                                                                    )}
-                                                                    {failed && !published && (
-                                                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                                                                            <AlertTriangle size={7} className="text-white" />
-                                                                        </span>
-                                                                    )}
-                                                                </button>
-                                                            </Tooltip>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        </Tooltip>
+                                            slot={slot}
+                                            isSelected={selectedSlotIndex === absoluteIdx && !useCustom}
+                                            occupant={getSlotOccupant(slot)}
+                                            selectedPlatforms={selectedPlatforms}
+                                            connectedPlatformIds={connectedPlatformIds}
+                                            contentType={contentType}
+                                            contentLength={contentLength}
+                                            threadPosts={threadPosts}
+                                            socialAccounts={socialAccounts}
+                                            getPublishedInfo={getPublishedInfo}
+                                            getFailedInfo={getFailedInfo}
+                                            getSlotPlatformStyle={getSlotPlatformStyle}
+                                            onSelect={() => handleSelectSlot(absoluteIdx)}
+                                            onTogglePlatform={togglePlatform}
+                                        />
                                     );
                                 })}
                             </div>
