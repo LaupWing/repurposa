@@ -10,6 +10,7 @@ function threadToPattern(thread: ThreadItem): ShortPostPattern {
         emotions: thread.metadata.emotions,
         structure: thread.metadata.structure,
         why_it_works: thread.metadata.why_it_works,
+        scheduled_posts: thread.scheduled_posts || [],
         media: [],
         cta_media: [],
         visualCount: 0,
