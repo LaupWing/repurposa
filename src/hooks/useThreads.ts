@@ -67,7 +67,7 @@ export function useThreads(
             updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
         },
         onInsertPost: (afterIndex: number) => {
-            const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content: '', media: null, images: [] }, ...thread.posts.slice(afterIndex + 1)];
+            const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content: '', media: null }, ...thread.posts.slice(afterIndex + 1)];
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
             ));
@@ -80,7 +80,7 @@ export function useThreads(
         },
         onDelete: () => setThreads(prev => prev.filter(t => t.id !== thread.id)),
         onInsertCtaPost: (afterIndex: number, content: string) => {
-            const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content, media: null, images: [] }, ...thread.posts.slice(afterIndex + 1)];
+            const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content, media: null }, ...thread.posts.slice(afterIndex + 1)];
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
             ));
@@ -89,7 +89,7 @@ export function useThreads(
         },
         onAddImage: (postIndex: number, imageUrl: string) => {
             const updatedPosts = thread.posts.map((p, i) =>
-                i === postIndex ? { ...p, images: [...(p.images || []), imageUrl].slice(0, 4) } : p
+                i === postIndex ? { ...p, media: [...(p.media || []), { url: imageUrl, type: 'image' }].slice(0, 4) } : p
             );
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
@@ -98,7 +98,7 @@ export function useThreads(
         },
         onRemoveImage: (postIndex: number, imageIndex: number) => {
             const updatedPosts = thread.posts.map((p, i) =>
-                i === postIndex ? { ...p, images: (p.images || []).filter((_, j) => j !== imageIndex) } : p
+                i === postIndex ? { ...p, media: (p.media || []).filter((_, j) => j !== imageIndex) } : p
             );
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
@@ -106,11 +106,11 @@ export function useThreads(
             updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
         },
         onReorderImages: (postIndex: number, from: number, to: number) => {
-            const images = [...(thread.posts[postIndex].images || [])];
-            const [moved] = images.splice(from, 1);
-            images.splice(to, 0, moved);
+            const media = [...(thread.posts[postIndex].media || [])];
+            const [moved] = media.splice(from, 1);
+            media.splice(to, 0, moved);
             const updatedPosts = thread.posts.map((p, i) =>
-                i === postIndex ? { ...p, images } : p
+                i === postIndex ? { ...p, media } : p
             );
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t

@@ -131,8 +131,7 @@ export interface GenerateShortPostsResponse {
 
 export interface ThreadPost {
     content: string;
-    media: { style: string; format: string; description: string } | null;
-    images: string[];
+    media: { url: string; type: string }[] | null;
 }
 
 export interface ThreadMetadata {

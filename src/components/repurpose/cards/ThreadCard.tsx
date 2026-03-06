@@ -190,10 +190,10 @@ function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onIns
                             {post.content}
                         </p>
                         {/* Media */}
-                        {post.images && post.images.length > 0 && (
+                        {post.media && post.media.length > 0 && (
                             <div className="mt-2">
                                 <ImageGrid
-                                    media={post.images}
+                                    media={post.media.map(m => m.url)}
                                     onRemove={onRemoveImage}
                                     onReorder={onReorderImages}
                                     onAddClick={() => setShowImagePicker(true)}
@@ -238,11 +238,11 @@ function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onIns
                                             </button>
                                             <button
                                                 onClick={() => { setShowImagePicker(true); setPostMenuOpen(false); }}
-                                                disabled={(post.images?.length ?? 0) >= 4}
+                                                disabled={(post.media?.length ?? 0) >= 4}
                                                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                             >
                                                 <ImagePlus size={14} />
-                                                Add Image{post.images?.length ? ` (${post.images.length}/4)` : ''}
+                                                Add Image{post.media?.length ? ` (${post.media.length}/4)` : ''}
                                             </button>
                                             <div className="border-t border-gray-100 my-1" />
                                             <button
