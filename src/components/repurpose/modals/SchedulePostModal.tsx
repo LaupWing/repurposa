@@ -194,6 +194,13 @@ export default function SchedulePostModal({
     const pageSlots = upcomingSlots.slice(pageStart, pageStart + slotsPerPage);
     const totalPages = Math.ceil(upcomingSlots.length / slotsPerPage);
 
+    const getSlotPlatformStyle = (p: typeof SCHEDULE_PLATFORMS[number], { isTaken, connected, isSelected, active, failed, published, inSlot }: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ReturnType<typeof getFailedInfo>; published: ReturnType<typeof getPublishedInfo>; inSlot: boolean }): string => {
+        if (isTaken || !connected) return 'bg-gray-100 text-gray-200 cursor-not-allowed';
+        if (isSelected) return active ? `${p.bg} text-white` : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400';
+        if (failed || inSlot) return `${p.bg} text-white`;
+        return 'bg-gray-100 text-gray-300';
+    };
+
     const handleSelectSlot = (absoluteIndex: number) => {
         setSelectedSlotIndex(absoluteIndex);
         setUseCustom(false);
@@ -630,23 +637,7 @@ export default function SchedulePostModal({
                                                                         togglePlatform(p.id);
                                                                     }}
                                                                     disabled={isTaken}
-                                                                    className={`relative inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
-                                                                        isTaken
-                                                                            ? 'bg-gray-100 text-gray-200 cursor-not-allowed'
-                                                                            : !connected
-                                                                                ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
-                                                                                : isSelected
-                                                                                    ? active
-                                                                                        ? `${p.bg} text-white`
-                                                                                        : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
-                                                                                    : failed
-                                                                                        ? `${p.bg} text-white`
-                                                                                        : published
-                                                                                            ? 'bg-gray-100 text-gray-300'
-                                                                                            : inSlot
-                                                                                                ? `${p.bg} text-white`
-                                                                                                : 'bg-gray-100 text-gray-300'
-                                                                    }`}
+                                                                    className={`relative inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${getSlotPlatformStyle(p, { isTaken, connected, isSelected, active, failed, published, inSlot })}`}
                                                                 >
                                                                     {p.icon}
                                                                     {published && (
