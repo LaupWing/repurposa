@@ -206,9 +206,14 @@ export default function SchedulePostModal({
             .filter((id) => connected.includes(id) && !getUnsupportedReason(id, contentType, post.content.length, threadPosts, accounts));
     };
 
-    // Filter platform IDs to only those supported for this content type
+    // Filter platform IDs to only those supported for this content type (excluding already published)
     const filterSupportedPlatforms = (ids: SchedulePlatform[], accounts: SocialAccount[]): SchedulePlatform[] =>
-        ids.filter((id) => !getUnsupportedReason(id, contentType, post?.content.length, threadPosts, accounts));
+        ids.filter((id) => {
+            if (getUnsupportedReason(id, contentType, post?.content.length, threadPosts, accounts)) return false;
+            const apiPlatform = UI_TO_API_PLATFORM[id];
+            const alreadyPublished = post?.scheduled_posts?.some((sp) => sp.platform === apiPlatform && (sp.status === 'published' || sp.status === 'publishing'));
+            return !alreadyPublished;
+        });
 
     // Fetch schedule + social accounts when modal opens
     useEffect(() => {
@@ -288,7 +293,7 @@ export default function SchedulePostModal({
     // Check which platforms this content was already published to or failed
     const getPublishedInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
         const apiPlatform = UI_TO_API_PLATFORM[platformId];
-        return post.scheduled_posts?.find((sp) => sp.platform === apiPlatform && sp.status === 'published');
+        return post.scheduled_posts?.find((sp) => sp.platform === apiPlatform && (sp.status === 'published' || sp.status === 'publishing'));
     };
 
     const getFailedInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
@@ -321,9 +326,9 @@ export default function SchedulePostModal({
 
     const getSlotPlatformStyle = (p: typeof SCHEDULE_PLATFORMS[number], { isTaken, connected, isSelected, active, failed, published, inSlot }: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ReturnType<typeof getFailedInfo>; published: ReturnType<typeof getPublishedInfo>; inSlot: boolean }): string => {
         if (isTaken || !connected) return 'bg-gray-100 text-gray-200 cursor-not-allowed';
-        if (isSelected) return active ? `${p.bg} text-white` : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400';
+        if (published && !active) return 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400';
         if (failed) return `${p.bg} text-white`;
-        if (published) return 'bg-gray-100 text-gray-300';
+        if (isSelected) return active ? `${p.bg} text-white` : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400';
         if (inSlot) return `${p.bg} text-white`;
         return 'bg-gray-100 text-gray-300';
     };
@@ -355,7 +360,7 @@ export default function SchedulePostModal({
         }
     };
 
-    const publishedPosts = post.scheduled_posts?.filter((sp) => sp.status === 'published') || [];
+    const publishedPosts = post.scheduled_posts?.filter((sp) => sp.status === 'published' || sp.status === 'publishing') || [];
     const failedPosts = post.scheduled_posts?.filter((sp) => sp.status === 'failed') || [];
     const pendingPosts = post.scheduled_posts?.filter((sp) => sp.status === 'pending') || [];
 
