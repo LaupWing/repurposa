@@ -637,7 +637,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const [cropPosition, setCropPosition] = useState<Point>({ x: 0, y: 0 });
     const [cropZoom, setCropZoom] = useState(1);
     const [pendingCroppedArea, setPendingCroppedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-    const defaultDescription = Array.isArray(content) ? content.join('\n\n') : content;
+    const defaultDescription = Array.isArray(content) ? content[0] : content;
     const [description, setDescription] = useState(initialDescription ?? defaultDescription);
     const [modalTab, setModalTab] = useState<'visual' | 'description'>('visual');
 
@@ -667,7 +667,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         setCropPosition({ x: 0, y: 0 });
         setCropZoom(1);
         setPendingCroppedArea(null);
-        setDescription(initialDescription ?? (Array.isArray(content) ? content.join('\n\n') : content));
+        setDescription(initialDescription ?? (Array.isArray(content) ? content[0] : content));
         if (initialSettings?.stats) {
             setStats(initialSettings.stats);
         } else {
