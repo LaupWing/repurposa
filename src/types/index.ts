@@ -87,6 +87,17 @@ export interface PostVersion {
 }
 
 // ============================================
+// MEDIA
+// ============================================
+
+export interface MediaItem {
+    url: string;
+    type: 'image' | 'video';
+    mime?: string;
+    size?: number;
+}
+
+// ============================================
 // SHORT POSTS
 // ============================================
 
@@ -115,7 +126,7 @@ export interface ShortPost {
     id: number;
     content: string;
     cta_content?: ShortPostCta | null;
-    media: string[] | null;
+    media: MediaItem[] | null;
     metadata: ShortPostMetadata;
     scheduled_posts?: ShortPostSchedule[];
     visuals?: Visual[];
@@ -131,7 +142,7 @@ export interface GenerateShortPostsResponse {
 
 export interface ThreadPost {
     content: string;
-    media: { url: string; type: string }[] | null;
+    media: MediaItem[] | null;
 }
 
 export interface ThreadMetadata {

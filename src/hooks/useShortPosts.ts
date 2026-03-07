@@ -2,7 +2,7 @@ import { useState } from '@wordpress/element';
 import { toast } from 'sonner';
 import { arrayMove } from '@dnd-kit/sortable';
 import { generateShortPosts, updateShortPost, generateCta } from '@/services/repurposeApi';
-import type { ShortPost, ShortPostSchedule } from '@/types';
+import type { ShortPost, ShortPostSchedule, MediaItem } from '@/types';
 import type { ShortPostPattern } from '@/components/repurpose/cards/ShortPostCard';
 
 function shortPostToPattern(sp: ShortPost): ShortPostPattern {
@@ -14,7 +14,7 @@ function shortPostToPattern(sp: ShortPost): ShortPostPattern {
         why_it_works: sp.metadata?.why_it_works || '',
         cta_content: sp.cta_content?.content || undefined,
         scheduled_posts: sp.scheduled_posts || [],
-        media: (sp.media || []).filter((m): m is string => typeof m === 'string'),
+        media: sp.media || [],
         cta_media: sp.cta_content?.media?.filter((m): m is string => typeof m === 'string') || [],
         visualCount: sp.visuals?.length || 0,
     };
@@ -35,14 +35,20 @@ export function useShortPosts(
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
 
-    const syncShortPostMedia = (postId: number, media: string[], ctaContent?: string, ctaMedia?: string[]) => {
+    const syncShortPostMedia = (postId: number, media: MediaItem[], ctaContent?: string, ctaMedia?: string[]) => {
         updateShortPost(postId, {
-            media,
+            media: media.map(m => m.url),
             ...(ctaContent !== undefined && {
                 cta_content: ctaContent
                     ? { content: ctaContent, media: ctaMedia && ctaMedia.length > 0 ? ctaMedia : null }
                     : null,
             }),
+        }).then((updated: ShortPost) => {
+            if (updated.media) {
+                setShortPosts(prev => prev.map(p =>
+                    p.id === postId ? { ...p, media: updated.media || [] } : p
+                ));
+            }
         }).catch((err) => {
             console.error('Failed to sync short post media:', err);
             toast.error('Failed to save image changes');
@@ -146,7 +152,7 @@ export function useShortPosts(
             updateShortPost(pattern.id, { cta_content: { content, media: pattern.cta_media.length > 0 ? pattern.cta_media : null } }).catch(() => toast.error('Failed to save'));
         },
         onAddImage: (imageUrl: string) => {
-            const newMedia = [...pattern.media, imageUrl].slice(0, 4);
+            const newMedia: MediaItem[] = [...pattern.media, { url: imageUrl, type: 'image' as const }].slice(0, 4);
             setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, media: newMedia } : p));
             syncShortPostMedia(pattern.id, newMedia);
         },

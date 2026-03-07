@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import type { ShortPostSchedule, Visual } from '@/types';
+import type { ShortPostSchedule, Visual, MediaItem } from '@/types';
 import { AITextPopup } from '@/components/AITextPopup';
 import ImagePickerModal from '@/components/ImagePickerModal';
 import { VisualShortPostPreviewModal, VisualPreview, GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
@@ -46,7 +46,7 @@ export interface ShortPostPattern {
     pending_cta?: string;
     is_generating_cta?: boolean;
     scheduled_posts?: ShortPostSchedule[];
-    media: string[];
+    media: MediaItem[];
     cta_media: string[];
     visualCount: number;
 }

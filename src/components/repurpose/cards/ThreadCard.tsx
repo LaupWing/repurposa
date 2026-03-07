@@ -193,7 +193,7 @@ function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onIns
                         {post.media && post.media.length > 0 && (
                             <div className="mt-2">
                                 <ImageGrid
-                                    media={post.media.map(m => m.url)}
+                                    media={post.media}
                                     onRemove={onRemoveImage}
                                     onReorder={onReorderImages}
                                     onAddClick={() => setShowImagePicker(true)}

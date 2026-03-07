@@ -1,7 +1,15 @@
 import { useState } from '@wordpress/element';
 import { toast } from 'sonner';
 import { generateThreads, updateThread, generateCta } from '@/services/repurposeApi';
-import type { ThreadItem, ShortPostSchedule } from '@/types';
+import type { ThreadItem, ThreadPost, ShortPostSchedule } from '@/types';
+
+/** Convert ThreadPost media objects to plain URL strings for the API */
+function postsToApi(posts: ThreadPost[]) {
+    return posts.map(p => ({
+        ...p,
+        media: p.media?.map(m => m.url) ?? null,
+    }));
+}
 
 export function useThreads(
     initialThreads: ThreadItem[] | undefined,
@@ -89,12 +97,16 @@ export function useThreads(
         },
         onAddImage: (postIndex: number, imageUrl: string) => {
             const updatedPosts = thread.posts.map((p, i) =>
-                i === postIndex ? { ...p, media: [...(p.media || []), { url: imageUrl, type: 'image' }].slice(0, 4) } : p
+                i === postIndex ? { ...p, media: [...(p.media || []), { url: imageUrl, type: 'image' as const }].slice(0, 4) } : p
             );
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
             ));
-            updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
+            updateThread(thread.id, { posts: postsToApi(updatedPosts) })
+                .then((updated: ThreadItem) => {
+                    setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, posts: updated.posts } : t));
+                })
+                .catch(() => toast.error('Failed to save'));
         },
         onRemoveImage: (postIndex: number, imageIndex: number) => {
             const updatedPosts = thread.posts.map((p, i) =>
@@ -103,7 +115,11 @@ export function useThreads(
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
             ));
-            updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
+            updateThread(thread.id, { posts: postsToApi(updatedPosts) })
+                .then((updated: ThreadItem) => {
+                    setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, posts: updated.posts } : t));
+                })
+                .catch(() => toast.error('Failed to save'));
         },
         onReorderImages: (postIndex: number, from: number, to: number) => {
             const media = [...(thread.posts[postIndex].media || [])];
@@ -115,7 +131,11 @@ export function useThreads(
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
             ));
-            updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
+            updateThread(thread.id, { posts: postsToApi(updatedPosts) })
+                .then((updated: ThreadItem) => {
+                    setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, posts: updated.posts } : t));
+                })
+                .catch(() => toast.error('Failed to save'));
         },
         onGenerateCta: async (content: string[]): Promise<string | null> => {
             if (!blogId) return null;

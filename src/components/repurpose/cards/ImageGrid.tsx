@@ -1,10 +1,20 @@
-import { X, ImagePlus } from 'lucide-react';
+import { X, ImagePlus, Loader2 } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import type { MediaItem } from '@/types';
 
-function SortableImage({ id, src, onRemove }: { id: string; src: string; onRemove: () => void }) {
+/** Accept both MediaItem objects and plain URL strings */
+type MediaInput = MediaItem | string;
+function getMediaUrl(item: MediaInput): string {
+    return typeof item === 'string' ? item : item.url;
+}
+function isPending(item: MediaInput): boolean {
+    return typeof item !== 'string' && !item.mime;
+}
+
+function SortableImage({ id, src, pending, onRemove }: { id: string; src: string; pending?: boolean; onRemove: () => void }) {
     const {
         attributes,
         listeners,
@@ -29,6 +39,11 @@ function SortableImage({ id, src, onRemove }: { id: string; src: string; onRemov
             {...listeners}
         >
             <img src={src} alt="" className="w-full h-full object-cover" />
+            {pending && (
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <Loader2 size={20} className="text-white animate-spin" />
+                </div>
+            )}
             <button
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={onRemove}
@@ -46,7 +61,7 @@ export function ImageGrid({
     onReorder,
     onAddClick,
 }: {
-    media: string[];
+    media: MediaInput[];
     onRemove: (index: number) => void;
     onReorder: (from: number, to: number) => void;
     onAddClick: () => void;
@@ -84,7 +99,7 @@ export function ImageGrid({
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <SortableContext items={ids} strategy={rectSortingStrategy}>
                         <div className={`${gridClass} w-full h-full`}>
-                            {media.map((src, i) => (
+                            {media.map((item, i) => (
                                 <div
                                     key={ids[i]}
                                     className={
@@ -93,7 +108,8 @@ export function ImageGrid({
                                 >
                                     <SortableImage
                                         id={ids[i]}
-                                        src={src}
+                                        src={getMediaUrl(item)}
+                                        pending={isPending(item)}
                                         onRemove={() => onRemove(i)}
                                     />
                                 </div>
