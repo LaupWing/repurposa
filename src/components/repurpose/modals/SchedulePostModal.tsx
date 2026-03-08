@@ -36,7 +36,7 @@ import {
 interface SlotCardProps {
     slot: UpcomingSlot;
     isSelected: boolean;
-    occupant: ScheduledPostType | null;
+    takenPlatforms: Map<string, string>;
     selectedPlatforms: SchedulePlatform[];
     connectedPlatformIds: SchedulePlatform[];
     contentType: ScheduleContentType;
@@ -46,7 +46,7 @@ interface SlotCardProps {
     getPublishedInfo: (id: SchedulePlatform) => ShortPostSchedule | undefined;
     getFailedInfo: (id: SchedulePlatform) => ShortPostSchedule | undefined;
     getPendingInfo: (id: SchedulePlatform) => ShortPostSchedule | undefined;
-    getSlotPlatformStyle: (p: typeof SCHEDULE_PLATFORMS[number], ctx: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ShortPostSchedule | undefined; published: ShortPostSchedule | undefined; pending: ShortPostSchedule | undefined; inSlot: boolean }) => string;
+    getSlotPlatformStyle: (p: typeof SCHEDULE_PLATFORMS[number], ctx: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ShortPostSchedule | undefined; published: ShortPostSchedule | undefined; pending?: ShortPostSchedule | undefined; inSlot: boolean }) => string;
     onSelect: () => void;
     onTogglePlatform: (id: SchedulePlatform) => void;
 }
@@ -54,7 +54,7 @@ interface SlotCardProps {
 function SlotCard({
     slot,
     isSelected,
-    occupant,
+    takenPlatforms,
     selectedPlatforms,
     connectedPlatformIds,
     contentType,
@@ -68,103 +68,96 @@ function SlotCard({
     onSelect,
     onTogglePlatform,
 }: SlotCardProps) {
-    const isTaken = !!occupant;
-    const occupantPreview = occupant?.schedulable?.content || occupant?.schedulable?.hook || '';
-
     return (
-        <Tooltip
-            text={isTaken ? `Already taken: "${occupantPreview.slice(0, 80)}${occupantPreview.length > 80 ? '...' : ''}"` : ''}
-            delay={0}
-            placement="top"
+        <div
+            onClick={() => onSelect()}
+            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                isSelected
+                    ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 cursor-pointer'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
+            }`}
         >
-            <div
-                onClick={() => !isTaken && onSelect()}
-                className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                    isTaken
-                        ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-50'
-                        : isSelected
-                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 cursor-pointer'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
-                }`}
-            >
-                {/* Radio check */}
-                <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
-                    isTaken
-                        ? 'border-gray-200 bg-gray-100'
-                        : isSelected
-                            ? 'border-blue-600 bg-blue-600'
-                            : 'border-gray-300 bg-white'
-                }`}>
-                    {isSelected && !isTaken && <Check size={12} className="text-white" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-medium ${isTaken ? 'text-gray-400' : 'text-gray-900'}`}>{slot.dateLabel}</div>
-                    <div className={`text-xs mt-0.5 ${isTaken ? 'text-gray-300' : 'text-gray-500'}`}>{slot.timeLabel}</div>
-                    {isTaken && (
-                        <div className="text-[10px] text-gray-400 mt-1 line-clamp-1">
-                            Taken by: {occupantPreview.slice(0, 40)}{occupantPreview.length > 40 ? '...' : ''}
-                        </div>
-                    )}
-                </div>
-                <div className="flex items-center gap-1.5">
-                    {SCHEDULE_PLATFORMS.map((p) => {
-                        const inSlot = slot.platforms.includes(p.id);
-                        const active = isSelected && selectedPlatforms.includes(p.id);
-                        const connected = connectedPlatformIds.includes(p.id);
-                        const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts, socialAccounts);
-                        if (unsupported) {
-                            return (
-                                <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
-                                    <div className="relative inline-flex items-center justify-center w-7 h-7 rounded-md border border-amber-400 text-gray-300 cursor-not-allowed">
-                                        {p.icon}
-                                        <AlertTriangle size={12} className="absolute -top-1.5 -right-1.5 text-amber-500 fill-amber-100" />
-                                    </div>
-                                </Tooltip>
-                            );
-                        }
-                        const published = getPublishedInfo(p.id);
-                        const failed = getFailedInfo(p.id);
-                        const pending = getPendingInfo(p.id);
-                        const tooltipText = published
+            {/* Radio check */}
+            <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
+                isSelected
+                    ? 'border-blue-600 bg-blue-600'
+                    : 'border-gray-300 bg-white'
+            }`}>
+                {isSelected && <Check size={12} className="text-white" />}
+            </div>
+            <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900">{slot.dateLabel}</div>
+                <div className="text-xs mt-0.5 text-gray-500">{slot.timeLabel}</div>
+            </div>
+            <div className="flex items-center gap-1.5">
+                {SCHEDULE_PLATFORMS.map((p) => {
+                    const inSlot = slot.platforms.includes(p.id);
+                    const active = isSelected && selectedPlatforms.includes(p.id);
+                    const connected = connectedPlatformIds.includes(p.id);
+                    const isTaken = takenPlatforms.has(p.id);
+                    const takenPreview = takenPlatforms.get(p.id);
+                    const unsupported = getUnsupportedReason(p.id, contentType, contentLength, threadPosts, socialAccounts);
+                    if (unsupported) {
+                        return (
+                            <Tooltip key={p.id} text={unsupported} delay={0} placement="top">
+                                <div className="relative inline-flex items-center justify-center w-7 h-7 rounded-md border border-amber-400 text-gray-300 cursor-not-allowed">
+                                    {p.icon}
+                                    <AlertTriangle size={12} className="absolute -top-1.5 -right-1.5 text-amber-500 fill-amber-100" />
+                                </div>
+                            </Tooltip>
+                        );
+                    }
+                    const published = getPublishedInfo(p.id);
+                    const failed = getFailedInfo(p.id);
+                    const pending = getPendingInfo(p.id);
+                    const tooltipText = isTaken
+                        ? `Taken: "${takenPreview}${(takenPreview?.length || 0) >= 50 ? '...' : ''}"`
+                        : published
                             ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
                             : pending
                                 ? `Scheduled for ${new Date(pending.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
                                 : failed ? 'Failed — retry by selecting this platform' : '';
+                    if (isTaken) {
                         return (
                             <Tooltip key={p.id} text={tooltipText} delay={0} placement="top">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (isTaken) return;
-                                        if (!isSelected) onSelect();
-                                        onTogglePlatform(p.id);
-                                    }}
-                                    disabled={isTaken}
-                                    className={`relative inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${getSlotPlatformStyle(p, { isTaken, connected, isSelected, active, failed, published, pending, inSlot })}`}
-                                >
+                                <div className="relative inline-flex items-center justify-center w-7 h-7 rounded-md bg-gray-100 text-gray-200 cursor-not-allowed">
                                     {p.icon}
-                                    {published && (
-                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
-                                            <Check size={8} className="text-white" />
-                                        </span>
-                                    )}
-                                    {pending && !published && (
-                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
-                                            <Clock size={7} className="text-white" />
-                                        </span>
-                                    )}
-                                    {failed && !published && !pending && (
-                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                                            <AlertTriangle size={7} className="text-white" />
-                                        </span>
-                                    )}
-                                </button>
+                                </div>
                             </Tooltip>
                         );
-                    })}
-                </div>
+                    }
+                    return (
+                        <Tooltip key={p.id} text={tooltipText} delay={0} placement="top">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!isSelected) onSelect();
+                                    onTogglePlatform(p.id);
+                                }}
+                                className={`relative inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${getSlotPlatformStyle(p, { isTaken: false, connected, isSelected, active, failed, published, inSlot })}`}
+                            >
+                                {p.icon}
+                                {published && (
+                                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                                        <Check size={8} className="text-white" />
+                                    </span>
+                                )}
+                                {pending && !published && (
+                                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                                        <Clock size={7} className="text-white" />
+                                    </span>
+                                )}
+                                {failed && !published && !pending && (
+                                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                                        <AlertTriangle size={7} className="text-white" />
+                                    </span>
+                                )}
+                            </button>
+                        </Tooltip>
+                    );
+                })}
             </div>
-        </Tooltip>
+        </div>
     );
 }
 
@@ -310,14 +303,20 @@ export default function SchedulePostModal({
     }).map((p) => p.name);
     const connectedPlatformIds = socialAccounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
 
-    // Check if a slot time is already taken by an existing scheduled post (excluding this content's own)
-    const getSlotOccupant = (slot: UpcomingSlot): ScheduledPostType | null => {
+    // Get which platforms are already taken at a slot time (by other content, excluding this content's own)
+    const getSlotTakenPlatforms = (slot: UpcomingSlot): Map<string, string> => {
         const slotTime = slot.date.getTime();
-        return existingScheduled.find((sp) => {
-            if (sp.schedulable_type === contentType && sp.schedulable_id === post.id) return false;
+        const taken = new Map<string, string>();
+        existingScheduled.forEach((sp) => {
+            if (sp.schedulable_type === contentType && sp.schedulable_id === post.id) return;
             const spTime = new Date(sp.scheduled_at).getTime();
-            return Math.abs(spTime - slotTime) < 60000;
-        }) || null;
+            if (Math.abs(spTime - slotTime) < 60000) {
+                const uiPlatform = API_TO_UI_PLATFORM[sp.platform];
+                const preview = (typeof sp.schedulable?.content === 'string' ? sp.schedulable.content : sp.schedulable?.hook || sp.schedulable?.description || '').slice(0, 50);
+                if (uiPlatform) taken.set(uiPlatform, preview);
+            }
+        });
+        return taken;
     };
 
     // Check which platforms this content was already published to or failed
@@ -372,7 +371,9 @@ export default function SchedulePostModal({
         setSelectedSlotIndex(absoluteIndex);
         setUseCustom(false);
         const failedIds = getRetryablePlatforms(socialAccounts);
-        setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupportedPlatforms(upcomingSlots[absoluteIndex].platforms, socialAccounts));
+        const taken = getSlotTakenPlatforms(upcomingSlots[absoluteIndex]);
+        const available = filterSupportedPlatforms(upcomingSlots[absoluteIndex].platforms, socialAccounts).filter((id) => !taken.has(id) || getPendingInfo(id));
+        setSelectedPlatforms(failedIds.length > 0 ? failedIds : available);
     };
 
     const handleUseCustom = () => {
@@ -771,7 +772,7 @@ export default function SchedulePostModal({
                                             key={absoluteIdx}
                                             slot={slot}
                                             isSelected={selectedSlotIndex === absoluteIdx && !useCustom}
-                                            occupant={getSlotOccupant(slot)}
+                                            takenPlatforms={getSlotTakenPlatforms(slot)}
                                             selectedPlatforms={selectedPlatforms}
                                             connectedPlatformIds={connectedPlatformIds}
                                             contentType={contentType}
