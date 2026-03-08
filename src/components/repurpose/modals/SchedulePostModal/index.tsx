@@ -70,6 +70,7 @@ export default function SchedulePostModal({
     const [slotPage, setSlotPage] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [removingId, setRemovingId] = useState<number | null>(null);
+    const [initialSelection, setInitialSelection] = useState<{ slotIndex: number | null; platforms: SchedulePlatform[] } | null>(null);
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // Compute platform states (no slot context — for global checks)
@@ -166,9 +167,11 @@ export default function SchedulePostModal({
                     setSelectedSlotIndex(init.slotIndex);
                     setSlotPage(init.slotPage);
                     setSelectedPlatforms(init.platforms);
+                    setInitialSelection({ slotIndex: init.slotIndex, platforms: [...init.platforms] });
                 } else {
                     setUpcomingSlots([]);
                     setSelectedPlatforms(['x']);
+                    setInitialSelection(null);
                 }
             })
             .catch(() => {
@@ -549,7 +552,13 @@ export default function SchedulePostModal({
                         </button>
                         <button
                             onClick={handleSchedule}
-                            disabled={isSubmitting || selectedPlatforms.length === 0}
+                            disabled={isSubmitting || selectedPlatforms.length === 0 || (
+                                initialSelection !== null
+                                && selectedSlotIndex === initialSelection.slotIndex
+                                && !useCustom
+                                && selectedPlatforms.length === initialSelection.platforms.length
+                                && selectedPlatforms.every(p => initialSelection.platforms.includes(p))
+                            )}
                             className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
                         >
                             <Calendar size={14} />
