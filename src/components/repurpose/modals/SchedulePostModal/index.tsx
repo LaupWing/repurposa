@@ -130,7 +130,7 @@ export default function SchedulePostModal({
             const slotStates = buildPlatformStates(post, contentType, threadPosts, accounts, scheduled, slots[slotIdx]);
             const available = slots[slotIdx].platforms.filter((id) => {
                 const s = slotStates.get(id);
-                return s && !s.disabled;
+                return s && !s.disabled && s.kind !== 'published';
             });
             return {
                 slotIndex: slotIdx,
@@ -196,7 +196,7 @@ export default function SchedulePostModal({
         if (validPlatforms.length === 0) {
             const available = upcomingSlots[absoluteIndex].platforms.filter((id) => {
                 const s = slotStates.get(id);
-                return s && !s.disabled;
+                return s && !s.disabled && s.kind !== 'published';
             });
             setSelectedPlatforms(available);
         } else {
@@ -206,7 +206,7 @@ export default function SchedulePostModal({
 
     const togglePlatform = (id: SchedulePlatform) => {
         const state = globalStates.get(id);
-        if (!state || state.kind === 'unsupported' || state.kind === 'published') return;
+        if (!state || state.kind === 'unsupported') return;
         if (state.kind === 'disconnected') {
             toast.error(state.reason, {
                 description: 'Go to Settings → Connected Accounts to link your account.',

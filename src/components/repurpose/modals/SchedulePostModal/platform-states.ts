@@ -54,7 +54,7 @@ export function buildPlatformStates(
             const date = new Date(sp.scheduled_at);
             states.set(p.id, {
                 kind: 'published',
-                disabled: true,
+                disabled: false,
                 reason: `Published ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
                 scheduledPost: sp,
             });

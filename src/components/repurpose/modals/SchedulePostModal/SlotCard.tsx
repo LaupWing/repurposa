@@ -65,13 +65,14 @@ export default function SlotCard({
                         );
                     }
 
+                    const isPublished = state.kind === 'published';
                     const style = active
                         ? `${p.bg} text-white`
                         : isSelected
                             ? 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'
-                            : inSlot
+                            : inSlot && !isPublished
                                 ? `${p.bg} text-white`
-                                : 'bg-gray-100 text-gray-300';
+                                : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400';
 
                     return (
                         <Tooltip key={p.id} text={state.reason} delay={0} placement="top">
@@ -84,6 +85,11 @@ export default function SlotCard({
                                 className={`relative inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${style}`}
                             >
                                 {p.icon}
+                                {state.kind === 'published' && (
+                                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                                        <Check size={8} className="text-white" />
+                                    </span>
+                                )}
                                 {state.kind === 'pending' && (
                                     <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
                                         <Clock size={7} className="text-white" />
