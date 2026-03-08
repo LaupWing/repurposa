@@ -245,23 +245,39 @@ export default function SchedulePostModal({
                 if (scheduleData.schedule) {
                     const slots = getUpcomingSlots(scheduleData.schedule, 60);
                     setUpcomingSlots(slots);
-                    // Auto-select the first available (non-taken) slot
-                    const firstAvailable = slots.findIndex((slot) => {
-                        const slotTime = slot.date.getTime();
-                        return !scheduled.some((sp) => {
-                            if (sp.schedulable_type === contentType && sp.schedulable_id === post?.id) return false;
-                            return Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000;
-                        });
-                    });
                     const failedIds = getRetryablePlatforms(accounts);
 
-                    if (firstAvailable !== -1) {
-                        setSelectedSlotIndex(firstAvailable);
-                        setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupportedPlatforms(slots[firstAvailable].platforms, accounts));
-                    } else if (slots.length > 0) {
-                        setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupportedPlatforms(slots[0].platforms, accounts));
+                    // If this content has pending posts, auto-select the slot they're scheduled in
+                    const ownPending = (post?.scheduled_posts || []).filter((sp) => sp.status === 'pending');
+                    const pendingSlotIndex = ownPending.length > 0
+                        ? slots.findIndex((slot) => {
+                            const slotTime = slot.date.getTime();
+                            return ownPending.some((sp) => Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000);
+                        })
+                        : -1;
+
+                    if (pendingSlotIndex !== -1) {
+                        setSelectedSlotIndex(pendingSlotIndex);
+                        const pendingPlatformIds = ownPending.map((sp) => API_TO_UI_PLATFORM[sp.platform]).filter(Boolean);
+                        setSelectedPlatforms(pendingPlatformIds);
                     } else {
-                        setSelectedPlatforms(['x']);
+                        // Auto-select the first available (non-taken) slot
+                        const firstAvailable = slots.findIndex((slot) => {
+                            const slotTime = slot.date.getTime();
+                            return !scheduled.some((sp) => {
+                                if (sp.schedulable_type === contentType && sp.schedulable_id === post?.id) return false;
+                                return Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000;
+                            });
+                        });
+
+                        if (firstAvailable !== -1) {
+                            setSelectedSlotIndex(firstAvailable);
+                            setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupportedPlatforms(slots[firstAvailable].platforms, accounts));
+                        } else if (slots.length > 0) {
+                            setSelectedPlatforms(failedIds.length > 0 ? failedIds : filterSupportedPlatforms(slots[0].platforms, accounts));
+                        } else {
+                            setSelectedPlatforms(['x']);
+                        }
                     }
                 } else {
                     setUpcomingSlots([]);
@@ -343,7 +359,7 @@ export default function SchedulePostModal({
     const pageSlots = upcomingSlots.slice(pageStart, pageStart + slotsPerPage);
     const totalPages = Math.ceil(upcomingSlots.length / slotsPerPage);
 
-    const getSlotPlatformStyle = (p: typeof SCHEDULE_PLATFORMS[number], { isTaken, connected, isSelected, active, failed, published, pending, inSlot }: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ReturnType<typeof getFailedInfo>; published: ReturnType<typeof getPublishedInfo>; pending: ReturnType<typeof getPendingInfo>; inSlot: boolean }): string => {
+    const getSlotPlatformStyle = (p: typeof SCHEDULE_PLATFORMS[number], { isTaken, connected, isSelected, active, failed, published, inSlot }: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ReturnType<typeof getFailedInfo>; published: ReturnType<typeof getPublishedInfo>; pending?: ReturnType<typeof getPendingInfo>; inSlot: boolean }): string => {
         if (isTaken || !connected) return 'bg-gray-100 text-gray-200 cursor-not-allowed';
         if (published && !active) return 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400';
         if (failed) return `${p.bg} text-white`;
