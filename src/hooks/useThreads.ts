@@ -46,7 +46,7 @@ export function useThreads(
     const addScheduledPosts = (threadId: number, newScheduledPosts: ShortPostSchedule[]) => {
         setThreads(prev => prev.map(t =>
             t.id === threadId
-                ? { ...t, scheduled_posts: [...(t.scheduled_posts || []), ...newScheduledPosts] }
+                ? { ...t, scheduled_posts: [...(t.scheduled_posts || []).filter(sp => !newScheduledPosts.some(n => n.id === sp.id)), ...newScheduledPosts] }
                 : t
         ));
     };

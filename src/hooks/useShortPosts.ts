@@ -103,7 +103,7 @@ export function useShortPosts(
     const addScheduledPosts = (postId: number, newScheduledPosts: ShortPostSchedule[]) => {
         setShortPosts(prev => prev.map(p =>
             p.id === postId
-                ? { ...p, scheduled_posts: [...(p.scheduled_posts || []), ...newScheduledPosts] }
+                ? { ...p, scheduled_posts: [...(p.scheduled_posts || []).filter(sp => !newScheduledPosts.some(n => n.id === sp.id)), ...newScheduledPosts] }
                 : p
         ));
     };

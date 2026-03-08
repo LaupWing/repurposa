@@ -45,7 +45,7 @@ export function useVisuals(
     const addScheduledPosts = (visualId: number, newScheduledPosts: ShortPostSchedule[]) => {
         setVisuals(prev => prev.map(v =>
             v.id === visualId
-                ? { ...v, scheduled_posts: [...(v.scheduled_posts || []), ...newScheduledPosts] }
+                ? { ...v, scheduled_posts: [...(v.scheduled_posts || []).filter(sp => !newScheduledPosts.some(n => n.id === sp.id)), ...newScheduledPosts] }
                 : v
         ));
     };
