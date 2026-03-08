@@ -12,7 +12,7 @@ import {
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { getPublishingSchedule, createScheduledPost, getScheduledPosts, deleteScheduledPost } from '@/services/scheduleApi';
+import { getPublishingSchedule, createScheduledPost, updateScheduledPost, getScheduledPosts, deleteScheduledPost } from '@/services/scheduleApi';
 import { getSocialAccounts } from '@/services/profileApi';
 import { renderVisual } from '@/services/repurposeApi';
 import type { SocialAccount, ScheduledPost as ScheduledPostType, ShortPostSchedule, Visual } from '@/types';
@@ -45,7 +45,8 @@ interface SlotCardProps {
     socialAccounts: SocialAccount[];
     getPublishedInfo: (id: SchedulePlatform) => ShortPostSchedule | undefined;
     getFailedInfo: (id: SchedulePlatform) => ShortPostSchedule | undefined;
-    getSlotPlatformStyle: (p: typeof SCHEDULE_PLATFORMS[number], ctx: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ShortPostSchedule | undefined; published: ShortPostSchedule | undefined; inSlot: boolean }) => string;
+    getPendingInfo: (id: SchedulePlatform) => ShortPostSchedule | undefined;
+    getSlotPlatformStyle: (p: typeof SCHEDULE_PLATFORMS[number], ctx: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ShortPostSchedule | undefined; published: ShortPostSchedule | undefined; pending: ShortPostSchedule | undefined; inSlot: boolean }) => string;
     onSelect: () => void;
     onTogglePlatform: (id: SchedulePlatform) => void;
 }
@@ -62,6 +63,7 @@ function SlotCard({
     socialAccounts,
     getPublishedInfo,
     getFailedInfo,
+    getPendingInfo,
     getSlotPlatformStyle,
     onSelect,
     onTogglePlatform,
@@ -122,9 +124,12 @@ function SlotCard({
                         }
                         const published = getPublishedInfo(p.id);
                         const failed = getFailedInfo(p.id);
+                        const pending = getPendingInfo(p.id);
                         const tooltipText = published
                             ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-                            : failed ? 'Failed — retry by selecting this platform' : '';
+                            : pending
+                                ? `Scheduled for ${new Date(pending.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                                : failed ? 'Failed — retry by selecting this platform' : '';
                         return (
                             <Tooltip key={p.id} text={tooltipText} delay={0} placement="top">
                                 <button
@@ -135,7 +140,7 @@ function SlotCard({
                                         onTogglePlatform(p.id);
                                     }}
                                     disabled={isTaken}
-                                    className={`relative inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${getSlotPlatformStyle(p, { isTaken, connected, isSelected, active, failed, published, inSlot })}`}
+                                    className={`relative inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${getSlotPlatformStyle(p, { isTaken, connected, isSelected, active, failed, published, pending, inSlot })}`}
                                 >
                                     {p.icon}
                                     {published && (
@@ -143,7 +148,12 @@ function SlotCard({
                                             <Check size={8} className="text-white" />
                                         </span>
                                     )}
-                                    {failed && !published && (
+                                    {pending && !published && (
+                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                                            <Clock size={7} className="text-white" />
+                                        </span>
+                                    )}
+                                    {failed && !published && !pending && (
                                         <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
                                             <AlertTriangle size={7} className="text-white" />
                                         </span>
@@ -238,7 +248,10 @@ export default function SchedulePostModal({
                     // Auto-select the first available (non-taken) slot
                     const firstAvailable = slots.findIndex((slot) => {
                         const slotTime = slot.date.getTime();
-                        return !scheduled.some((sp) => Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000);
+                        return !scheduled.some((sp) => {
+                            if (sp.schedulable_type === contentType && sp.schedulable_id === post?.id) return false;
+                            return Math.abs(new Date(sp.scheduled_at).getTime() - slotTime) < 60000;
+                        });
                     });
                     const failedIds = getRetryablePlatforms(accounts);
 
@@ -281,10 +294,11 @@ export default function SchedulePostModal({
     }).map((p) => p.name);
     const connectedPlatformIds = socialAccounts.map((a) => API_TO_UI_PLATFORM[a.platform]).filter(Boolean);
 
-    // Check if a slot time is already taken by an existing scheduled post
+    // Check if a slot time is already taken by an existing scheduled post (excluding this content's own)
     const getSlotOccupant = (slot: UpcomingSlot): ScheduledPostType | null => {
         const slotTime = slot.date.getTime();
         return existingScheduled.find((sp) => {
+            if (sp.schedulable_type === contentType && sp.schedulable_id === post.id) return false;
             const spTime = new Date(sp.scheduled_at).getTime();
             return Math.abs(spTime - slotTime) < 60000;
         }) || null;
@@ -299,6 +313,11 @@ export default function SchedulePostModal({
     const getFailedInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
         const apiPlatform = UI_TO_API_PLATFORM[platformId];
         return post.scheduled_posts?.find((sp) => sp.platform === apiPlatform && sp.status === 'failed');
+    };
+
+    const getPendingInfo = (platformId: SchedulePlatform): ShortPostSchedule | undefined => {
+        const apiPlatform = UI_TO_API_PLATFORM[platformId];
+        return post.scheduled_posts?.find((sp) => sp.platform === apiPlatform && sp.status === 'pending');
     };
 
     const togglePlatform = (id: SchedulePlatform) => {
@@ -324,7 +343,7 @@ export default function SchedulePostModal({
     const pageSlots = upcomingSlots.slice(pageStart, pageStart + slotsPerPage);
     const totalPages = Math.ceil(upcomingSlots.length / slotsPerPage);
 
-    const getSlotPlatformStyle = (p: typeof SCHEDULE_PLATFORMS[number], { isTaken, connected, isSelected, active, failed, published, inSlot }: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ReturnType<typeof getFailedInfo>; published: ReturnType<typeof getPublishedInfo>; inSlot: boolean }): string => {
+    const getSlotPlatformStyle = (p: typeof SCHEDULE_PLATFORMS[number], { isTaken, connected, isSelected, active, failed, published, pending, inSlot }: { isTaken: boolean; connected: boolean; isSelected: boolean; active: boolean; failed: ReturnType<typeof getFailedInfo>; published: ReturnType<typeof getPublishedInfo>; pending: ReturnType<typeof getPendingInfo>; inSlot: boolean }): string => {
         if (isTaken || !connected) return 'bg-gray-100 text-gray-200 cursor-not-allowed';
         if (published && !active) return 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400';
         if (failed) return `${p.bg} text-white`;
@@ -397,6 +416,13 @@ export default function SchedulePostModal({
                 const apiPlatform = UI_TO_API_PLATFORM[platformId];
                 const account = socialAccounts.find((a) => a.platform === apiPlatform);
                 if (!account) return Promise.resolve(null);
+
+                // If this platform already has a pending post, reschedule it
+                const pendingPost = getPendingInfo(platformId);
+                if (pendingPost) {
+                    return updateScheduledPost(pendingPost.id, { scheduled_at: scheduledAt });
+                }
+
                 return createScheduledPost({
                     social_account_id: account.id,
                     scheduled_at: scheduledAt,
@@ -425,7 +451,9 @@ export default function SchedulePostModal({
                 hour: 'numeric',
                 minute: '2-digit',
             });
-            toast.success('Post scheduled!', {
+            const hasReschedules = selectedPlatforms.some((id) => getPendingInfo(id));
+            const allReschedules = selectedPlatforms.every((id) => getPendingInfo(id));
+            toast.success(allReschedules ? 'Post rescheduled!' : hasReschedules ? 'Post scheduled & rescheduled!' : 'Post scheduled!', {
                 description: `${platformNames} · ${formattedTime}`,
             });
             onScheduled(newScheduledPosts);
@@ -565,6 +593,29 @@ export default function SchedulePostModal({
                         </div>
                     )}
 
+                    {/* Pending (scheduled) platforms */}
+                    {pendingPosts.length > 0 && (
+                        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-blue-300 bg-blue-50">
+                            <Clock size={16} className="text-blue-500 shrink-0" />
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-blue-700">
+                                <span>Scheduled on</span>
+                                {pendingPosts.map((sp) => {
+                                    const uiId = API_TO_UI_PLATFORM[sp.platform] || sp.platform;
+                                    const name = SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || sp.platform;
+                                    const date = new Date(sp.scheduled_at);
+                                    return (
+                                        <Tooltip key={sp.id} text={`Scheduled for ${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`} delay={0} placement="top">
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 border border-blue-200 text-blue-700 font-medium cursor-default">
+                                                {SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.icon}
+                                                {name} · {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                            </span>
+                                        </Tooltip>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Failed platforms */}
                     {failedPosts.length > 0 && (
                         <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-red-300 bg-red-50">
@@ -630,9 +681,12 @@ export default function SchedulePostModal({
                                         }
                                         const published = getPublishedInfo(p.id);
                                         const failed = getFailedInfo(p.id);
+                                        const pending = getPendingInfo(p.id);
                                         const tooltipText = published
                                             ? `Published ${new Date(published.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-                                            : failed ? 'Failed — retry by selecting this platform' : '';
+                                            : pending
+                                                ? `Scheduled for ${new Date(pending.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                                                : failed ? 'Failed — retry by selecting this platform' : '';
                                         return (
                                             <Tooltip key={p.id} text={tooltipText} delay={0} placement="top">
                                                 <button
@@ -648,7 +702,8 @@ export default function SchedulePostModal({
                                                     {p.icon}
                                                     {p.name}
                                                     {published && <Check size={12} className={active ? 'text-white/70' : 'text-green-500'} />}
-                                                    {failed && !published && <AlertTriangle size={12} className={active ? 'text-white/70' : 'text-red-500'} />}
+                                                    {pending && !published && <Clock size={12} className="text-blue-500" />}
+                                                    {failed && !published && !pending && <AlertTriangle size={12} className={active ? 'text-white/70' : 'text-red-500'} />}
                                                 </button>
                                             </Tooltip>
                                         );
@@ -709,6 +764,7 @@ export default function SchedulePostModal({
                                             socialAccounts={socialAccounts}
                                             getPublishedInfo={getPublishedInfo}
                                             getFailedInfo={getFailedInfo}
+                                            getPendingInfo={getPendingInfo}
                                             getSlotPlatformStyle={getSlotPlatformStyle}
                                             onSelect={() => handleSelectSlot(absoluteIdx)}
                                             onTogglePlatform={togglePlatform}
