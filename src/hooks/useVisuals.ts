@@ -30,7 +30,7 @@ export function useVisuals(
     };
 
     const updateVisual = (updated: Visual) => {
-        setVisuals(prev => prev.map(v => v.id === updated.id ? updated : v));
+        setVisuals(prev => prev.map(v => v.id === updated.id ? { ...v, ...updated, scheduled_posts: updated.scheduled_posts ?? v.scheduled_posts } : v));
     };
 
     const confirmDelete = () => {
