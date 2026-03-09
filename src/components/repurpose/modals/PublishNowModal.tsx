@@ -28,6 +28,7 @@ interface PublishNowModalProps {
     post: ShortPostPattern | null;
     contentType?: ScheduleContentType;
     visual?: Visual | null;
+    postId?: number;
     onClose: () => void;
     onPublished?: (publishedPosts: ShortPostSchedule[]) => void;
 }
@@ -37,6 +38,7 @@ export default function PublishNowModal({
     post,
     contentType = 'short_post',
     visual,
+    postId,
     onClose,
     onPublished,
 }: PublishNowModalProps) {
@@ -153,6 +155,7 @@ export default function PublishNowModal({
                 social_account_ids: accountIds,
                 schedulable_type: contentType,
                 schedulable_id: post.id,
+                post_id: postId,
             });
 
             const succeeded = response.results.filter((r) => r.status === 'published');

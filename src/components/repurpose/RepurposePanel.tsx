@@ -388,6 +388,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 post={sched.publishingPost}
                 contentType={sched.publishingContentType}
                 visual={sched.publishingVisual}
+                postId={blogId}
                 onClose={sched.clearPublishing}
                 onPublished={handlePublished}
             />
