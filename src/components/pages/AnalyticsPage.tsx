@@ -204,7 +204,6 @@ function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: 
     if (!data) return null;
 
     const m = data.metrics;
-    const cfg = PLATFORM_CONFIG[displayPlatform];
 
     return (
         <div className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all p-4">
