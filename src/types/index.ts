@@ -2,7 +2,7 @@
 // APP
 // ============================================
 
-export type PageType = "create" | "blogs" | "blog-view" | "schedule" | "settings";
+export type PageType = "create" | "blogs" | "blog-view" | "schedule" | "settings" | "analytics";
 
 // ============================================
 // BLOG

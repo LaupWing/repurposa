@@ -65,6 +65,16 @@ function wbrp_add_admin_menu() {
         'wbrp_render_page_schedule'
     );
 
+    // Submenu: Analytics
+    $analytics_hook = add_submenu_page(
+        'blog-repurpose',
+        'Analytics',
+        'Analytics',
+        'manage_options',
+        'blog-repurpose-analytics',
+        'wbrp_render_page_analytics'
+    );
+
     // Submenu: Settings
     $connections_hook = add_submenu_page(
         'blog-repurpose',
@@ -76,7 +86,7 @@ function wbrp_add_admin_menu() {
     );
 
     // Collect all hooks to load scripts on any of our pages
-    $all_hooks = [$main_hook, $create_hook, $blogs_hook, $schedule_hook, $connections_hook];
+    $all_hooks = [$main_hook, $create_hook, $blogs_hook, $schedule_hook, $analytics_hook, $connections_hook];
 
     // Load scripts on all our pages
     add_action('admin_enqueue_scripts', function($current_hook) use ($all_hooks) {
@@ -138,6 +148,10 @@ function wbrp_render_page_blogs() {
 
 function wbrp_render_page_schedule() {
     wbrp_render_app('schedule');
+}
+
+function wbrp_render_page_analytics() {
+    wbrp_render_app('analytics');
 }
 
 function wbrp_render_page_settings() {

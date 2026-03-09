@@ -13,6 +13,7 @@ import BlogsPage from './components/pages/BlogsPage';
 import BlogViewPage from './components/pages/BlogViewPage';
 import SchedulePage from './components/pages/SchedulePage';
 import SettingsPage from './components/pages/SettingsPage';
+import AnalyticsPage from './components/pages/AnalyticsPage';
 import LoginModal from './components/LoginModal';
 import OnboardingModal from './components/onboarding';
 import type { WizardData } from './components/blog-wizard/BlogWizard';
@@ -85,6 +86,8 @@ export default function App({ initialPage, postId }: AppProps) {
                 return <SchedulePage />;
             case 'settings':
                 return <SettingsPage />;
+            case 'analytics':
+                return <AnalyticsPage />;
             default:
                 return <BlogWizard onComplete={handleWizardComplete} />;
         }
