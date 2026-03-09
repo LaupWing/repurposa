@@ -148,79 +148,6 @@ const POST_TYPES: { id: PostType; label: string; icon: React.ReactNode }[] = [
     { id: "thread", label: "Thread", icon: <ListOrdered size={13} /> },
 ];
 
-// ============================================
-// MOCK PUBLISHED DATA
-// ============================================
-
-function getRecentDate(daysAgo: number, hour: number, minute: number): string {
-    const d = new Date();
-    d.setDate(d.getDate() - daysAgo);
-    d.setHours(hour, minute, 0, 0);
-    return d.toISOString();
-}
-
-const MOCK_PUBLISHED: ScheduledPost[] = [
-    {
-        id: 901,
-        content:
-            "Most developers overcomplicate state management.\n\nHere's the truth: you don't need Redux for 90% of apps.\n\nReact context + useReducer handles it all.",
-        platform: "x",
-        postType: "short",
-        scheduledAt: getRecentDate(0, 9, 0),
-        status: "published",
-        blogTitle: "Why You Don't Need Redux Anymore",
-    },
-    {
-        id: 902,
-        content:
-            'I spent 3 years building SaaS products nobody wanted.\n\nThen I learned one simple framework that changed everything.\n\nThe "Mom Test" — stop asking people if your idea is good. Instead, ask about their problems.',
-        platform: "linkedin",
-        postType: "short",
-        scheduledAt: getRecentDate(0, 9, 0),
-        status: "published",
-        blogTitle: "The Mom Test: How to Talk to Customers",
-    },
-    {
-        id: 903,
-        content:
-            "Hot take: TypeScript doesn't slow you down.\n\nWhat slows you down is debugging runtime errors at 2am that a type checker would have caught instantly.",
-        platform: "x",
-        postType: "short",
-        scheduledAt: getRecentDate(1, 12, 30),
-        status: "published",
-        blogTitle: "TypeScript: Worth the Investment",
-    },
-    {
-        id: 904,
-        content:
-            "The best marketing strategy for developers?\n\nBuild in public. Share your wins AND your failures.\n\nPeople connect with authenticity, not perfection.",
-        platform: "threads",
-        postType: "short",
-        scheduledAt: getRecentDate(1, 9, 0),
-        status: "published",
-        blogTitle: "Build in Public: A Developer's Guide",
-    },
-    {
-        id: 905,
-        content:
-            'Stop writing "clean code" and start writing code that ships.\n\nPerfect is the enemy of done. Your users don\'t care about your architecture — they care about solving their problem.',
-        platform: "linkedin",
-        postType: "short",
-        scheduledAt: getRecentDate(2, 9, 0),
-        status: "published",
-        blogTitle: "Ship First, Refactor Later",
-    },
-    {
-        id: 906,
-        content:
-            "Every senior developer I know has one thing in common:\n\nThey read more code than they write.\n\nReading codebases teaches you patterns no tutorial ever will.",
-        platform: "x",
-        postType: "short",
-        scheduledAt: getRecentDate(3, 17, 0),
-        status: "published",
-        blogTitle: "How to Level Up as a Developer",
-    },
-];
 
 // ============================================
 // API → UI MAPPING
@@ -922,7 +849,10 @@ export default function SchedulePage() {
     }, [isPublishedFilterOpen]);
 
     // Filter posts
-    const filteredPosts = posts.filter((post) => {
+    const queuePosts = posts.filter((post) => post.status !== "published");
+    const publishedPosts = posts.filter((post) => post.status === "published");
+
+    const filteredPosts = queuePosts.filter((post) => {
         const matchesPlatform =
             platformFilter === "all" || post.platform === platformFilter;
         const matchesType =
@@ -932,7 +862,7 @@ export default function SchedulePage() {
 
     const grouped = groupPostsByDate(filteredPosts);
 
-    const filteredPublishedPosts = MOCK_PUBLISHED.filter((post) => {
+    const filteredPublishedPosts = publishedPosts.filter((post) => {
         const matchesPlatform =
             publishedPlatformFilter === "all" ||
             post.platform === publishedPlatformFilter;
@@ -1036,7 +966,7 @@ export default function SchedulePage() {
                 >
                     <Calendar size={16} />
                     Queue
-                    {posts.length > 0 && (
+                    {queuePosts.length > 0 && (
                         <span
                             className={`px-1.5 py-0.5 text-xs rounded-full ${
                                 activeTab === "queue"
@@ -1044,7 +974,7 @@ export default function SchedulePage() {
                                     : "bg-gray-100 text-gray-500"
                             }`}
                         >
-                            {posts.length}
+                            {queuePosts.length}
                         </span>
                     )}
                 </button>
@@ -1092,7 +1022,7 @@ export default function SchedulePage() {
             {activeTab === "queue" && !isLoadingPosts && (
                 <div>
                     {/* Filters */}
-                    {posts.length > 0 && (
+                    {queuePosts.length > 0 && (
                         <div className="flex items-center justify-between mb-5">
                             {/* Post type pills — left */}
                             <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
@@ -1228,7 +1158,7 @@ export default function SchedulePage() {
                                 ),
                             )}
                         </div>
-                    ) : posts.length > 0 ? (
+                    ) : queuePosts.length > 0 ? (
                         /* No results from filter */
                         <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
                             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1277,7 +1207,7 @@ export default function SchedulePage() {
             {activeTab === "published" && (
                 <div>
                     {/* Filters */}
-                    {MOCK_PUBLISHED.length > 0 && (
+                    {publishedPosts.length > 0 && (
                         <div className="flex items-center justify-between mb-5">
                             {/* Post type pills — left */}
                             <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
@@ -1423,7 +1353,7 @@ export default function SchedulePage() {
                                 ),
                             )}
                         </div>
-                    ) : MOCK_PUBLISHED.length > 0 ? (
+                    ) : publishedPosts.length > 0 ? (
                         /* No results from filter */
                         <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
                             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
