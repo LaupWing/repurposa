@@ -29,7 +29,7 @@ export default function App({ initialPage, postId }: AppProps) {
 
     // Fetch profile on mount (replaces ProfileProvider)
     useEffect(() => {
-        const token = (window.wbrpConfig || { token: '' }).token;
+        const token = (window.repurposaConfig || { token: '' }).token;
         if (!token) {
             useProfileStore.setState({ isLoading: false });
             return;
@@ -47,7 +47,7 @@ export default function App({ initialPage, postId }: AppProps) {
 
     const handleWizardComplete = (data: WizardData) => {
         // Redirect to blog view page — it will poll for generation status
-        window.location.href = `admin.php?page=blog-repurpose-blogs&post_id=${data.generatedBlogId}`;
+        window.location.href = `admin.php?page=repurposa-blogs&post_id=${data.generatedBlogId}`;
     };
 
     if (isLoading) {
@@ -57,7 +57,7 @@ export default function App({ initialPage, postId }: AppProps) {
     // Not connected — show login modal
     if (!isConnected) {
         return (
-            <div className="wbrp-app">
+            <div className="repurposa-app">
                 <Toaster position="bottom-right" richColors />
                 <LoginModal onConnected={() => window.location.reload()} />
             </div>
@@ -67,7 +67,7 @@ export default function App({ initialPage, postId }: AppProps) {
     // Connected but needs onboarding
     if (needsOnboarding) {
         return (
-            <div className="wbrp-app">
+            <div className="repurposa-app">
                 <Toaster position="bottom-right" richColors />
                 <OnboardingModal onComplete={() => window.location.reload()} />
             </div>
@@ -94,7 +94,7 @@ export default function App({ initialPage, postId }: AppProps) {
     };
 
     return (
-        <div className="wbrp-app">
+        <div className="repurposa-app">
             <Toaster position="bottom-right" richColors />
             {renderPage()}
         </div>

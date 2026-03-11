@@ -191,7 +191,7 @@ export function BlogEditor({
                 post_url: string;
                 updated: boolean;
             }>({
-                path: `/wbrp/v1/blogs/${post.id}/publish`,
+                path: `/repurposa/v1/blogs/${post.id}/publish`,
                 method: 'POST',
                 data: { title, content, thumbnail },
             });

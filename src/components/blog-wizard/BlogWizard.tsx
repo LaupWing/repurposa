@@ -239,7 +239,7 @@ export default function BlogWizard({ onComplete }: BlogWizardProps) {
     setIsGeneratingBlog(true);
     try {
       const blog = await createEmptyBlog();
-      window.location.href = `admin.php?page=blog-repurpose-blogs&post_id=${blog.id}`;
+      window.location.href = `admin.php?page=repurposa-blogs&post_id=${blog.id}`;
     } catch (error) {
       console.error("Failed to create blog:", error);
       toast.error("Failed to create blog", {

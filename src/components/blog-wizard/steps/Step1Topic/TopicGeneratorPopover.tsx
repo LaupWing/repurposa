@@ -91,7 +91,7 @@ export default function TopicGeneratorPopover({
             anchor={anchorRef.current}
             placement="bottom-end"
             onClose={handleClose}
-            className="wbrp-topic-popover"
+            className="repurposa-topic-popover"
         >
             <div className="w-80 p-5 bg-white rounded-lg shadow-lg border border-gray-200">
                 {/* Header */}

@@ -119,7 +119,7 @@ export default function SettingsPage() {
   });
 
   const handleConnect = (platformId: string) => {
-    const { apiUrl } = window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000' };
+    const { apiUrl } = window.repurposaConfig || { apiUrl: 'http://127.0.0.1:8000' };
     const origin = window.location.origin;
     openPopup(`${apiUrl}/social/${platformId}/connect?origin=${encodeURIComponent(origin)}`, platformId);
   };

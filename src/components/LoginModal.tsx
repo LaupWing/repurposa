@@ -12,7 +12,7 @@ import { RiGoogleFill, RiTwitterXFill, RiLinkedinFill } from 'react-icons/ri';
 import logoUrl from '@/assets/logo.svg';
 import { useSocialPopup } from '@/hooks/useSocialPopup';
 
-const getConfig = () => window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
+const getConfig = () => window.repurposaConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
 
 interface LoginModalProps {
     onConnected: () => void;
@@ -24,11 +24,11 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
             try { localStorage.removeItem('onboarding-step'); } catch { /* ignore */ }
 
             await apiFetch({
-                path: '/wbrp/v1/auth/token',
+                path: '/repurposa/v1/auth/token',
                 method: 'POST',
                 data: { token },
             });
-            window.wbrpConfig.token = token;
+            window.repurposaConfig.token = token;
             onConnected();
         } catch (error) {
             console.error('Failed to save token:', error);
@@ -36,7 +36,7 @@ export default function LoginModal({ onConnected }: LoginModalProps) {
     };
 
     const { connectingPlatform: loadingPlatform, openPopup } = useSocialPopup({
-        messageType: 'wbrp-auth',
+        messageType: 'repurposa-auth',
         onSuccess: (_platformId, eventData) => {
             if (eventData.token) {
                 saveTokenAndConnect(eventData.token);

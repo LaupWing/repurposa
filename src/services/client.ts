@@ -2,19 +2,19 @@
  * API Client
  *
  * Base HTTP client for all API calls to the Laravel backend.
- * Config is passed from PHP via wp_localize_script as window.wbrpConfig.
+ * Config is passed from PHP via wp_localize_script as window.repurposaConfig.
  */
 
 declare global {
     interface Window {
-        wbrpConfig: {
+        repurposaConfig: {
             apiUrl: string;
             token: string;
         };
     }
 }
 
-export const getConfig = () => window.wbrpConfig || { apiUrl: 'https://ai-blog-tool.test', token: '' };
+export const getConfig = () => window.repurposaConfig || { apiUrl: 'https://ai-blog-tool.test', token: '' };
 
 export async function apiRequest<T>(
     endpoint: string,

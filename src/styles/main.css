@@ -8,26 +8,26 @@
 /**
  * Custom styles - Reset WordPress admin defaults inside our plugin
  */
-.wrap .wbrp-app {
+.wrap .repurposa-app {
   margin: 0;
   position: relative;
   min-height: 600px;
 }
 
 /* Reduce WordPress default padding below content area */
-.wrap:has(.wbrp-app) #wpbody-content,
-#wpbody-content:has(.wbrp-app) {
+.wrap:has(.repurposa-app) #wpbody-content,
+#wpbody-content:has(.repurposa-app) {
   padding-bottom: 10px;
 }
 
 /* Neutralize WordPress default margins/font-size for headings and paragraphs */
-.wbrp-app h1,
-.wbrp-app h2,
-.wbrp-app h3,
-.wbrp-app h4,
-.wbrp-app h5,
-.wbrp-app h6,
-.wbrp-app p {
+.repurposa-app h1,
+.repurposa-app h2,
+.repurposa-app h3,
+.repurposa-app h4,
+.repurposa-app h5,
+.repurposa-app h6,
+.repurposa-app p {
   margin: 0;
   font-size: inherit;
   line-height: inherit;

@@ -64,7 +64,7 @@ interface ProfileStore {
 // HELPERS
 // ============================================
 
-const getConfig = () => window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
+const getConfig = () => window.repurposaConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
 
 async function laravelFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const { apiUrl, token } = getConfig();

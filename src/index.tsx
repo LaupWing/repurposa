@@ -1,5 +1,5 @@
 /**
- * WordPress Blog Repurpose Plugin - Main Entry Point
+ * Repurposa - Main Entry Point - Main Entry Point
  */
 
 import { createRoot } from "@wordpress/element";
@@ -8,7 +8,7 @@ import "./styles/main.css";
 import type { PageType } from "./types";
 
 function mountApp(): void {
-    const container = document.getElementById("wbrp-app");
+    const container = document.getElementById("repurposa-app");
 
     if (container) {
         const page = (container.dataset.page || "create") as PageType;
@@ -19,7 +19,7 @@ function mountApp(): void {
         const root = createRoot(container);
         root.render(<App initialPage={page} postId={postId} />);
     } else {
-        console.error("WBRP: Could not find #wbrp-app container");
+        console.error("Repurposa: Could not find #repurposa-app container");
     }
 }
 

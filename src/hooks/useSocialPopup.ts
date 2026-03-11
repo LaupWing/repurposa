@@ -17,7 +17,7 @@ export function useSocialPopup({ messageType, onSuccess }: SocialPopupOptions) {
         console.log('[SocialPopup] Opening:', url);
         setConnectingPlatform(platformId);
 
-        const popup = window.open(url, 'wbrp-social-auth', 'width=600,height=700,scrollbars=yes');
+        const popup = window.open(url, 'repurposa-social-auth', 'width=600,height=700,scrollbars=yes');
         popupRef.current = popup;
 
         const handleMessage = (event: MessageEvent) => {

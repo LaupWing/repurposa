@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: WordPress Blog Repurpose Plugin
- * Description: Create blog posts with AI and repurpose them into tweets using proven viral patterns.
+ * Plugin Name: Repurposa
+ * Description: Create blog posts with AI and repurpose them into social media content.
  * Version: 1.0.0
  * Author: Loc Nguyen
  * License: GPL v2 or later
- * Text Domain: wordpress-blog-repurpose-plugin
+ * Text Domain: repurposa
  */
 
 // Prevent direct access
@@ -14,75 +14,75 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('WBRP_VERSION', '1.0.0');
-define('WBRP_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('WBRP_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('REPURPOSA_VERSION', '1.0.0');
+define('REPURPOSA_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('REPURPOSA_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 /**
  * Add admin menu with submenus
  */
-add_action('admin_menu', 'wbrp_add_admin_menu');
+add_action('admin_menu', 'repurposa_add_admin_menu');
 
-function wbrp_add_admin_menu() {
+function repurposa_add_admin_menu() {
     // Main menu page (also serves as "Create Blog")
     $main_hook = add_menu_page(
-        'Blog Repurpose',
-        'Blog Repurpose',
+        'Repurposa',
+        'Repurposa',
         'manage_options',
-        'blog-repurpose',
-        'wbrp_render_page_create',
+        'repurposa',
+        'repurposa_render_page_create',
         'dashicons-edit-large',
         30
     );
 
     // Submenu: Create Blog (same as main, but explicit in submenu)
     $create_hook = add_submenu_page(
-        'blog-repurpose',           // Parent slug
+        'repurposa',           // Parent slug
         'Create Blog',              // Page title
         'Create Blog',              // Menu title
         'manage_options',           // Capability
-        'blog-repurpose',           // Menu slug (same as parent = replaces "Blog Repurpose" text)
-        'wbrp_render_page_create'   // Callback
+        'repurposa',           // Menu slug (same as parent = replaces "Repurposa" text)
+        'repurposa_render_page_create'   // Callback
     );
 
     // Submenu: Blogs
     $blogs_hook = add_submenu_page(
-        'blog-repurpose',
+        'repurposa',
         'Blogs',
         'Blogs',
         'manage_options',
-        'blog-repurpose-blogs',
-        'wbrp_render_page_blogs'
+        'repurposa-blogs',
+        'repurposa_render_page_blogs'
     );
 
     // Submenu: Schedule
     $schedule_hook = add_submenu_page(
-        'blog-repurpose',
+        'repurposa',
         'Schedule',
         'Schedule',
         'manage_options',
-        'blog-repurpose-schedule',
-        'wbrp_render_page_schedule'
+        'repurposa-schedule',
+        'repurposa_render_page_schedule'
     );
 
     // Submenu: Analytics
     $analytics_hook = add_submenu_page(
-        'blog-repurpose',
+        'repurposa',
         'Analytics',
         'Analytics',
         'manage_options',
-        'blog-repurpose-analytics',
-        'wbrp_render_page_analytics'
+        'repurposa-analytics',
+        'repurposa_render_page_analytics'
     );
 
     // Submenu: Settings
     $connections_hook = add_submenu_page(
-        'blog-repurpose',
+        'repurposa',
         'Settings',
         'Settings',
         'manage_options',
-        'blog-repurpose-settings',
-        'wbrp_render_page_settings'
+        'repurposa-settings',
+        'repurposa_render_page_settings'
     );
 
     // Collect all hooks to load scripts on any of our pages
@@ -94,7 +94,7 @@ function wbrp_add_admin_menu() {
             return;
         }
 
-        $asset_file = WBRP_PLUGIN_DIR . 'build/index.asset.php';
+        $asset_file = REPURPOSA_PLUGIN_DIR . 'build/index.asset.php';
 
         if (!file_exists($asset_file)) {
             return;
@@ -103,16 +103,16 @@ function wbrp_add_admin_menu() {
         $assets = include($asset_file);
 
         wp_enqueue_script(
-            'wbrp-admin',
-            WBRP_PLUGIN_URL . 'build/index.js',
+            'repurposa-admin',
+            REPURPOSA_PLUGIN_URL . 'build/index.js',
             $assets['dependencies'],
             $assets['version'],
             true
         );
 
         wp_enqueue_style(
-            'wbrp-admin',
-            WBRP_PLUGIN_URL . 'build/index.css',
+            'repurposa-admin',
+            REPURPOSA_PLUGIN_URL . 'build/index.css',
             [],
             $assets['version']
         );
@@ -120,9 +120,9 @@ function wbrp_add_admin_menu() {
         wp_enqueue_style('wp-components');
 
         // Pass config to React (Sanctum token + Laravel API URL)
-        wp_localize_script('wbrp-admin', 'wbrpConfig', [
-            'apiUrl' => defined('WBRP_API_URL') ? WBRP_API_URL : 'https://ai-blog-tool.test',
-            'token' => get_option('wbrp_auth_token', ''),
+        wp_localize_script('repurposa-admin', 'repurposaConfig', [
+            'apiUrl' => defined('REPURPOSA_API_URL') ? REPURPOSA_API_URL : 'https://ai-blog-tool.test',
+            'token' => get_option('repurposa_auth_token', ''),
         ]);
 
         // Enqueue WordPress media library
@@ -133,38 +133,38 @@ function wbrp_add_admin_menu() {
 /**
  * Render pages - each passes the page type to React via data attribute
  */
-function wbrp_render_page_create() {
-    wbrp_render_app('create');
+function repurposa_render_page_create() {
+    repurposa_render_app('create');
 }
 
-function wbrp_render_page_blogs() {
+function repurposa_render_page_blogs() {
     // Check if viewing a specific blog
     if (isset($_GET['post_id'])) {
-        wbrp_render_app('blog-view', intval($_GET['post_id']));
+        repurposa_render_app('blog-view', intval($_GET['post_id']));
     } else {
-        wbrp_render_app('blogs');
+        repurposa_render_app('blogs');
     }
 }
 
-function wbrp_render_page_schedule() {
-    wbrp_render_app('schedule');
+function repurposa_render_page_schedule() {
+    repurposa_render_app('schedule');
 }
 
-function wbrp_render_page_analytics() {
-    wbrp_render_app('analytics');
+function repurposa_render_page_analytics() {
+    repurposa_render_app('analytics');
 }
 
-function wbrp_render_page_settings() {
-    wbrp_render_app('settings');
+function repurposa_render_page_settings() {
+    repurposa_render_app('settings');
 }
 
 /**
  * Render the React app container with page type
  */
-function wbrp_render_app($page, $post_id = null) {
+function repurposa_render_app($page, $post_id = null) {
     ?>
     <div class="wrap">
-        <div id="wbrp-app"
+        <div id="repurposa-app"
              data-page="<?php echo esc_attr($page); ?>"
              <?php if ($post_id): ?>data-post-id="<?php echo esc_attr($post_id); ?>"<?php endif; ?>>
             <p>Loading...</p>
@@ -177,15 +177,15 @@ function wbrp_render_app($page, $post_id = null) {
 /**
  * Register REST API routes
  */
-add_action('rest_api_init', 'wbrp_register_rest_routes');
+add_action('rest_api_init', 'repurposa_register_rest_routes');
 
-function wbrp_register_rest_routes() {
+function repurposa_register_rest_routes() {
     // Auth token route — stores/retrieves the Sanctum token
-    register_rest_route('wbrp/v1', '/auth/token', [
+    register_rest_route('repurposa/v1', '/auth/token', [
         [
             'methods' => 'GET',
             'callback' => function() {
-                $token = get_option('wbrp_auth_token', '');
+                $token = get_option('repurposa_auth_token', '');
                 return new WP_REST_Response(['token' => $token], 200);
             },
             'permission_callback' => function() {
@@ -202,7 +202,7 @@ function wbrp_register_rest_routes() {
                     return new WP_REST_Response(['error' => 'Token is required'], 400);
                 }
 
-                update_option('wbrp_auth_token', $token);
+                update_option('repurposa_auth_token', $token);
                 return new WP_REST_Response(['success' => true], 200);
             },
             'permission_callback' => function() {
@@ -212,7 +212,7 @@ function wbrp_register_rest_routes() {
         [
             'methods' => 'DELETE',
             'callback' => function() {
-                delete_option('wbrp_auth_token');
+                delete_option('repurposa_auth_token');
                 return new WP_REST_Response(['success' => true], 200);
             },
             'permission_callback' => function() {
@@ -222,10 +222,10 @@ function wbrp_register_rest_routes() {
     ]);
 
     // Publish route — creates/updates a real WordPress post from Laravel data
-    register_rest_route('wbrp/v1', '/blogs/(?P<id>\d+)/publish', [
+    register_rest_route('repurposa/v1', '/blogs/(?P<id>\d+)/publish', [
         [
             'methods' => 'POST',
-            'callback' => 'wbrp_publish_blog',
+            'callback' => 'repurposa_publish_blog',
             'permission_callback' => function () {
                 return current_user_can('manage_options');
             },
@@ -238,7 +238,7 @@ function wbrp_register_rest_routes() {
  * Receives { title, content, thumbnail } directly from the frontend.
  * The id param is the Laravel post ID, stored as meta for tracking.
  */
-function wbrp_publish_blog(WP_REST_Request $request) {
+function repurposa_publish_blog(WP_REST_Request $request) {
     $laravel_id = $request->get_param('id');
     $data = $request->get_json_params();
 
@@ -253,7 +253,7 @@ function wbrp_publish_blog(WP_REST_Request $request) {
     // Check if we already published this Laravel post
     $existing_posts = get_posts([
         'post_type' => 'post',
-        'meta_key' => '_wbrp_laravel_id',
+        'meta_key' => '_repurposa_laravel_id',
         'meta_value' => $laravel_id,
         'posts_per_page' => 1,
         'post_status' => 'any',
@@ -269,7 +269,7 @@ function wbrp_publish_blog(WP_REST_Request $request) {
         ]);
 
         if (!empty($thumbnail)) {
-            wbrp_set_featured_image($wp_post_id, $thumbnail);
+            repurposa_set_featured_image($wp_post_id, $thumbnail);
         }
 
         return new WP_REST_Response([
@@ -293,10 +293,10 @@ function wbrp_publish_blog(WP_REST_Request $request) {
     }
 
     // Store the Laravel ID for future syncing
-    update_post_meta($wp_post_id, '_wbrp_laravel_id', $laravel_id);
+    update_post_meta($wp_post_id, '_repurposa_laravel_id', $laravel_id);
 
     if (!empty($thumbnail)) {
-        wbrp_set_featured_image($wp_post_id, $thumbnail);
+        repurposa_set_featured_image($wp_post_id, $thumbnail);
     }
 
     return new WP_REST_Response([
@@ -310,7 +310,7 @@ function wbrp_publish_blog(WP_REST_Request $request) {
 /**
  * Download an image from a URL and set it as the featured image for a post.
  */
-function wbrp_set_featured_image($post_id, $image_url) {
+function repurposa_set_featured_image($post_id, $image_url) {
     require_once ABSPATH . 'wp-admin/includes/media.php';
     require_once ABSPATH . 'wp-admin/includes/file.php';
     require_once ABSPATH . 'wp-admin/includes/image.php';

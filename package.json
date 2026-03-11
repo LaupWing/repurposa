@@ -1,7 +1,7 @@
 {
-  "name": "wordpress-blog-repurpose-plugin",
+  "name": "repurposa",
   "version": "1.0.0",
-  "description": "Create blog posts with AI and repurpose them into tweets",
+  "description": "Create blog posts with AI and repurpose them into social media content",
   "scripts": {
     "build": "wp-scripts build",
     "start": "wp-scripts start",

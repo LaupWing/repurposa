@@ -378,7 +378,7 @@ export default function SchedulePostModal({
                                 <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
                                     <Calendar size={16} className="text-gray-400 shrink-0" />
                                     <p className="text-xs text-gray-500">
-                                        No publishing schedule set up yet. <a href="admin.php?page=blog-repurpose-schedule" className="text-blue-600 hover:underline">Configure your times</a> to see quick-pick slots here.
+                                        No publishing schedule set up yet. <a href="admin.php?page=repurposa-schedule" className="text-blue-600 hover:underline">Configure your times</a> to see quick-pick slots here.
                                     </p>
                                 </div>
                             )}

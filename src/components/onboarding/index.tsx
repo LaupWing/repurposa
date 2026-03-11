@@ -22,7 +22,7 @@ type Step = 'welcome' | 'setup-profile' | 'setup-email' | 'setup-connect' | 'set
 
 const STORAGE_KEY = 'onboarding-step';
 
-const getConfig = () => window.wbrpConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
+const getConfig = () => window.repurposaConfig || { apiUrl: 'http://127.0.0.1:8000', token: '' };
 
 function getStepsForProvider(provider?: string): Step[] {
     switch (provider) {

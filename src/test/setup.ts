@@ -3,7 +3,7 @@
  *
  * Runs before every test file. Sets up:
  * - DOM matchers (toBeInTheDocument, toHaveTextContent, etc.)
- * - Global mocks (window.wbrpConfig, WordPress globals)
+ * - Global mocks (window.repurposaConfig, WordPress globals)
  */
 
 import '@testing-library/jest-dom';
@@ -14,7 +14,7 @@ Element.prototype.scrollTo = vi.fn();
 
 // Mock the WordPress config that PHP injects via wp_localize_script.
 // Every test starts with a known-good config. Individual tests can override.
-Object.defineProperty(window, 'wbrpConfig', {
+Object.defineProperty(window, 'repurposaConfig', {
     writable: true,
     value: {
         apiUrl: 'http://test-api.local',

@@ -14,7 +14,7 @@ The build outputs to `build/` directory (`index.js`, `index.css`, `index.asset.p
 
 ## Architecture Overview
 
-This is a WordPress admin dashboard plugin with a React/TypeScript frontend for creating AI-assisted blog posts and repurposing them into tweets.
+This is a WordPress admin dashboard plugin (Repurposa) with a React/TypeScript frontend for creating AI-assisted blog posts and repurposing them into social media content.
 
 ### Tech Stack
 - **Frontend**: React (via `@wordpress/element`), TypeScript, Tailwind CSS v4, TipTap editor
@@ -22,14 +22,15 @@ This is a WordPress admin dashboard plugin with a React/TypeScript frontend for 
 - **Build**: `@wordpress/scripts` (wp-scripts), PostCSS for Tailwind
 
 ### PHP → React Integration
-The PHP plugin (`wordpress-blog-repurpose-plugin.php`) registers WordPress admin menu pages and renders a container div with `data-page` and optional `data-post-id` attributes. The React app (`src/index.tsx`) mounts to this div and reads these attributes to determine which page component to render.
+The PHP plugin (`repurposa.php`) registers WordPress admin menu pages and renders a container div with `data-page` and optional `data-post-id` attributes. The React app (`src/index.tsx`) mounts to this div and reads these attributes to determine which page component to render.
 
 ### Page Routing
 Routing is handled via WordPress admin menu slugs, not client-side routing:
-- `blog-repurpose` → `BlogWizard` (3-step blog creation)
-- `blog-repurpose-blogs` → `BlogsPage` (list) or `BlogViewPage` (single, when `post_id` param present)
-- `blog-repurpose-schedule` → `SchedulePage`
-- `blog-repurpose-connections` → `ConnectionsPage`
+- `repurposa` → `BlogWizard` (3-step blog creation)
+- `repurposa-blogs` → `BlogsPage` (list) or `BlogViewPage` (single, when `post_id` param present)
+- `repurposa-schedule` → `SchedulePage`
+- `repurposa-settings` → `SettingsPage`
+- `repurposa-analytics` → `AnalyticsPage`
 
 ### Key Components
 - **BlogWizard**: 3-step wizard (Topic → Rough Outline → Generated Outline) with state management
@@ -40,6 +41,6 @@ Routing is handled via WordPress admin menu slugs, not client-side routing:
 TypeScript is configured with `@/*` mapping to `src/*` for imports.
 
 ### WordPress Constants
-- `WBRP_VERSION` - Plugin version
-- `WBRP_PLUGIN_DIR` - Server path to plugin directory
-- `WBRP_PLUGIN_URL` - URL to plugin directory
+- `REPURPOSA_VERSION` - Plugin version
+- `REPURPOSA_PLUGIN_DIR` - Server path to plugin directory
+- `REPURPOSA_PLUGIN_URL` - URL to plugin directory

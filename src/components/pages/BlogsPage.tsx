@@ -313,7 +313,7 @@ export default function BlogsPage() {
     });
 
     const handleEdit = (id: number) => {
-        window.location.href = `admin.php?page=blog-repurpose-blogs&post_id=${id}`;
+        window.location.href = `admin.php?page=repurposa-blogs&post_id=${id}`;
     };
 
     const handleDelete = async (id: number) => {
@@ -334,7 +334,7 @@ export default function BlogsPage() {
     };
 
     const handleCreateNew = () => {
-        window.location.href = 'admin.php?page=blog-repurpose';
+        window.location.href = 'admin.php?page=repurposa';
     };
 
     // Loading state

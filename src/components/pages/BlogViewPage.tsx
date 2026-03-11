@@ -91,7 +91,7 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
         if (onBack) {
             onBack();
         } else {
-            window.location.href = 'admin.php?page=blog-repurpose-blogs';
+            window.location.href = 'admin.php?page=repurposa-blogs';
         }
     };
 

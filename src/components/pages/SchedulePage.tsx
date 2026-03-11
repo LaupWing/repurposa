@@ -440,7 +440,7 @@ function ScheduledPostCard({
                         {post.postId && (
                             <button
                                 onClick={() => {
-                                    const url = `admin.php?page=blog-repurpose-blogs&post_id=${
+                                    const url = `admin.php?page=repurposa-blogs&post_id=${
                                         post.postId
                                     }${
                                         post.schedulableId
