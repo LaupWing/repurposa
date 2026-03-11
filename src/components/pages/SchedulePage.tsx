@@ -6,7 +6,7 @@
  * Includes default publishing times configuration.
  */
 
-import { useState, useRef, useEffect } from "@wordpress/element";
+import { useState, useRef, useEffect, useCallback } from "@wordpress/element";
 import {
     Calendar,
     Clock,
@@ -945,6 +945,8 @@ export default function SchedulePage() {
     >("all");
     const [isPublishedFilterOpen, setIsPublishedFilterOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [weeksAhead, setWeeksAhead] = useState(2);
+    const loadMoreRef = useRef<HTMLDivElement>(null);
     const filterRef = useRef<HTMLDivElement>(null);
     const publishedFilterRef = useRef<HTMLDivElement>(null);
 
@@ -1002,6 +1004,22 @@ export default function SchedulePage() {
         return () =>
             document.removeEventListener("mousedown", handleClickOutside);
     }, [isFilterOpen]);
+
+    // Infinite scroll — load more weeks when sentinel enters viewport
+    useEffect(() => {
+        const el = loadMoreRef.current;
+        if (!el || activeTab !== 'queue') return;
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setWeeksAhead((prev) => Math.min(prev + 2, 12));
+                }
+            },
+            { rootMargin: '200px' },
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [activeTab]);
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -1292,7 +1310,7 @@ export default function SchedulePage() {
 
                     {/* Timeline: scheduled posts + empty slots */}
                     {(() => {
-                        const timeline = buildQueueTimeline(filteredPosts, weeklySchedule);
+                        const timeline = buildQueueTimeline(filteredPosts, weeklySchedule, weeksAhead);
                         const timelineGroups = groupEntriesByDate(timeline);
 
                         if (timeline.length === 0) {
@@ -1364,6 +1382,8 @@ export default function SchedulePage() {
                             </div>
                         );
                     })()}
+                    {/* Infinite scroll sentinel */}
+                    {weeksAhead < 12 && <div ref={loadMoreRef} className="h-px" />}
                 </div>
             )}
 
