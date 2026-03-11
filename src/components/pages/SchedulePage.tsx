@@ -148,7 +148,6 @@ const POST_TYPES: { id: PostType; label: string; icon: React.ReactNode }[] = [
     { id: "thread", label: "Thread", icon: <ListOrdered size={13} /> },
 ];
 
-
 // ============================================
 // API → UI MAPPING
 // ============================================
@@ -440,7 +439,7 @@ function ScheduledPostCard({
                         {post.postId && (
                             <button
                                 onClick={() => {
-                                    const url = `admin.php?page=repurposa-blogs&post_id=${
+                                    const url = `admin.php?page=blog-repurpose-blogs&post_id=${
                                         post.postId
                                     }${
                                         post.schedulableId
