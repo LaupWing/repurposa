@@ -190,7 +190,7 @@ export interface VisualSettings {
 
 export interface Visual {
     id: number;
-    blog_id: number;
+    post_id: number;
     source_type: 'short_post' | 'thread';
     source_id: number;
     content: string | string[];
