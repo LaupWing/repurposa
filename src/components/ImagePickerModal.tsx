@@ -52,6 +52,9 @@ export default function ImagePickerModal({
     const [generatePrompt, setGeneratePrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+    const [generatedImageData, setGeneratedImageData] = useState<{ base64: string; mimeType: string } | null>(null);
+    const [referenceImages, setReferenceImages] = useState<{ url: string; base64: string; mimeType: string }[]>([]);
+    const refImageInputRef = useRef<HTMLInputElement>(null);
 
     // Upload state
     const [isUploading, setIsUploading] = useState(false);
@@ -142,6 +145,8 @@ export default function ImagePickerModal({
             setIsModifyExpanded(false);
             setModifiedPreview(null);
             setGeneratePrompt('');
+            setReferenceImages([]);
+            setGeneratedImageData(null);
             setGeneratedImage(null);
             setShowPromptHelper(false);
             setPromptHelperText('');
@@ -155,26 +160,97 @@ export default function ImagePickerModal({
         image.alt_text.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleSelect = () => {
-        if (selectedImage) {
-            onSelect(selectedImage);
-            onClose();
+    const handleAddReferenceImages = useCallback(async (files: FileList | File[]) => {
+        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+        if (imageFiles.length === 0) return;
+
+        const newRefs: { url: string; base64: string; mimeType: string }[] = [];
+        for (const file of imageFiles) {
+            const url = URL.createObjectURL(file);
+            const base64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const result = reader.result as string;
+                    resolve(result.split(',')[1]);
+                };
+                reader.readAsDataURL(file);
+            });
+            newRefs.push({ url, base64, mimeType: file.type });
         }
+        setReferenceImages(prev => [...prev, ...newRefs].slice(0, 5));
+    }, []);
+
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSelect = async () => {
+        if (!selectedImage) return;
+
+        // If it's a generated image (data URL), upload to WP first
+        if (generatedImageData && selectedImage.startsWith('data:')) {
+            setIsSaving(true);
+            try {
+                const imageBytes = atob(generatedImageData.base64);
+                const byteArray = new Uint8Array(imageBytes.length);
+                for (let i = 0; i < imageBytes.length; i++) {
+                    byteArray[i] = imageBytes.charCodeAt(i);
+                }
+                const ext = generatedImageData.mimeType.split('/')[1] || 'png';
+                const file = new File([byteArray], `ai-generated-${Date.now()}.${ext}`, { type: generatedImageData.mimeType });
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const uploaded = await apiFetch<MediaItem>({
+                    path: '/wp/v2/media',
+                    method: 'POST',
+                    body: formData,
+                });
+
+                onSelect(uploaded.source_url);
+                onClose();
+            } catch (error) {
+                console.error('Failed to save generated image:', error);
+            } finally {
+                setIsSaving(false);
+            }
+            return;
+        }
+
+        onSelect(selectedImage);
+        onClose();
     };
 
     const handleGenerate = async () => {
         if (!generatePrompt.trim()) return;
 
         setIsGenerating(true);
-        // TODO: Connect to AI image generation API
-        // For now, simulate with a delay and placeholder
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            const images = referenceImages.map(ref => ({
+                data: ref.base64,
+                mime_type: ref.mimeType,
+            }));
 
-        // Placeholder - replace with actual AI generation
-        const placeholderUrl = `https://picsum.photos/seed/${Date.now()}/1200/630`;
-        setGeneratedImage(placeholderUrl);
-        setSelectedImage(placeholderUrl);
-        setIsGenerating(false);
+            const result = await apiRequest<{
+                image: string;
+                mime_type: string;
+                text: string | null;
+            }>('/image/generate', {
+                prompt: generatePrompt,
+                images,
+                aspect_ratio: '16:9',
+            });
+
+            const dataUrl = `data:${result.mime_type};base64,${result.image}`;
+            setGeneratedImage(dataUrl);
+            setSelectedImage(dataUrl);
+
+            // Store base64 for saving later
+            setGeneratedImageData({ base64: result.image, mimeType: result.mime_type });
+        } catch (error) {
+            console.error('Failed to generate image:', error);
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const handleModify = async () => {
@@ -516,10 +592,66 @@ export default function ImagePickerModal({
                                     </p>
                                 </div>
 
+                                {/* Reference Images */}
+                                <div className="mb-4">
+                                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                                        Reference images <span className="text-gray-400 font-normal">(optional)</span>
+                                    </label>
+                                    <div className="flex items-center gap-3">
+                                        {referenceImages.map((ref, i) => (
+                                            <div key={i} className="relative shrink-0">
+                                                <img
+                                                    src={ref.url}
+                                                    alt={`Reference ${i + 1}`}
+                                                    className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                                                />
+                                                <div className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+                                                    {i + 1}
+                                                </div>
+                                                <button
+                                                    onClick={() => setReferenceImages(prev => prev.filter((_, j) => j !== i))}
+                                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                                                >
+                                                    <X size={10} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {referenceImages.length < 5 && (
+                                            <button
+                                                onClick={() => refImageInputRef.current?.click()}
+                                                className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                                            >
+                                                <ImageIcon size={20} />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <input
+                                        ref={refImageInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files.length > 0) {
+                                                handleAddReferenceImages(e.target.files);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                    />
+                                    {referenceImages.length > 0 && (
+                                        <p className="text-xs text-gray-400 mt-1.5">
+                                            Reference images by number in your prompt, e.g. "recreate image 1 in the style of image 2"
+                                        </p>
+                                    )}
+                                </div>
+
                                 <textarea
                                     value={generatePrompt}
                                     onChange={(e) => setGeneratePrompt(e.target.value)}
-                                    placeholder="e.g., A professional blog header image showing a laptop on a wooden desk with a coffee cup, warm lighting, minimalist style"
+                                    placeholder={referenceImages.length > 0
+                                        ? "e.g., Recreate image 1 as a blog header with warm lighting and minimalist style"
+                                        : "e.g., A professional blog header image showing a laptop on a wooden desk with a coffee cup, warm lighting, minimalist style"
+                                    }
                                     rows={4}
                                     className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
                                 />
@@ -797,11 +929,11 @@ export default function ImagePickerModal({
                         )}
                         <button
                             onClick={handleSelect}
-                            disabled={!selectedImage}
+                            disabled={!selectedImage || isSaving}
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
                         >
-                            <Check size={16} />
-                            Select Image
+                            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                            {isSaving ? 'Saving...' : 'Select Image'}
                         </button>
                     </div>
                 </div>
