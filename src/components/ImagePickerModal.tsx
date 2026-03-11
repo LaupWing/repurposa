@@ -50,6 +50,7 @@ export default function ImagePickerModal({
     // AI Generate state
     const [generatePrompt, setGeneratePrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
     // Upload state
     const [isUploading, setIsUploading] = useState(false);
@@ -136,7 +137,9 @@ export default function ImagePickerModal({
         if (!isOpen) {
             setShowModifyInput(false);
             setModifyPrompt('');
+            setIsModifyExpanded(false);
             setGeneratePrompt('');
+            setGeneratedImage(null);
             setShowPromptHelper(false);
             setPromptHelperText('');
         }
@@ -166,6 +169,7 @@ export default function ImagePickerModal({
 
         // Placeholder - replace with actual AI generation
         const placeholderUrl = `https://picsum.photos/seed/${Date.now()}/1200/630`;
+        setGeneratedImage(placeholderUrl);
         setSelectedImage(placeholderUrl);
         setIsGenerating(false);
     };
@@ -302,7 +306,7 @@ export default function ImagePickerModal({
                 {/* Tabs */}
                 <div className={`flex gap-1 px-6 py-3 border-b border-gray-100 bg-gray-50 ${isModifyExpanded ? 'hidden' : ''}`}>
                     <button
-                        onClick={() => setActiveTab('library')}
+                        onClick={() => { setActiveTab('library'); setGeneratedImage(null); }}
                         className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                             activeTab === 'library'
                                 ? 'bg-white text-gray-900 shadow-sm'
@@ -313,7 +317,7 @@ export default function ImagePickerModal({
                         Library
                     </button>
                     <button
-                        onClick={() => setActiveTab('generate')}
+                        onClick={() => { setActiveTab('generate'); setShowModifyInput(false); setIsModifyExpanded(false); }}
                         className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                             activeTab === 'generate'
                                 ? 'bg-white text-gray-900 shadow-sm'
@@ -473,12 +477,12 @@ export default function ImagePickerModal({
                                 </button>
 
                                 {/* Generated image preview */}
-                                {selectedImage && activeTab === 'generate' && (
+                                {generatedImage && (
                                     <div className="mt-6">
                                         <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
                                         <div className="relative rounded-lg overflow-hidden border border-gray-200">
                                             <img
-                                                src={selectedImage}
+                                                src={generatedImage}
                                                 alt="Generated preview"
                                                 className="w-full h-48 object-cover"
                                             />
@@ -491,7 +495,7 @@ export default function ImagePickerModal({
                 </div>
 
                 {/* Modify with AI Input - shows above footer when active */}
-                {showModifyInput && selectedImage && (
+                {showModifyInput && selectedImage && activeTab === 'library' && (
                     <div className={`relative px-6 py-4 border-t border-gray-200 bg-blue-50 overflow-visible ${isModifyExpanded ? 'flex-1 flex flex-col' : ''}`}>
                         {/* Expand/Collapse button */}
                         <button
