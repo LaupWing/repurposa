@@ -20,7 +20,7 @@ export async function generateTopics(
     roughIdea: string,
     options?: { target_audience?: string }
 ): Promise<GenerateTopicsResponse> {
-    return apiRequest<GenerateTopicsResponse>('/blog/generate-topics', {
+    return apiRequest<GenerateTopicsResponse>('/posts/generate-topics', {
         rough_idea: roughIdea,
         target_audience: options?.target_audience,
     });
@@ -31,7 +31,7 @@ export async function generateOutline(
     roughOutline?: string[],
     options?: { target_audience?: string }
 ): Promise<GenerateOutlineResponse> {
-    return apiRequest<GenerateOutlineResponse>('/blog/generate-outline', {
+    return apiRequest<GenerateOutlineResponse>('/posts/generate-outline', {
         topic,
         rough_outline: roughOutline || [],
         target_audience: options?.target_audience,
@@ -43,7 +43,7 @@ export async function generateBlog(
     outline: OutlineSection[],
     options?: { target_audience?: string; mode?: BlogGenerationMode }
 ): Promise<GenerateBlogResponse> {
-    return apiRequest<GenerateBlogResponse>('/blog/generate-blog', {
+    return apiRequest<GenerateBlogResponse>('/posts/generate', {
         topic,
         outline,
         target_audience: options?.target_audience,
@@ -60,7 +60,7 @@ export async function regenerateBlog(
         mode?: BlogGenerationMode;
     }
 ): Promise<GenerateBlogResponse> {
-    return apiRequest<GenerateBlogResponse>(`/blog/${postId}/regenerate`, {
+    return apiRequest<GenerateBlogResponse>(`/posts/${postId}/regenerate`, {
         topic: options.topic,
         outline: options.outline,
         target_audience: options.target_audience,
@@ -69,7 +69,7 @@ export async function regenerateBlog(
 }
 
 export async function getPostStatus(id: number): Promise<PostStatusResponse> {
-    return apiRequest<PostStatusResponse>(`/blogs/${id}/status`, {}, 'GET');
+    return apiRequest<PostStatusResponse>(`/posts/${id}/status`, {}, 'GET');
 }
 
 export function pollPostStatus(
@@ -107,7 +107,7 @@ export async function refineOutline(
     instruction: string,
     options?: { target_audience?: string }
 ): Promise<GenerateOutlineResponse> {
-    return apiRequest<GenerateOutlineResponse>('/blog/refine-outline', {
+    return apiRequest<GenerateOutlineResponse>('/posts/refine-outline', {
         topic,
         outline,
         instruction,
@@ -130,27 +130,27 @@ export async function refineText(
 // ============================================
 
 export async function getBlogs(): Promise<BlogPost[]> {
-    const response = await apiRequest<{ data: BlogPost[] }>('/blogs', {}, 'GET');
+    const response = await apiRequest<{ data: BlogPost[] }>('/posts', {}, 'GET');
     return response.data;
 }
 
 export async function getBlog(id: number): Promise<BlogPost> {
-    return apiRequest<BlogPost>(`/blogs/${id}`, {}, 'GET');
+    return apiRequest<BlogPost>(`/posts/${id}`, {}, 'GET');
 }
 
 export async function updateBlog(
     id: number,
     data: { title?: string; content?: string; thumbnail?: string; status?: BlogPost['status']; published_post_id?: number; published_post_url?: string }
 ): Promise<BlogPost> {
-    return apiRequest<BlogPost>(`/blogs/${id}`, data as Record<string, unknown>, 'PUT');
+    return apiRequest<BlogPost>(`/posts/${id}`, data as Record<string, unknown>, 'PUT');
 }
 
 export async function createEmptyBlog(): Promise<BlogPost> {
-    return apiRequest<BlogPost>('/blogs', {});
+    return apiRequest<BlogPost>('/posts', {});
 }
 
 export async function deleteBlog(id: number): Promise<void> {
-    await apiRequest<{ success: boolean }>(`/blogs/${id}`, {}, 'DELETE');
+    await apiRequest<{ success: boolean }>(`/posts/${id}`, {}, 'DELETE');
 }
 
 // ============================================
@@ -176,14 +176,14 @@ export async function updateWizard(
 // ============================================
 
 export async function getVersions(postId: number): Promise<PostVersion[]> {
-    const response = await apiRequest<{ data: PostVersion[] }>(`/blogs/${postId}/versions`, {}, 'GET');
+    const response = await apiRequest<{ data: PostVersion[] }>(`/posts/${postId}/versions`, {}, 'GET');
     return response.data;
 }
 
 export async function createVersion(postId: number): Promise<PostVersion> {
-    return apiRequest<PostVersion>(`/blogs/${postId}/versions`, {});
+    return apiRequest<PostVersion>(`/posts/${postId}/versions`, {});
 }
 
 export async function restoreVersion(postId: number, versionId: number): Promise<PostVersion> {
-    return apiRequest<PostVersion>(`/blogs/${postId}/versions/${versionId}/restore`, {});
+    return apiRequest<PostVersion>(`/posts/${postId}/versions/${versionId}/restore`, {});
 }

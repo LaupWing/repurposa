@@ -34,7 +34,7 @@ export async function generateShortPosts(
 }
 
 export async function getShortPosts(postId: number): Promise<ShortPost[]> {
-    const response = await apiRequest<{ data: ShortPost[] }>(`/blogs/${postId}/short-posts`, {}, 'GET');
+    const response = await apiRequest<{ data: ShortPost[] }>(`/posts/${postId}/short-posts`, {}, 'GET');
     return response.data;
 }
 
@@ -51,7 +51,7 @@ export async function updateShortPost(shortPostId: number, data: {
 // ============================================
 
 export async function getThreads(postId: number): Promise<ThreadItem[]> {
-    const response = await apiRequest<{ data: ThreadItem[] }>(`/blogs/${postId}/threads`, {}, 'GET');
+    const response = await apiRequest<{ data: ThreadItem[] }>(`/posts/${postId}/threads`, {}, 'GET');
     return response.data;
 }
 
@@ -77,7 +77,7 @@ export async function updateThread(threadId: number, data: {
 // ============================================
 
 export async function getVisuals(blogId: number): Promise<Visual[]> {
-    const response = await apiRequest<{ data: Visual[] }>(`/blogs/${blogId}/visuals`, {}, 'GET');
+    const response = await apiRequest<{ data: Visual[] }>(`/posts/${blogId}/visuals`, {}, 'GET');
     return response.data;
 }
 
@@ -88,7 +88,7 @@ export async function createVisual(blogId: number, data: {
     description?: string;
     settings: VisualSettings;
 }): Promise<Visual> {
-    return apiRequest<Visual>(`/blogs/${blogId}/visuals`, data as unknown as Record<string, unknown>);
+    return apiRequest<Visual>(`/posts/${blogId}/visuals`, data as unknown as Record<string, unknown>);
 }
 
 export async function updateVisual(visualId: number, data: {

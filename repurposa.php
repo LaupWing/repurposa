@@ -222,7 +222,7 @@ function repurposa_register_rest_routes() {
     ]);
 
     // Publish route — creates/updates a real WordPress post from Laravel data
-    register_rest_route('repurposa/v1', '/blogs/(?P<id>\d+)/publish', [
+    register_rest_route('repurposa/v1', '/posts/(?P<id>\d+)/publish', [
         [
             'methods' => 'POST',
             'callback' => 'repurposa_publish_blog',

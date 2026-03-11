@@ -191,7 +191,7 @@ export function BlogEditor({
                 post_url: string;
                 updated: boolean;
             }>({
-                path: `/repurposa/v1/blogs/${post.id}/publish`,
+                path: `/repurposa/v1/posts/${post.id}/publish`,
                 method: 'POST',
                 data: { title, content, thumbnail },
             });
