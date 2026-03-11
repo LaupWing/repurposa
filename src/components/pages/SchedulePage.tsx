@@ -285,6 +285,137 @@ function generateSlotId(): string {
     return `slot-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 }
 
+const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+
+interface UpcomingSlot {
+    date: Date;
+    dateLabel: string;
+    timeLabel: string;
+    platforms: Platform[];
+}
+
+function getUpcomingSlotsFromSchedule(
+    schedule: WeeklySchedule,
+    maxSlots: number,
+): UpcomingSlot[] {
+    const now = new Date();
+    const slots: UpcomingSlot[] = [];
+
+    for (let d = 0; d < 30 && slots.length < maxSlots; d++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + d);
+        const dayKey = DAY_KEYS[date.getDay()] as DayOfWeek;
+        const daySchedule = schedule[dayKey];
+        if (!daySchedule?.enabled) continue;
+
+        for (const slot of daySchedule.slots) {
+            if (slots.length >= maxSlots) break;
+            const [hours, minutes] = slot.time.split(':').map(Number);
+            const slotDate = new Date(date);
+            slotDate.setHours(hours, minutes, 0, 0);
+
+            if (slotDate <= now) continue;
+
+            const today = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            let dateLabel: string;
+            if (slotDate.toDateString() === today.toDateString()) {
+                dateLabel = 'Today';
+            } else if (slotDate.toDateString() === tomorrow.toDateString()) {
+                dateLabel = 'Tomorrow';
+            } else {
+                dateLabel = slotDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+            }
+
+            const timeLabel = slotDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+            slots.push({
+                date: slotDate,
+                dateLabel,
+                timeLabel,
+                platforms: slot.platforms,
+            });
+        }
+    }
+
+    return slots;
+}
+
+interface QueueEntry {
+    type: 'post' | 'empty';
+    dateKey: string;
+    dateLabel: string;
+    time: Date;
+    timeLabel: string;
+    post?: ScheduledPost;
+    platforms?: Platform[];
+}
+
+function buildQueueTimeline(
+    posts: ScheduledPost[],
+    schedule: WeeklySchedule | null,
+    weeksAhead = 2,
+): QueueEntry[] {
+    const slotsCount = schedule ? Object.values(schedule).reduce(
+        (sum, day) => sum + (day.enabled ? day.slots.length : 0), 0
+    ) * weeksAhead : 0;
+
+    const upcomingSlots = schedule ? getUpcomingSlotsFromSchedule(schedule, Math.max(slotsCount, 14)) : [];
+
+    const entries: QueueEntry[] = [];
+
+    // Add all existing posts
+    for (const post of posts) {
+        const d = new Date(post.scheduledAt);
+        entries.push({
+            type: 'post',
+            dateKey: d.toDateString(),
+            dateLabel: formatScheduleDate(post.scheduledAt),
+            time: d,
+            timeLabel: formatTime(post.scheduledAt),
+            post,
+        });
+    }
+
+    // Add empty slots that don't overlap with existing posts
+    for (const slot of upcomingSlots) {
+        if (slot.platforms.length === 0) continue;
+        const slotTime = slot.date.getTime();
+        const hasPost = posts.some((p) => {
+            const postTime = new Date(p.scheduledAt).getTime();
+            return Math.abs(postTime - slotTime) < 60000; // within 1 minute
+        });
+        if (!hasPost) {
+            entries.push({
+                type: 'empty',
+                dateKey: slot.date.toDateString(),
+                dateLabel: slot.dateLabel,
+                time: slot.date,
+                timeLabel: slot.timeLabel,
+                platforms: slot.platforms,
+            });
+        }
+    }
+
+    // Sort by time
+    entries.sort((a, b) => a.time.getTime() - b.time.getTime());
+
+    return entries;
+}
+
+function groupEntriesByDate(entries: QueueEntry[]): Map<string, { label: string; entries: QueueEntry[] }> {
+    const groups = new Map<string, { label: string; entries: QueueEntry[] }>();
+    for (const entry of entries) {
+        if (!groups.has(entry.dateKey)) {
+            groups.set(entry.dateKey, { label: entry.dateLabel, entries: [] });
+        }
+        groups.get(entry.dateKey)!.entries.push(entry);
+    }
+    return groups;
+}
+
 // ============================================
 // SUB-COMPONENTS
 // ============================================
@@ -513,6 +644,46 @@ function PublishedPostCard({ post }: { post: ScheduledPost }) {
                 <ExternalLink size={13} />
                 View
             </button>
+        </div>
+    );
+}
+
+function EmptySlotCard({ timeLabel, platforms }: { timeLabel: string; platforms: Platform[] }) {
+    return (
+        <div className="flex items-center gap-4 p-4 rounded-lg border border-dashed border-gray-200 bg-gray-50/50">
+            {/* Time column */}
+            <div className="shrink-0 w-16">
+                <span className="text-sm font-medium text-gray-400">
+                    {timeLabel}
+                </span>
+            </div>
+
+            {/* Platforms + empty label */}
+            <div className="flex-1 flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                    {platforms.map((platformId) => {
+                        const p = PLATFORMS.find((pl) => pl.id === platformId);
+                        if (!p) return null;
+                        return (
+                            <span
+                                key={platformId}
+                                className={`w-5 h-5 ${p.bg} text-white rounded flex items-center justify-center opacity-40`}
+                            >
+                                {p.icon}
+                            </span>
+                        );
+                    })}
+                </div>
+                <span className="text-sm text-gray-400">
+                    Open slot
+                </span>
+            </div>
+
+            {/* CTA */}
+            <span className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-400">
+                <Plus size={14} />
+                Schedule
+            </span>
         </div>
     );
 }
@@ -859,8 +1030,6 @@ export default function SchedulePage() {
         return matchesPlatform && matchesType;
     });
 
-    const grouped = groupPostsByDate(filteredPosts);
-
     const filteredPublishedPosts = publishedPosts.filter((post) => {
         const matchesPlatform =
             publishedPlatformFilter === "all" ||
@@ -1121,84 +1290,80 @@ export default function SchedulePage() {
                         </div>
                     )}
 
-                    {/* Posts grouped by day */}
-                    {filteredPosts.length > 0 ? (
-                        <div className="space-y-6">
-                            {Array.from(grouped.entries()).map(
-                                ([dateKey, dayPosts]) => (
-                                    <div key={dateKey}>
-                                        {/* Day header */}
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <h3 className="text-sm font-semibold text-gray-900">
-                                                {formatScheduleDate(
-                                                    dayPosts[0].scheduledAt,
-                                                )}
-                                            </h3>
-                                            <span className="text-xs text-gray-400">
-                                                {dayPosts.length}{" "}
-                                                {dayPosts.length === 1
-                                                    ? "post"
-                                                    : "posts"}
-                                            </span>
-                                            <div className="flex-1 border-t border-gray-100" />
-                                        </div>
+                    {/* Timeline: scheduled posts + empty slots */}
+                    {(() => {
+                        const timeline = buildQueueTimeline(filteredPosts, weeklySchedule);
+                        const timelineGroups = groupEntriesByDate(timeline);
 
-                                        {/* Posts list */}
-                                        <div className="space-y-2">
-                                            {dayPosts.map((post) => (
-                                                <ScheduledPostCard
-                                                    key={post.id}
-                                                    post={post}
-                                                    onDelete={handleDeletePost}
-                                                />
-                                            ))}
-                                        </div>
+                        if (timeline.length === 0) {
+                            return (
+                                <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
+                                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-5">
+                                        <Calendar size={28} className="text-blue-600" />
                                     </div>
-                                ),
-                            )}
-                        </div>
-                    ) : queuePosts.length > 0 ? (
-                        /* No results from filter */
-                        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Calendar size={24} className="text-gray-400" />
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                        No upcoming slots
+                                    </h3>
+                                    <p className="text-sm text-gray-500 max-w-sm mx-auto mb-5">
+                                        Set up your publishing times first, then schedule posts to fill the slots.
+                                    </p>
+                                    <button
+                                        onClick={() => setActiveTab("times")}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors mx-auto"
+                                    >
+                                        <Clock size={16} />
+                                        Set Publishing Times
+                                    </button>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div className="space-y-6">
+                                {Array.from(timelineGroups.entries()).map(
+                                    ([dateKey, { label, entries }]) => {
+                                        const postCount = entries.filter((e) => e.type === 'post').length;
+                                        const emptyCount = entries.filter((e) => e.type === 'empty').length;
+                                        return (
+                                            <div key={dateKey}>
+                                                {/* Day header */}
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <h3 className="text-sm font-semibold text-gray-900">
+                                                        {label}
+                                                    </h3>
+                                                    <span className="text-xs text-gray-400">
+                                                        {postCount > 0 && `${postCount} scheduled`}
+                                                        {postCount > 0 && emptyCount > 0 && ' · '}
+                                                        {emptyCount > 0 && `${emptyCount} open`}
+                                                    </span>
+                                                    <div className="flex-1 border-t border-gray-100" />
+                                                </div>
+
+                                                {/* Entries */}
+                                                <div className="space-y-2">
+                                                    {entries.map((entry, i) =>
+                                                        entry.type === 'post' && entry.post ? (
+                                                            <ScheduledPostCard
+                                                                key={entry.post.id}
+                                                                post={entry.post}
+                                                                onDelete={handleDeletePost}
+                                                            />
+                                                        ) : (
+                                                            <EmptySlotCard
+                                                                key={`empty-${dateKey}-${i}`}
+                                                                timeLabel={entry.timeLabel}
+                                                                platforms={entry.platforms || []}
+                                                            />
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    },
+                                )}
                             </div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                No matching posts
-                            </h3>
-                            <p className="text-sm text-gray-500 mb-4">
-                                Try adjusting your filters
-                            </p>
-                            <button
-                                onClick={() => {
-                                    setPlatformFilter("all");
-                                    setTypeFilter("all");
-                                }}
-                                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                Clear filters
-                            </button>
-                        </div>
-                    ) : (
-                        /* Empty state */
-                        <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
-                            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-5">
-                                <Calendar size={28} className="text-blue-600" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                No scheduled posts
-                            </h3>
-                            <p className="text-sm text-gray-500 max-w-sm mx-auto mb-5">
-                                Repurpose a blog post into short posts or
-                                threads, then schedule them for the best
-                                engagement times.
-                            </p>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors mx-auto">
-                                <Plus size={16} />
-                                Schedule Your First Post
-                            </button>
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
             )}
 
