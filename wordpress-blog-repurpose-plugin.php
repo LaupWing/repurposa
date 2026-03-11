@@ -268,6 +268,10 @@ function wbrp_publish_blog(WP_REST_Request $request) {
             'post_content' => $content,
         ]);
 
+        if (!empty($thumbnail)) {
+            wbrp_set_featured_image($wp_post_id, $thumbnail);
+        }
+
         return new WP_REST_Response([
             'success' => true,
             'post_id' => $wp_post_id,
@@ -291,11 +295,56 @@ function wbrp_publish_blog(WP_REST_Request $request) {
     // Store the Laravel ID for future syncing
     update_post_meta($wp_post_id, '_wbrp_laravel_id', $laravel_id);
 
+    if (!empty($thumbnail)) {
+        wbrp_set_featured_image($wp_post_id, $thumbnail);
+    }
+
     return new WP_REST_Response([
         'success' => true,
         'post_id' => $wp_post_id,
         'post_url' => get_permalink($wp_post_id),
         'updated' => false,
     ], 201);
+}
+
+/**
+ * Download an image from a URL and set it as the featured image for a post.
+ */
+function wbrp_set_featured_image($post_id, $image_url) {
+    require_once ABSPATH . 'wp-admin/includes/media.php';
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+
+    // Check if this image is already in the media library (by URL)
+    $existing_id = attachment_url_to_postid($image_url);
+    if ($existing_id) {
+        set_post_thumbnail($post_id, $existing_id);
+        return;
+    }
+
+    // Download and sideload the image into the media library
+    $tmp = download_url($image_url);
+    if (is_wp_error($tmp)) {
+        return;
+    }
+
+    $filename = basename(parse_url($image_url, PHP_URL_PATH));
+    if (empty($filename)) {
+        $filename = 'featured-' . $post_id . '.jpg';
+    }
+
+    $file_array = [
+        'name'     => $filename,
+        'tmp_name' => $tmp,
+    ];
+
+    $attachment_id = media_handle_sideload($file_array, $post_id);
+
+    if (is_wp_error($attachment_id)) {
+        @unlink($tmp);
+        return;
+    }
+
+    set_post_thumbnail($post_id, $attachment_id);
 }
 
