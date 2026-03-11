@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { X, Search, Check, Loader2, Image as ImageIcon, Sparkles, Wand2, MoveHorizontal, Sun, Palette, PenTool, Eraser, Focus, Maximize2, Minimize2, Upload } from 'lucide-react';
+import { apiRequest } from '@/services/client';
 
 interface MediaItem {
     id: number;
@@ -178,15 +179,61 @@ export default function ImagePickerModal({
         if (!modifyPrompt.trim() || !selectedImage) return;
 
         setIsModifying(true);
-        // TODO: Connect to AI image modification API
-        // For now, simulate with a delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            // Fetch the selected image and convert to base64
+            const imgResponse = await fetch(selectedImage);
+            const blob = await imgResponse.blob();
+            const mimeType = blob.type || 'image/png';
+            const base64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const result = reader.result as string;
+                    resolve(result.split(',')[1]); // strip data:...;base64, prefix
+                };
+                reader.readAsDataURL(blob);
+            });
 
-        // Placeholder - in real implementation, this would return modified image
-        // For now just keep the same image
-        setIsModifying(false);
-        setShowModifyInput(false);
-        setModifyPrompt('');
+            // Call the Laravel image editing API
+            const result = await apiRequest<{
+                image: string;
+                mime_type: string;
+                text: string | null;
+            }>('/image/generate', {
+                prompt: modifyPrompt,
+                image: base64,
+                image_mime_type: mimeType,
+                aspect_ratio: '16:9',
+            });
+
+            // Upload the modified image to WordPress media library
+            const imageBytes = atob(result.image);
+            const byteArray = new Uint8Array(imageBytes.length);
+            for (let i = 0; i < imageBytes.length; i++) {
+                byteArray[i] = imageBytes.charCodeAt(i);
+            }
+            const ext = result.mime_type.split('/')[1] || 'png';
+            const file = new File([byteArray], `ai-modified-${Date.now()}.${ext}`, { type: result.mime_type });
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploaded = await apiFetch<MediaItem>({
+                path: '/wp/v2/media',
+                method: 'POST',
+                body: formData,
+            });
+
+            // Add to library and select
+            setImages(prev => [uploaded, ...prev]);
+            setSelectedImage(uploaded.source_url);
+            setShowModifyInput(false);
+            setModifyPrompt('');
+            setIsModifyExpanded(false);
+        } catch (error) {
+            console.error('Failed to modify image:', error);
+        } finally {
+            setIsModifying(false);
+        }
     };
 
     const getThumbnailUrl = (image: MediaItem) => {
