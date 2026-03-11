@@ -62,6 +62,7 @@ export default function ImagePickerModal({
     const [showModifyInput, setShowModifyInput] = useState(false);
     const [modifyPrompt, setModifyPrompt] = useState('');
     const [isModifying, setIsModifying] = useState(false);
+    const [modifiedPreview, setModifiedPreview] = useState<{ base64: string; mimeType: string } | null>(null);
     const [isModifyExpanded, setIsModifyExpanded] = useState(false);
     const [showPromptHelper, setShowPromptHelper] = useState(false);
     const [promptHelperText, setPromptHelperText] = useState('');
@@ -139,6 +140,7 @@ export default function ImagePickerModal({
             setShowModifyInput(false);
             setModifyPrompt('');
             setIsModifyExpanded(false);
+            setModifiedPreview(null);
             setGeneratePrompt('');
             setGeneratedImage(null);
             setShowPromptHelper(false);
@@ -188,7 +190,7 @@ export default function ImagePickerModal({
                 const reader = new FileReader();
                 reader.onloadend = () => {
                     const result = reader.result as string;
-                    resolve(result.split(',')[1]); // strip data:...;base64, prefix
+                    resolve(result.split(',')[1]);
                 };
                 reader.readAsDataURL(blob);
             });
@@ -205,14 +207,27 @@ export default function ImagePickerModal({
                 aspect_ratio: '16:9',
             });
 
-            // Upload the modified image to WordPress media library
-            const imageBytes = atob(result.image);
+            // Show preview instead of saving directly
+            setModifiedPreview({ base64: result.image, mimeType: result.mime_type });
+        } catch (error) {
+            console.error('Failed to modify image:', error);
+        } finally {
+            setIsModifying(false);
+        }
+    };
+
+    const handleAcceptModified = async () => {
+        if (!modifiedPreview) return;
+
+        setIsModifying(true);
+        try {
+            const imageBytes = atob(modifiedPreview.base64);
             const byteArray = new Uint8Array(imageBytes.length);
             for (let i = 0; i < imageBytes.length; i++) {
                 byteArray[i] = imageBytes.charCodeAt(i);
             }
-            const ext = result.mime_type.split('/')[1] || 'png';
-            const file = new File([byteArray], `ai-modified-${Date.now()}.${ext}`, { type: result.mime_type });
+            const ext = modifiedPreview.mimeType.split('/')[1] || 'png';
+            const file = new File([byteArray], `ai-modified-${Date.now()}.${ext}`, { type: modifiedPreview.mimeType });
 
             const formData = new FormData();
             formData.append('file', file);
@@ -223,17 +238,21 @@ export default function ImagePickerModal({
                 body: formData,
             });
 
-            // Add to library and select
             setImages(prev => [uploaded, ...prev]);
             setSelectedImage(uploaded.source_url);
             setShowModifyInput(false);
             setModifyPrompt('');
             setIsModifyExpanded(false);
+            setModifiedPreview(null);
         } catch (error) {
-            console.error('Failed to modify image:', error);
+            console.error('Failed to save modified image:', error);
         } finally {
             setIsModifying(false);
         }
+    };
+
+    const handleDiscardModified = () => {
+        setModifiedPreview(null);
     };
 
     const getThumbnailUrl = (image: MediaItem) => {
@@ -544,6 +563,46 @@ export default function ImagePickerModal({
                 {/* Modify with AI Input - shows above footer when active */}
                 {showModifyInput && selectedImage && activeTab === 'library' && (
                     <div className={`relative px-6 py-4 border-t border-gray-200 bg-blue-50 overflow-visible ${isModifyExpanded ? 'flex-1 flex flex-col' : ''}`}>
+
+                        {/* Preview of modified image */}
+                        {modifiedPreview ? (
+                            <div>
+                                <p className="text-sm font-medium text-gray-700 mb-3">Modified image preview:</p>
+                                <div className="flex gap-4 mb-4">
+                                    <div className="flex-1">
+                                        <p className="text-xs text-gray-500 mb-1">Original</p>
+                                        <img src={selectedImage} alt="Original" className="w-full h-48 object-cover rounded-lg border border-gray-200" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-xs text-gray-500 mb-1">Modified</p>
+                                        <img src={`data:${modifiedPreview.mimeType};base64,${modifiedPreview.base64}`} alt="Modified" className="w-full h-48 object-cover rounded-lg border border-blue-300" />
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                    <button
+                                        onClick={handleDiscardModified}
+                                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-white rounded-lg transition-colors"
+                                    >
+                                        Discard
+                                    </button>
+                                    <button
+                                        onClick={() => { setModifiedPreview(null); }}
+                                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-white rounded-lg transition-colors"
+                                    >
+                                        Try again
+                                    </button>
+                                    <button
+                                        onClick={handleAcceptModified}
+                                        disabled={isModifying}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                    >
+                                        {isModifying ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                        {isModifying ? 'Saving...' : 'Accept'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                        <>
                         {/* Expand/Collapse button */}
                         <button
                             onClick={() => setIsModifyExpanded(!isModifyExpanded)}
@@ -713,11 +772,13 @@ export default function ImagePickerModal({
                                 </div>
                             ))}
                         </div>
+                        </>
+                        )}
                     </div>
                 )}
 
                 {/* Footer */}
-                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
                     <button
                         onClick={onClose}
                         className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
