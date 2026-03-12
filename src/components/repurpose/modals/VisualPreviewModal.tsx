@@ -57,6 +57,15 @@ const PLATFORM_LIMITS = [
 type Theme = 'light' | 'dark';
 type Style = 'basic' | 'minimal' | 'detailed';
 type Corners = 'rounded' | 'square';
+type FontFamily = 'inter' | 'playfair' | 'space-grotesk' | 'caveat' | 'jetbrains-mono';
+
+export const FONT_PRESETS: { id: FontFamily; label: string; family: string }[] = [
+    { id: 'inter', label: 'Inter', family: "'Inter', sans-serif" },
+    { id: 'playfair', label: 'Playfair', family: "'Playfair Display', serif" },
+    { id: 'space-grotesk', label: 'Space Grotesk', family: "'Space Grotesk', sans-serif" },
+    { id: 'caveat', label: 'Caveat', family: "'Caveat', cursive" },
+    { id: 'jetbrains-mono', label: 'JetBrains', family: "'JetBrains Mono', monospace" },
+];
 
 interface GradientPreset {
     id: string;
@@ -187,6 +196,7 @@ export function VisualPreview({
     stats,
     roundedCorners,
     gradient,
+    fontFamily,
     textSize,
     onOverflowChange,
     isEditing: isEditingContent,
@@ -205,6 +215,7 @@ export function VisualPreview({
     gradient: GradientPreset;
     textSize?: TextSize | null;
     onOverflowChange?: (isOverflowing: boolean) => void;
+    fontFamily?: string;
     isEditing?: boolean;
     editValue?: string;
     onEditChange?: (value: string) => void;
@@ -212,6 +223,7 @@ export function VisualPreview({
     const isDark = theme === 'dark';
     const isBasic = style === 'basic';
     const isMinimal = style === 'minimal';
+    const fontStyle = fontFamily ? { fontFamily } : undefined;
     const initial = displayName?.charAt(0).toUpperCase() || handle?.charAt(0).toUpperCase() || '?';
 
     const getAvatarBgStyle = (): React.CSSProperties | undefined => {
@@ -261,7 +273,7 @@ export function VisualPreview({
     // Basic style: flat card, no gradient wrapper
     if (isBasic) {
         return (
-            <div className={`h-[500px] w-[500px] flex flex-col px-10 py-12 shadow-2xl ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'} ${isEditingContent ? 'ring-2 ring-inset ring-blue-400' : ''}`}>
+            <div className={`h-[500px] w-[500px] flex flex-col px-10 py-12 shadow-2xl ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'} ${isEditingContent ? 'ring-2 ring-inset ring-blue-400' : ''}`} style={fontStyle}>
                 {/* Avatar + Name */}
                 <div className="flex items-center gap-3 mb-6 flex-shrink-0">
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-violet-600">
@@ -308,6 +320,7 @@ export function VisualPreview({
                 className={`flex h-full w-full flex-col rounded-2xl shadow-xl ${
                     isMinimal ? 'p-6' : 'p-5'
                 } ${isDark ? 'bg-[#15202b] text-white' : 'bg-white text-black'} ${isEditingContent ? 'ring-2 ring-inset ring-blue-400' : ''}`}
+                style={fontStyle}
             >
                 {/* Header */}
                 <div className="flex items-center gap-3 flex-shrink-0">
@@ -592,6 +605,53 @@ function GradientPicker({
     );
 }
 
+function FontPicker({
+    fontFamily,
+    onChange,
+}: {
+    fontFamily: FontFamily;
+    onChange: (font: FontFamily) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const current = FONT_PRESETS.find(f => f.id === fontFamily) || FONT_PRESETS[0];
+
+    return (
+        <div className="relative">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Font</label>
+            <button
+                onClick={() => setOpen(!open)}
+                className="h-[34px] px-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer flex items-center gap-2 bg-white"
+                title={current.label}
+            >
+                <Type size={14} className="text-gray-400" />
+                <span className="text-sm text-gray-700" style={{ fontFamily: current.family }}>{current.label}</span>
+                <ChevronDown size={12} className="text-gray-400" />
+            </button>
+            {open && (
+                <>
+                    <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+                    <div className="absolute left-0 top-full mt-2 bg-white rounded-xl border border-gray-200 shadow-lg z-20 p-2 w-[180px]">
+                        {FONT_PRESETS.map((preset) => (
+                            <button
+                                key={preset.id}
+                                onClick={() => { onChange(preset.id); setOpen(false); }}
+                                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                                    fontFamily === preset.id
+                                        ? 'bg-blue-50 text-blue-600'
+                                        : 'text-gray-700 hover:bg-gray-50'
+                                }`}
+                                style={{ fontFamily: preset.family }}
+                            >
+                                {preset.label}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
 // ============================================
 // MAIN MODAL
 // ============================================
@@ -623,6 +683,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const [style, setStyle] = useState<Style>('detailed');
     const [corners, setCorners] = useState<Corners>('square');
     const [gradient, setGradient] = useState<GradientPreset>(GRADIENT_PRESETS[0]);
+    const [fontFamily, setFontFamily] = useState<FontFamily>('inter');
     const [displayName, setDisplayName] = useState(user?.name || 'Your Name');
     const [handle, setHandle] = useState(xConnection?.username || 'yourhandle');
     const [stats, setStats] = useState<EngagementStats>(generateRandomStats);
@@ -660,6 +721,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         setStyle(initialSettings?.style ?? 'detailed');
         setCorners(initialSettings?.corners ?? 'square');
         setGradient(GRADIENT_PRESETS.find(g => g.id === initialSettings?.gradient_id) || GRADIENT_PRESETS[0]);
+        setFontFamily((initialSettings as any)?.font_family ?? 'inter');
         setDisplayName(initialSettings?.display_name ?? user?.name ?? 'Your Name');
         setHandle(initialSettings?.handle ?? xConnection?.username ?? 'yourhandle');
         setAvatarUrl(initialSettings?.avatar_url ?? user?.avatar ?? undefined);
@@ -708,6 +770,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                 theme,
                 corners,
                 gradient_id: gradient.id,
+                font_family: fontFamily,
                 display_name: displayName,
                 handle,
                 avatar_url: avatarUrl,
@@ -833,6 +896,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                 {style !== 'basic' && (
                                     <GradientPicker gradient={gradient} onChange={setGradient} />
                                 )}
+                                <FontPicker fontFamily={fontFamily} onChange={setFontFamily} />
                                 {style === 'detailed' && <StatsEditor stats={stats} onChange={setStats} />}
                             </div>
 
@@ -993,6 +1057,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                                 stats={stats}
                                                 roundedCorners={corners === 'rounded'}
                                                 gradient={gradient}
+                                                fontFamily={FONT_PRESETS.find(f => f.id === fontFamily)?.family}
                                                 textSize={textSizes[currentPostIndex] || null}
                                                 onOverflowChange={setIsCurrentPostOverflowing}
                                                 isEditing={editingPostIndex === currentPostIndex}

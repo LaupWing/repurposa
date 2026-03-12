@@ -174,6 +174,7 @@ export interface VisualSettings {
     theme: 'light' | 'dark';
     corners: 'rounded' | 'square';
     gradient_id: string;
+    font_family?: string;
     display_name: string;
     handle: string;
     avatar_url?: string;
