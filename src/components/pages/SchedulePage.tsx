@@ -1201,8 +1201,29 @@ export default function SchedulePage() {
 
             {/* ============ QUEUE TAB ============ */}
             {activeTab === "queue" && isLoadingPosts && (
-                <div className="flex items-center justify-center min-h-[300px]">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <div className="space-y-6 animate-pulse">
+                    {Array.from({ length: 3 }).map((_, gi) => (
+                        <div key={gi}>
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="h-4 w-28 bg-gray-200 rounded" />
+                                <div className="h-3 w-20 bg-gray-100 rounded" />
+                                <div className="flex-1 border-t border-gray-100" />
+                            </div>
+                            <div className="space-y-2">
+                                {Array.from({ length: 2 }).map((_, ci) => (
+                                    <div key={ci} className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200">
+                                        <div className="h-4 w-14 bg-gray-200 rounded" />
+                                        <div className="h-5 w-5 bg-gray-200 rounded" />
+                                        <div className="flex-1 space-y-1.5">
+                                            <div className="h-4 w-3/4 bg-gray-200 rounded" />
+                                            <div className="h-3 w-1/2 bg-gray-100 rounded" />
+                                        </div>
+                                        <div className="h-6 w-16 bg-gray-100 rounded" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
             {activeTab === "queue" && !isLoadingPosts && (
@@ -1585,8 +1606,26 @@ export default function SchedulePage() {
 
             {/* ============ PUBLISHING TIMES TAB ============ */}
             {activeTab === "times" && isLoadingSchedule && (
-                <div className="flex items-center justify-center min-h-[300px]">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <div className="max-w-3xl animate-pulse">
+                    <div className="h-20 bg-blue-50 border border-blue-100 rounded-lg mb-6" />
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div className="px-6 py-4 border-b border-gray-200">
+                            <div className="h-5 w-36 bg-gray-200 rounded mb-2" />
+                            <div className="h-3.5 w-56 bg-gray-100 rounded" />
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            {Array.from({ length: 7 }).map((_, i) => (
+                                <div key={i} className="flex items-center gap-4 px-6 py-4">
+                                    <div className="h-4 w-4 bg-gray-200 rounded" />
+                                    <div className="h-4 w-24 bg-gray-200 rounded" />
+                                    <div className="flex-1 flex gap-2">
+                                        <div className="h-8 w-20 bg-gray-100 rounded" />
+                                        <div className="h-8 w-20 bg-gray-100 rounded" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
             {activeTab === "times" && !isLoadingSchedule && (
