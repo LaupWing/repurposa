@@ -41,6 +41,10 @@ import {
 import type { ScheduledPost as ApiScheduledPost } from "@/types";
 import { useProfileStore } from "@/store/profileStore";
 import { TimezonePicker } from "@/components/TimezonePicker";
+import SlotContentPicker from "@/components/schedule/SlotContentPicker";
+import SchedulePostModal from "@/components/repurpose/modals/SchedulePostModal";
+import type { ShortPostPattern } from "@/components/repurpose/cards/ShortPostCard";
+import type { ScheduleContentType } from "@/components/repurpose/modals/schedule-utils";
 
 // ============================================
 // TYPES
@@ -648,9 +652,12 @@ function PublishedPostCard({ post }: { post: ScheduledPost }) {
     );
 }
 
-function EmptySlotCard({ timeLabel, platforms }: { timeLabel: string; platforms: Platform[] }) {
+function EmptySlotCard({ timeLabel, platforms, onClick }: { timeLabel: string; platforms: Platform[]; onClick?: () => void }) {
     return (
-        <div className="flex items-center gap-4 p-4 rounded-lg border border-dashed border-gray-200 bg-gray-50/50">
+        <div
+            onClick={onClick}
+            className="flex items-center gap-4 p-4 rounded-lg border border-dashed border-gray-200 bg-gray-50/50 cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors"
+        >
             {/* Time column */}
             <div className="shrink-0 w-16">
                 <span className="text-sm font-medium text-gray-400">
@@ -949,6 +956,16 @@ export default function SchedulePage() {
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const filterRef = useRef<HTMLDivElement>(null);
     const publishedFilterRef = useRef<HTMLDivElement>(null);
+
+    // SlotContentPicker + SchedulePostModal state
+    const [isPickerOpen, setIsPickerOpen] = useState(false);
+    const [pickerSlotLabel, setPickerSlotLabel] = useState('');
+    const [pickerSlotDate, setPickerSlotDate] = useState<Date | null>(null);
+    const [pickerSlotPlatforms, setPickerSlotPlatforms] = useState<Platform[]>([]);
+    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+    const [scheduleModalPost, setScheduleModalPost] = useState<ShortPostPattern | null>(null);
+    const [scheduleModalBlogId, setScheduleModalBlogId] = useState<number | undefined>();
+    const [scheduleModalContentType, setScheduleModalContentType] = useState<ScheduleContentType>('short_post');
 
     // Map social connections to UI platform names
     const connectedPlatforms: Platform[] = socialConnections
@@ -1392,6 +1409,12 @@ export default function SchedulePage() {
                                                                 key={`empty-${dateKey}-${i}`}
                                                                 timeLabel={entry.timeLabel}
                                                                 platforms={entry.platforms || []}
+                                                                onClick={() => {
+                                                                    setPickerSlotLabel(`${dateKey} at ${entry.timeLabel}`);
+                                                                    setPickerSlotDate(entry.time);
+                                                                    setPickerSlotPlatforms(entry.platforms || []);
+                                                                    setIsPickerOpen(true);
+                                                                }}
                                                             />
                                                         ),
                                                     )}
@@ -1822,6 +1845,49 @@ export default function SchedulePage() {
                     </div>
                 </div>
             )}
+
+            {/* Slot Content Picker Modal */}
+            <SlotContentPicker
+                isOpen={isPickerOpen}
+                slotLabel={pickerSlotLabel}
+                onClose={() => setIsPickerOpen(false)}
+                onSelect={(item) => {
+                    setIsPickerOpen(false);
+                    setScheduleModalContentType(item.type === 'thread' ? 'thread' : item.type === 'visual' ? 'visual' : 'short_post');
+                    setScheduleModalBlogId(item.blogId);
+                    setScheduleModalPost({
+                        id: item.id,
+                        content: item.content,
+                        emotions: [],
+                        structure: '',
+                        why_it_works: '',
+                        media: [],
+                        cta_media: [],
+                        visualCount: 0,
+                    });
+                    setScheduleModalOpen(true);
+                }}
+            />
+
+            {/* Schedule Post Modal (opened after picking content) */}
+            <SchedulePostModal
+                isOpen={scheduleModalOpen}
+                post={scheduleModalPost}
+                blogId={scheduleModalBlogId}
+                contentType={scheduleModalContentType}
+                onClose={() => {
+                    setScheduleModalOpen(false);
+                    setScheduleModalPost(null);
+                }}
+                onScheduled={() => {
+                    setScheduleModalOpen(false);
+                    setScheduleModalPost(null);
+                    // Refresh the schedule
+                    getScheduledPosts()
+                        .then((data) => setPosts(data.map(mapApiPost)))
+                        .catch(() => toast.error('Failed to refresh schedule'));
+                }}
+            />
         </div>
     );
 
