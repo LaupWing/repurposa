@@ -1,0 +1,74 @@
+/* Self-hosted Google Fonts for visual editor */
+
+/* Inter — clean sans-serif */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./inter-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('./inter-700.woff2') format('woff2');
+}
+
+/* Playfair Display — elegant serif */
+@font-face {
+    font-family: 'Playfair Display';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./playfair-display-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Playfair Display';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('./playfair-display-700.woff2') format('woff2');
+}
+
+/* Space Grotesk — modern geometric */
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./space-grotesk-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('./space-grotesk-700.woff2') format('woff2');
+}
+
+/* Caveat — handwritten */
+@font-face {
+    font-family: 'Caveat';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./caveat-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Caveat';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('./caveat-700.woff2') format('woff2');
+}
+
+/* JetBrains Mono — monospace/code */
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./jetbrains-mono-400.woff2') format('woff2');
+}

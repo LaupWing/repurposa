@@ -4,7 +4,5 @@
  * Much simpler than v3 - just one plugin!
  */
 module.exports = {
-  plugins: [
-    require('@tailwindcss/postcss')
-  ],
-}
+    plugins: [require("@tailwindcss/postcss")],
+};

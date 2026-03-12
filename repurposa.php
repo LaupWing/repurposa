@@ -119,6 +119,13 @@ function repurposa_add_admin_menu() {
 
         wp_enqueue_style('wp-components');
 
+        wp_enqueue_style(
+            'repurposa-fonts',
+            REPURPOSA_PLUGIN_URL . 'assets/fonts/fonts.css',
+            [],
+            $assets['version']
+        );
+
         // Pass config to React (Sanctum token + Laravel API URL)
         wp_localize_script('repurposa-admin', 'repurposaConfig', [
             'apiUrl' => defined('REPURPOSA_API_URL') ? REPURPOSA_API_URL : 'https://ai-blog-tool.test',
