@@ -1,5 +1,5 @@
-import { useState, useEffect } from '@wordpress/element';
-import { X, ChevronDown, ChevronRight, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus } from 'lucide-react';
+import { useState, useEffect, useRef } from '@wordpress/element';
+import { X, ChevronDown, ChevronRight, ChevronLeft, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogs } from '@/services/blogApi';
 import { getShortPosts, getThreads, getVisuals } from '@/services/repurposeApi';
@@ -8,6 +8,7 @@ import { createScheduledPost } from '@/services/scheduleApi';
 import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM } from '@/components/repurpose/modals/schedule-utils';
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
+import { AITextPopup } from '@/components/AITextPopup';
 import type { BlogPost, ShortPost, ThreadItem, Visual, SocialAccount } from '@/types';
 
 // ============================================
@@ -106,11 +107,14 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
     const [loadingBlogId, setLoadingBlogId] = useState<number | null>(null);
     const [isScheduling, setIsScheduling] = useState(false);
     const [schedulingItemId, setSchedulingItemId] = useState<string | null>(null);
+    const [blogContentTab, setBlogContentTab] = useState<Record<number, 'short_post' | 'thread' | 'visual'>>({});
+    const [contentPage, setContentPage] = useState<Record<string, number>>({});
 
     // Create new state
     const [view, setView] = useState<'list' | 'create'>('list');
     const [createType, setCreateType] = useState<'short_post' | 'thread' | 'visual'>('short_post');
     const [createText, setCreateText] = useState('');
+    const createTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Reset state when modal opens
     useEffect(() => {
@@ -374,14 +378,20 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
 
                             {/* Composer */}
                             {createType === 'short_post' && (
-                                <div>
+                                <div className="relative">
                                     <textarea
+                                        ref={createTextareaRef}
                                         value={createText}
                                         onChange={(e) => setCreateText(e.target.value)}
                                         placeholder="Write your post..."
                                         rows={6}
                                         autoFocus
                                         className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100 placeholder:text-gray-300"
+                                    />
+                                    <AITextPopup
+                                        textareaRef={createTextareaRef}
+                                        value={createText}
+                                        onChange={setCreateText}
                                     />
                                     <div className="flex items-center justify-between mt-2">
                                         <span className={`text-[11px] ${createText.length > 280 ? 'text-amber-500' : 'text-gray-300'}`}>
@@ -486,80 +496,104 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                                     <div className="flex items-center justify-center py-8">
                                                         <Loader2 size={18} className="animate-spin text-gray-300" />
                                                     </div>
-                                                ) : content?.loaded ? (
-                                                    <div className="px-5 py-3 space-y-4">
-                                                        {/* Short Posts */}
-                                                        {content.shortPosts.length > 0 && (
-                                                            <ContentSection
-                                                                icon={<FileText size={12} className="text-blue-500" />}
-                                                                label="Short Posts"
-                                                                count={content.shortPosts.length}
-                                                            >
-                                                                {content.shortPosts.map(post => {
-                                                                    const scheduled = isScheduled(post.scheduled_posts);
-                                                                    const itemKey = `short_post-${post.id}`;
-                                                                    return (
-                                                                        <div key={post.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
-                                                                            <div className="flex-1 min-w-0">
-                                                                                <p className="text-xs text-gray-700 line-clamp-3 whitespace-pre-line">{post.content}</p>
-                                                                                <div className="flex items-center gap-2 mt-1">
-                                                                                    {scheduled && <ScheduleBadge />}
-                                                                                    <span className="text-[10px] text-gray-300">{post.content.length} chars</span>
-                                                                                </div>
-                                                                            </div>
-                                                                            <button
-                                                                                onClick={() => scheduleContent(post.id, 'short_post', blog.id)}
-                                                                                disabled={isScheduling}
-                                                                                className="shrink-0 px-2.5 py-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
-                                                                            >
-                                                                                {schedulingItemId === itemKey ? <Loader2 size={11} className="animate-spin" /> : 'Schedule'}
-                                                                            </button>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </ContentSection>
-                                                        )}
+                                                ) : content?.loaded ? (() => {
+                                                    const activeTab = blogContentTab[blog.id] || 'short_post';
+                                                    const tabs: { id: 'short_post' | 'thread' | 'visual'; label: string; icon: React.ReactNode; count: number }[] = [
+                                                        { id: 'short_post', label: 'Short Posts', icon: <FileText size={11} />, count: content.shortPosts.length },
+                                                        { id: 'thread', label: 'Threads', icon: <MessageSquare size={11} />, count: content.threads.length },
+                                                        { id: 'visual', label: 'Visuals', icon: <Image size={11} />, count: content.visuals.length },
+                                                    ];
 
-                                                        {/* Threads */}
-                                                        {content.threads.length > 0 && (
-                                                            <ContentSection
-                                                                icon={<MessageSquare size={12} className="text-purple-500" />}
-                                                                label="Threads"
-                                                                count={content.threads.length}
-                                                            >
-                                                                {content.threads.map(thread => {
-                                                                    const scheduled = isScheduled(thread.scheduled_posts);
-                                                                    const itemKey = `thread-${thread.id}`;
-                                                                    return (
-                                                                        <div key={thread.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
-                                                                            <div className="flex-1 min-w-0">
-                                                                                <p className="text-xs text-gray-700 line-clamp-2 whitespace-pre-line">{thread.hook}</p>
-                                                                                <div className="flex items-center gap-2 mt-1">
-                                                                                    {scheduled && <ScheduleBadge />}
-                                                                                </div>
-                                                                                <ThreadChain thread={thread} />
-                                                                            </div>
-                                                                            <button
-                                                                                onClick={() => scheduleContent(thread.id, 'thread', blog.id)}
-                                                                                disabled={isScheduling}
-                                                                                className="shrink-0 px-2.5 py-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
-                                                                            >
-                                                                                {schedulingItemId === itemKey ? <Loader2 size={11} className="animate-spin" /> : 'Schedule'}
-                                                                            </button>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </ContentSection>
-                                                        )}
+                                                    const PER_PAGE = 3;
+                                                    const pageKey = `${blog.id}-${activeTab}`;
+                                                    const page = contentPage[pageKey] || 0;
 
-                                                        {/* Visuals */}
-                                                        {content.visuals.length > 0 && (
-                                                            <ContentSection
-                                                                icon={<Image size={12} className="text-pink-500" />}
-                                                                label="Visuals"
-                                                                count={content.visuals.length}
-                                                            >
-                                                                {content.visuals.map(visual => {
+                                                    const allItems = activeTab === 'short_post' ? content.shortPosts
+                                                        : activeTab === 'thread' ? content.threads
+                                                        : content.visuals;
+                                                    const totalPages = Math.ceil(allItems.length / PER_PAGE);
+                                                    const pagedItems = allItems.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+
+                                                    return (
+                                                    <div className="px-5 py-3 space-y-3">
+                                                        {/* Tabs */}
+                                                        <div className="flex items-center gap-1.5">
+                                                            {tabs.map(tab => (
+                                                                <button
+                                                                    key={tab.id}
+                                                                    onClick={() => {
+                                                                        setBlogContentTab(prev => ({ ...prev, [blog.id]: tab.id }));
+                                                                        setContentPage(prev => ({ ...prev, [`${blog.id}-${tab.id}`]: 0 }));
+                                                                    }}
+                                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                                                        activeTab === tab.id
+                                                                            ? 'bg-gray-900 text-white'
+                                                                            : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
+                                                                    }`}
+                                                                >
+                                                                    {tab.icon}
+                                                                    {tab.label}
+                                                                    <span className={`text-[10px] ${activeTab === tab.id ? 'text-gray-400' : 'text-gray-300'}`}>{tab.count}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+
+                                                        {/* Tab content */}
+                                                        <div className="space-y-1.5">
+                                                            {allItems.length === 0 ? (
+                                                                <p className="text-xs text-gray-400 text-center py-6">
+                                                                    No {activeTab === 'short_post' ? 'short posts' : activeTab === 'thread' ? 'threads' : 'visuals'} yet.
+                                                                </p>
+                                                            ) : (
+                                                                <>
+                                                                {pagedItems.map((item: ShortPost | ThreadItem | Visual) => {
+                                                                    if (activeTab === 'short_post') {
+                                                                        const post = item as ShortPost;
+                                                                        const scheduled = isScheduled(post.scheduled_posts);
+                                                                        const itemKey = `short_post-${post.id}`;
+                                                                        return (
+                                                                            <div key={post.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
+                                                                                <div className="flex-1 min-w-0">
+                                                                                    <p className="text-xs text-gray-700 line-clamp-3 whitespace-pre-line">{post.content}</p>
+                                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                                        {scheduled && <ScheduleBadge />}
+                                                                                        <span className="text-[10px] text-gray-300">{post.content.length} chars</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => scheduleContent(post.id, 'short_post', blog.id)}
+                                                                                    disabled={isScheduling}
+                                                                                    className="shrink-0 px-2.5 py-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+                                                                                >
+                                                                                    {schedulingItemId === itemKey ? <Loader2 size={11} className="animate-spin" /> : 'Schedule'}
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    if (activeTab === 'thread') {
+                                                                        const thread = item as ThreadItem;
+                                                                        const scheduled = isScheduled(thread.scheduled_posts);
+                                                                        const itemKey = `thread-${thread.id}`;
+                                                                        return (
+                                                                            <div key={thread.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
+                                                                                <div className="flex-1 min-w-0">
+                                                                                    <p className="text-xs text-gray-700 line-clamp-2 whitespace-pre-line">{thread.hook}</p>
+                                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                                        {scheduled && <ScheduleBadge />}
+                                                                                    </div>
+                                                                                    <ThreadChain thread={thread} />
+                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => scheduleContent(thread.id, 'thread', blog.id)}
+                                                                                    disabled={isScheduling}
+                                                                                    className="shrink-0 px-2.5 py-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+                                                                                >
+                                                                                    {schedulingItemId === itemKey ? <Loader2 size={11} className="animate-spin" /> : 'Schedule'}
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    const visual = item as Visual;
                                                                     const scheduled = isScheduled(visual.scheduled_posts);
                                                                     const itemKey = `visual-${visual.id}`;
                                                                     return (
@@ -586,15 +620,35 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                                                         </div>
                                                                     );
                                                                 })}
-                                                            </ContentSection>
-                                                        )}
 
-                                                        {/* Empty state */}
-                                                        {content.shortPosts.length === 0 && content.threads.length === 0 && content.visuals.length === 0 && (
-                                                            <p className="text-xs text-gray-400 text-center py-6">No content for this blog yet.</p>
-                                                        )}
+                                                                {/* Pagination */}
+                                                                {totalPages > 1 && (
+                                                                    <div className="flex items-center justify-between pt-2">
+                                                                        <button
+                                                                            onClick={() => setContentPage(prev => ({ ...prev, [pageKey]: page - 1 }))}
+                                                                            disabled={page === 0}
+                                                                            className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                                        >
+                                                                            <ChevronLeft size={12} /> Prev
+                                                                        </button>
+                                                                        <span className="text-[10px] text-gray-300">
+                                                                            {page + 1} / {totalPages}
+                                                                        </span>
+                                                                        <button
+                                                                            onClick={() => setContentPage(prev => ({ ...prev, [pageKey]: page + 1 }))}
+                                                                            disabled={page >= totalPages - 1}
+                                                                            className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                                        >
+                                                                            Next <ChevronRight size={12} />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                ) : null}
+                                                    );
+                                                })() : null}
                                             </div>
                                         )}
                                     </div>
@@ -610,26 +664,3 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
     );
 }
 
-// ============================================
-// CONTENT SECTION
-// ============================================
-
-function ContentSection({ icon, label, count, children }: {
-    icon: React.ReactNode;
-    label: string;
-    count: number;
-    children: React.ReactNode;
-}) {
-    return (
-        <div>
-            <div className="flex items-center gap-1.5 mb-2">
-                {icon}
-                <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
-                <span className="text-[10px] text-gray-300">{count}</span>
-            </div>
-            <div className="space-y-1.5">
-                {children}
-            </div>
-        </div>
-    );
-}
