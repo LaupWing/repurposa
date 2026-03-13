@@ -1,5 +1,5 @@
 import { useState, useEffect } from '@wordpress/element';
-import { X, ChevronLeft, ChevronDown, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check } from 'lucide-react';
+import { X, ChevronDown, ChevronRight, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogs } from '@/services/blogApi';
 import { getShortPosts, getThreads, getVisuals } from '@/services/repurposeApi';
@@ -31,12 +31,12 @@ function MiniVisualPreview({ visual }: { visual: Visual }) {
     const gradientClass = isDark ? gradient.dark : gradient.light;
 
     return (
-        <div className={`w-16 h-16 rounded-lg shrink-0 overflow-hidden bg-gradient-to-br ${gradientClass} flex flex-col items-center justify-center p-1.5 relative`}>
-            <p className={`text-[5px] leading-tight line-clamp-4 text-center ${isDark ? 'text-white/90' : 'text-gray-900/80'}`}>
+        <div className={`w-12 h-12 rounded-lg shrink-0 overflow-hidden bg-gradient-to-br ${gradientClass} flex flex-col items-center justify-center p-1 relative`}>
+            <p className={`text-[4px] leading-tight line-clamp-3 text-center ${isDark ? 'text-white/90' : 'text-gray-900/80'}`}>
                 {firstSlide}
             </p>
             {slideCount > 1 && (
-                <span className={`absolute bottom-0.5 right-1 text-[7px] font-bold ${isDark ? 'text-white/60' : 'text-gray-900/40'}`}>
+                <span className={`absolute bottom-0.5 right-0.5 text-[6px] font-bold ${isDark ? 'text-white/60' : 'text-gray-900/40'}`}>
                     1/{slideCount}
                 </span>
             )}
@@ -71,11 +71,19 @@ function ThreadChain({ thread }: { thread: ThreadItem }) {
 }
 
 // ============================================
-// MAIN COMPONENT
+// BLOG CONTENT (per-type counts + loaded items)
 // ============================================
 
-type ChooseType = 'short_post' | 'thread' | 'visual';
-type View = 'main' | 'choose-blogs' | 'choose-content';
+interface BlogContent {
+    shortPosts: ShortPost[];
+    threads: ThreadItem[];
+    visuals: Visual[];
+    loaded: boolean;
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 
 interface SlotContentPickerProps {
     isOpen: boolean;
@@ -86,40 +94,52 @@ interface SlotContentPickerProps {
 }
 
 export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onClose, onScheduled }: SlotContentPickerProps) {
-    const [view, setView] = useState<View>('main');
     const [scheduledAt, setScheduledAt] = useState<Date>(slotDate);
     const [platforms, setPlatforms] = useState<SchedulePlatform[]>(slotPlatforms);
     const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
     const [isEditingTime, setIsEditingTime] = useState(false);
 
-    const [chooseType, setChooseType] = useState<ChooseType>('short_post');
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
-    const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
-    const [shortPosts, setShortPosts] = useState<ShortPost[]>([]);
-    const [threads, setThreads] = useState<ThreadItem[]>([]);
-    const [visuals, setVisuals] = useState<Visual[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingBlogs, setIsLoadingBlogs] = useState(false);
+    const [expandedBlogId, setExpandedBlogId] = useState<number | null>(null);
+    const [blogContent, setBlogContent] = useState<Record<number, BlogContent>>({});
+    const [loadingBlogId, setLoadingBlogId] = useState<number | null>(null);
     const [isScheduling, setIsScheduling] = useState(false);
+    const [schedulingItemId, setSchedulingItemId] = useState<string | null>(null);
+
+    // Create new state
+    const [view, setView] = useState<'list' | 'create'>('list');
+    const [createType, setCreateType] = useState<'short_post' | 'thread' | 'visual'>('short_post');
+    const [createText, setCreateText] = useState('');
 
     // Reset state when modal opens
     useEffect(() => {
         if (!isOpen) return;
-        setView('main');
         setScheduledAt(slotDate);
         setPlatforms(slotPlatforms);
-        setSelectedBlog(null);
-        setShortPosts([]);
-        setThreads([]);
-        setVisuals([]);
         setIsEditingTime(false);
         setIsScheduling(false);
+        setSchedulingItemId(null);
+        setExpandedBlogId(null);
+        setBlogContent({});
+        setView('list');
+        setCreateType('short_post');
+        setCreateText('');
 
-        getSocialAccounts()
-            .then(setSocialAccounts)
-            .catch(() => toast.error('Failed to load social accounts'));
+        setIsLoadingBlogs(true);
+        Promise.all([
+            getSocialAccounts(),
+            getBlogs(),
+        ]).then(([accounts, blogsData]) => {
+            setSocialAccounts(accounts);
+            setBlogs(blogsData.filter(b => b.status !== 'generating' && b.status !== 'failed'));
+        }).catch(() => {
+            toast.error('Failed to load data');
+        }).finally(() => {
+            setIsLoadingBlogs(false);
+        });
     }, [isOpen]);
 
-    // Connected platform IDs
     const connectedPlatforms = SCHEDULE_PLATFORMS.filter(p =>
         socialAccounts.some(a => a.platform === UI_TO_API_PLATFORM[p.id])
     );
@@ -130,54 +150,42 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
         );
     };
 
-    const handleChooseExisting = async (type: ChooseType) => {
-        setChooseType(type);
-        setView('choose-blogs');
-        setIsLoading(true);
-        try {
-            const data = await getBlogs();
-            setBlogs(data.filter(b => b.status !== 'generating' && b.status !== 'failed'));
-        } catch {
-            toast.error('Failed to load blogs');
-        } finally {
-            setIsLoading(false);
+    const toggleBlog = async (blogId: number) => {
+        if (expandedBlogId === blogId) {
+            setExpandedBlogId(null);
+            return;
         }
-    };
+        setExpandedBlogId(blogId);
 
-    const handleSelectBlog = async (blog: BlogPost) => {
-        setSelectedBlog(blog);
-        setView('choose-content');
-        setIsLoading(true);
-        try {
-            if (chooseType === 'short_post') {
-                setShortPosts(await getShortPosts(blog.id));
-            } else if (chooseType === 'thread') {
-                setThreads(await getThreads(blog.id));
-            } else {
-                setVisuals(await getVisuals(blog.id));
+        // Load content if not yet loaded
+        if (!blogContent[blogId]?.loaded) {
+            setLoadingBlogId(blogId);
+            try {
+                const [shortPosts, threads, visuals] = await Promise.all([
+                    getShortPosts(blogId),
+                    getThreads(blogId),
+                    getVisuals(blogId),
+                ]);
+                setBlogContent(prev => ({
+                    ...prev,
+                    [blogId]: { shortPosts, threads, visuals, loaded: true },
+                }));
+            } catch {
+                toast.error('Failed to load content');
+            } finally {
+                setLoadingBlogId(null);
             }
-        } catch {
-            toast.error('Failed to load content');
-        } finally {
-            setIsLoading(false);
         }
     };
 
-    const handleBack = () => {
-        if (view === 'choose-content') {
-            setView('choose-blogs');
-            setSelectedBlog(null);
-        } else if (view === 'choose-blogs') {
-            setView('main');
-        }
-    };
-
-    const scheduleContent = async (contentId: number, contentType: ChooseType) => {
+    const scheduleContent = async (contentId: number, contentType: 'short_post' | 'thread' | 'visual', blogId: number) => {
         if (platforms.length === 0) {
             toast.error('Select at least one platform');
             return;
         }
+        const itemKey = `${contentType}-${contentId}`;
         setIsScheduling(true);
+        setSchedulingItemId(itemKey);
         try {
             const isoDate = scheduledAt.toISOString();
             const promises = platforms.map(platformId => {
@@ -189,7 +197,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                     scheduled_at: isoDate,
                     schedulable_type: contentType,
                     schedulable_id: contentId,
-                    ...(selectedBlog && { post_id: selectedBlog.id }),
+                    post_id: blogId,
                 });
             });
             await Promise.all(promises);
@@ -208,6 +216,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
             toast.error('Failed to schedule post');
         } finally {
             setIsScheduling(false);
+            setSchedulingItemId(null);
         }
     };
 
@@ -217,35 +226,28 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
 
     if (!isOpen) return null;
 
-    // Date/time input values
     const dateValue = scheduledAt.toISOString().split('T')[0];
     const timeValue = scheduledAt.toTimeString().slice(0, 5);
-
-    const title = view === 'main'
-        ? 'Schedule Content'
-        : view === 'choose-blogs'
-            ? `Choose Blog — ${chooseType === 'short_post' ? 'Short Posts' : chooseType === 'thread' ? 'Threads' : 'Visuals'}`
-            : selectedBlog?.title || 'Choose Content';
-
-    const contentTypeLabel = chooseType === 'short_post' ? 'short posts' : chooseType === 'thread' ? 'threads' : 'visuals';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col max-h-[85vh]">
                 {/* Header */}
                 <div className="px-5 py-4 border-b border-gray-200 shrink-0">
                     <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                            {view !== 'main' && (
+                        <div className="flex items-center gap-2">
+                            {view === 'create' && (
                                 <button
-                                    onClick={handleBack}
+                                    onClick={() => setView('list')}
                                     className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                                 >
-                                    <ChevronLeft size={16} />
+                                    <ChevronRight size={16} className="rotate-180" />
                                 </button>
                             )}
-                            <h2 className="text-base font-semibold text-gray-900 line-clamp-1">{title}</h2>
+                            <h2 className="text-base font-semibold text-gray-900">
+                                {view === 'create' ? 'Create New' : 'Schedule Content'}
+                            </h2>
                         </div>
                         <button
                             onClick={onClose}
@@ -255,9 +257,8 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                         </button>
                     </div>
 
-                    {/* Date/time + platforms bar */}
+                    {/* Date/time + platforms */}
                     <div className="flex items-center gap-3 flex-wrap">
-                        {/* Date/time display */}
                         <div className="flex items-center gap-1.5">
                             <Clock size={14} className="text-gray-400" />
                             {isEditingTime ? (
@@ -308,7 +309,6 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
 
                         <div className="h-4 w-px bg-gray-200" />
 
-                        {/* Platform toggles */}
                         <div className="flex items-center gap-1.5">
                             {connectedPlatforms.map(p => {
                                 const active = platforms.includes(p.id);
@@ -335,163 +335,274 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                 </div>
 
                 {/* Body */}
-                <div className="flex-1 overflow-y-auto p-5">
-                    {view === 'main' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {/* Short Post card */}
-                            <ActionCard
-                                icon={<FileText size={24} className="text-blue-500" />}
-                                title="Short Post"
-                                description="Single post for any platform"
-                                onChoose={() => handleChooseExisting('short_post')}
-                            />
-                            {/* Thread card */}
-                            <ActionCard
-                                icon={<MessageSquare size={24} className="text-purple-500" />}
-                                title="Thread"
-                                description="Multi-post thread"
-                                onChoose={() => handleChooseExisting('thread')}
-                            />
-                            {/* Visual card */}
-                            <ActionCard
-                                icon={<Image size={24} className="text-pink-500" />}
-                                title="Visual"
-                                description="Carousel or image post"
-                                onChoose={() => handleChooseExisting('visual')}
-                            />
-                        </div>
-                    )}
-
-                    {view === 'choose-blogs' && (
-                        isLoading ? (
-                            <div className="flex items-center justify-center py-16">
-                                <Loader2 size={24} className="animate-spin text-gray-300" />
+                <div className="flex-1 overflow-y-auto">
+                    {view === 'create' ? (
+                        /* ===== CREATE NEW VIEW ===== */
+                        <div className="px-5 py-5 space-y-4">
+                            {/* Type pills */}
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={() => setCreateType('short_post')}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                        createType === 'short_post'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <FileText size={11} />
+                                    Short Post
+                                </button>
+                                <button
+                                    disabled
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-gray-100 text-gray-300 cursor-not-allowed"
+                                    title="Coming soon"
+                                >
+                                    <MessageSquare size={11} />
+                                    Thread
+                                    <span className="text-[9px] text-gray-300 ml-0.5">soon</span>
+                                </button>
+                                <button
+                                    disabled
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-gray-100 text-gray-300 cursor-not-allowed"
+                                    title="Coming soon"
+                                >
+                                    <Image size={11} />
+                                    Visual
+                                    <span className="text-[9px] text-gray-300 ml-0.5">soon</span>
+                                </button>
                             </div>
-                        ) : blogs.length === 0 ? (
-                            <p className="text-sm text-gray-400 text-center py-16">No blogs found. Create a blog first.</p>
-                        ) : (
-                            <div className="space-y-2">
-                                {blogs.map(blog => {
-                                    const count = chooseType === 'short_post'
-                                        ? blog.short_posts?.length || 0
-                                        : chooseType === 'thread'
-                                            ? blog.threads?.length || 0
-                                            : blog.visuals?.length || 0;
-                                    return (
+
+                            {/* Composer */}
+                            {createType === 'short_post' && (
+                                <div>
+                                    <textarea
+                                        value={createText}
+                                        onChange={(e) => setCreateText(e.target.value)}
+                                        placeholder="Write your post..."
+                                        rows={6}
+                                        autoFocus
+                                        className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100 placeholder:text-gray-300"
+                                    />
+                                    <div className="flex items-center justify-between mt-2">
+                                        <span className={`text-[11px] ${createText.length > 280 ? 'text-amber-500' : 'text-gray-300'}`}>
+                                            {createText.length} chars
+                                        </span>
                                         <button
-                                            key={blog.id}
-                                            onClick={() => handleSelectBlog(blog)}
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all text-left"
+                                            disabled={!createText.trim() || isScheduling}
+                                            onClick={() => {
+                                                // TODO: create short post via API, then schedule
+                                                toast.info('Create & schedule coming soon');
+                                            }}
+                                            className="px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                         >
+                                            {isScheduling ? <Loader2 size={12} className="animate-spin" /> : 'Create & Schedule'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        /* ===== LIST VIEW ===== */
+                        <>
+                    {/* Create new row */}
+                    <div className="border-b border-gray-100">
+                        <button
+                            onClick={() => setView('create')}
+                            className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors text-left"
+                        >
+                            <div className="w-9 h-9 rounded-lg bg-blue-50 shrink-0 flex items-center justify-center">
+                                <Plus size={16} className="text-blue-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-blue-600">Create new</p>
+                                <p className="text-[10px] text-gray-400">Write and schedule a new post</p>
+                            </div>
+                            <ChevronRight size={14} className="text-gray-300 shrink-0" />
+                        </button>
+                    </div>
+
+                    {/* Blog accordion list */}
+                    {isLoadingBlogs ? (
+                        <div className="flex items-center justify-center py-16">
+                            <Loader2 size={24} className="animate-spin text-gray-300" />
+                        </div>
+                    ) : blogs.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-16">No blogs found. Create a blog first.</p>
+                    ) : (
+                        <div className="divide-y divide-gray-100">
+                            {blogs.map(blog => {
+                                const isExpanded = expandedBlogId === blog.id;
+                                const content = blogContent[blog.id];
+                                const isLoadingContent = loadingBlogId === blog.id;
+                                const shortCount = blog.short_posts?.length || 0;
+                                const threadCount = blog.threads?.length || 0;
+                                const visualCount = blog.visuals?.length || 0;
+                                const totalCount = shortCount + threadCount + visualCount;
+
+                                return (
+                                    <div key={blog.id}>
+                                        {/* Blog row */}
+                                        <button
+                                            onClick={() => toggleBlog(blog.id)}
+                                            className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors text-left"
+                                        >
+                                            <ChevronRight size={14} className={`text-gray-300 transition-transform shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
                                             {blog.thumbnail ? (
-                                                <img src={blog.thumbnail} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                                                <img src={blog.thumbnail} className="w-9 h-9 rounded-lg object-cover shrink-0" />
                                             ) : (
-                                                <div className="w-10 h-10 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center">
-                                                    <FileText size={16} className="text-gray-300" />
+                                                <div className="w-9 h-9 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center">
+                                                    <FileText size={14} className="text-gray-300" />
                                                 </div>
                                             )}
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-medium text-gray-900 line-clamp-1">{blog.title}</p>
-                                                <p className="text-xs text-gray-400">{count} {contentTypeLabel}</p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    {shortCount > 0 && (
+                                                        <span className="flex items-center gap-0.5 text-[10px] text-gray-400">
+                                                            <FileText size={9} /> {shortCount}
+                                                        </span>
+                                                    )}
+                                                    {threadCount > 0 && (
+                                                        <span className="flex items-center gap-0.5 text-[10px] text-gray-400">
+                                                            <MessageSquare size={9} /> {threadCount}
+                                                        </span>
+                                                    )}
+                                                    {visualCount > 0 && (
+                                                        <span className="flex items-center gap-0.5 text-[10px] text-gray-400">
+                                                            <Image size={9} /> {visualCount}
+                                                        </span>
+                                                    )}
+                                                    {totalCount === 0 && (
+                                                        <span className="text-[10px] text-gray-300">No content yet</span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </button>
-                                    );
-                                })}
-                            </div>
-                        )
+
+                                        {/* Expanded content */}
+                                        {isExpanded && (
+                                            <div className="bg-gray-50/60 border-t border-gray-100">
+                                                {isLoadingContent ? (
+                                                    <div className="flex items-center justify-center py-8">
+                                                        <Loader2 size={18} className="animate-spin text-gray-300" />
+                                                    </div>
+                                                ) : content?.loaded ? (
+                                                    <div className="px-5 py-3 space-y-4">
+                                                        {/* Short Posts */}
+                                                        {content.shortPosts.length > 0 && (
+                                                            <ContentSection
+                                                                icon={<FileText size={12} className="text-blue-500" />}
+                                                                label="Short Posts"
+                                                                count={content.shortPosts.length}
+                                                            >
+                                                                {content.shortPosts.map(post => {
+                                                                    const scheduled = isScheduled(post.scheduled_posts);
+                                                                    const itemKey = `short_post-${post.id}`;
+                                                                    return (
+                                                                        <div key={post.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="text-xs text-gray-700 line-clamp-3 whitespace-pre-line">{post.content}</p>
+                                                                                <div className="flex items-center gap-2 mt-1">
+                                                                                    {scheduled && <ScheduleBadge />}
+                                                                                    <span className="text-[10px] text-gray-300">{post.content.length} chars</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => scheduleContent(post.id, 'short_post', blog.id)}
+                                                                                disabled={isScheduling}
+                                                                                className="shrink-0 px-2.5 py-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+                                                                            >
+                                                                                {schedulingItemId === itemKey ? <Loader2 size={11} className="animate-spin" /> : 'Schedule'}
+                                                                            </button>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </ContentSection>
+                                                        )}
+
+                                                        {/* Threads */}
+                                                        {content.threads.length > 0 && (
+                                                            <ContentSection
+                                                                icon={<MessageSquare size={12} className="text-purple-500" />}
+                                                                label="Threads"
+                                                                count={content.threads.length}
+                                                            >
+                                                                {content.threads.map(thread => {
+                                                                    const scheduled = isScheduled(thread.scheduled_posts);
+                                                                    const itemKey = `thread-${thread.id}`;
+                                                                    return (
+                                                                        <div key={thread.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="text-xs text-gray-700 line-clamp-2 whitespace-pre-line">{thread.hook}</p>
+                                                                                <div className="flex items-center gap-2 mt-1">
+                                                                                    {scheduled && <ScheduleBadge />}
+                                                                                </div>
+                                                                                <ThreadChain thread={thread} />
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => scheduleContent(thread.id, 'thread', blog.id)}
+                                                                                disabled={isScheduling}
+                                                                                className="shrink-0 px-2.5 py-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+                                                                            >
+                                                                                {schedulingItemId === itemKey ? <Loader2 size={11} className="animate-spin" /> : 'Schedule'}
+                                                                            </button>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </ContentSection>
+                                                        )}
+
+                                                        {/* Visuals */}
+                                                        {content.visuals.length > 0 && (
+                                                            <ContentSection
+                                                                icon={<Image size={12} className="text-pink-500" />}
+                                                                label="Visuals"
+                                                                count={content.visuals.length}
+                                                            >
+                                                                {content.visuals.map(visual => {
+                                                                    const scheduled = isScheduled(visual.scheduled_posts);
+                                                                    const itemKey = `visual-${visual.id}`;
+                                                                    return (
+                                                                        <div key={visual.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
+                                                                            <MiniVisualPreview visual={visual} />
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="text-xs text-gray-700 line-clamp-2 whitespace-pre-line">
+                                                                                    {Array.isArray(visual.content) ? visual.content[0] : visual.content}
+                                                                                </p>
+                                                                                <div className="flex items-center gap-2 mt-1">
+                                                                                    {scheduled && <ScheduleBadge />}
+                                                                                    <span className="text-[10px] text-gray-300">
+                                                                                        {Array.isArray(visual.content) ? `${visual.content.length} slides` : '1 slide'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => scheduleContent(visual.id, 'visual', blog.id)}
+                                                                                disabled={isScheduling}
+                                                                                className="shrink-0 px-2.5 py-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+                                                                            >
+                                                                                {schedulingItemId === itemKey ? <Loader2 size={11} className="animate-spin" /> : 'Schedule'}
+                                                                            </button>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </ContentSection>
+                                                        )}
+
+                                                        {/* Empty state */}
+                                                        {content.shortPosts.length === 0 && content.threads.length === 0 && content.visuals.length === 0 && (
+                                                            <p className="text-xs text-gray-400 text-center py-6">No content for this blog yet.</p>
+                                                        )}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     )}
-
-                    {view === 'choose-content' && (
-                        isLoading ? (
-                            <div className="flex items-center justify-center py-16">
-                                <Loader2 size={24} className="animate-spin text-gray-300" />
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                {chooseType === 'short_post' && (
-                                    shortPosts.length === 0 ? (
-                                        <p className="text-sm text-gray-400 text-center py-16">No short posts for this blog.</p>
-                                    ) : shortPosts.map(post => {
-                                        const scheduled = isScheduled(post.scheduled_posts);
-                                        return (
-                                            <div key={post.id} className="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-all">
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm text-gray-700 line-clamp-3 whitespace-pre-line">{post.content}</p>
-                                                    <div className="flex items-center gap-2 mt-1.5">
-                                                        {scheduled && <ScheduleBadge />}
-                                                        <span className="text-[10px] text-gray-300">{post.content.length} chars</span>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => scheduleContent(post.id, 'short_post')}
-                                                    disabled={isScheduling}
-                                                    className="shrink-0 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
-                                                >
-                                                    {isScheduling ? <Loader2 size={12} className="animate-spin" /> : 'Schedule'}
-                                                </button>
-                                            </div>
-                                        );
-                                    })
-                                )}
-
-                                {chooseType === 'thread' && (
-                                    threads.length === 0 ? (
-                                        <p className="text-sm text-gray-400 text-center py-16">No threads for this blog.</p>
-                                    ) : threads.map(thread => {
-                                        const scheduled = isScheduled(thread.scheduled_posts);
-                                        return (
-                                            <div key={thread.id} className="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-all">
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm text-gray-700 line-clamp-2 whitespace-pre-line">{thread.hook}</p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        {scheduled && <ScheduleBadge />}
-                                                    </div>
-                                                    <ThreadChain thread={thread} />
-                                                </div>
-                                                <button
-                                                    onClick={() => scheduleContent(thread.id, 'thread')}
-                                                    disabled={isScheduling}
-                                                    className="shrink-0 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
-                                                >
-                                                    {isScheduling ? <Loader2 size={12} className="animate-spin" /> : 'Schedule'}
-                                                </button>
-                                            </div>
-                                        );
-                                    })
-                                )}
-
-                                {chooseType === 'visual' && (
-                                    visuals.length === 0 ? (
-                                        <p className="text-sm text-gray-400 text-center py-16">No visuals for this blog.</p>
-                                    ) : visuals.map(visual => {
-                                        const scheduled = isScheduled(visual.scheduled_posts);
-                                        return (
-                                            <div key={visual.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-all">
-                                                <MiniVisualPreview visual={visual} />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm text-gray-700 line-clamp-2 whitespace-pre-line">
-                                                        {Array.isArray(visual.content) ? visual.content[0] : visual.content}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        {scheduled && <ScheduleBadge />}
-                                                        <span className="text-[10px] text-gray-300">
-                                                            {Array.isArray(visual.content) ? `${visual.content.length} slides` : '1 slide'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => scheduleContent(visual.id, 'visual')}
-                                                    disabled={isScheduling}
-                                                    className="shrink-0 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
-                                                >
-                                                    {isScheduling ? <Loader2 size={12} className="animate-spin" /> : 'Schedule'}
-                                                </button>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        )
+                        </>
                     )}
                 </div>
             </div>
@@ -500,28 +611,25 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
 }
 
 // ============================================
-// ACTION CARD
+// CONTENT SECTION
 // ============================================
 
-function ActionCard({ icon, title, description, onChoose }: {
+function ContentSection({ icon, label, count, children }: {
     icon: React.ReactNode;
-    title: string;
-    description: string;
-    onChoose: () => void;
+    label: string;
+    count: number;
+    children: React.ReactNode;
 }) {
     return (
-        <div className="flex flex-col items-center gap-3 p-6 rounded-xl border border-gray-100 bg-gray-50/50">
-            {icon}
-            <div className="text-center">
-                <p className="text-sm font-semibold text-gray-900">{title}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+        <div>
+            <div className="flex items-center gap-1.5 mb-2">
+                {icon}
+                <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
+                <span className="text-[10px] text-gray-300">{count}</span>
             </div>
-            <button
-                onClick={onChoose}
-                className="w-full mt-1 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all"
-            >
-                Choose existing
-            </button>
+            <div className="space-y-1.5">
+                {children}
+            </div>
         </div>
     );
 }
