@@ -1,8 +1,9 @@
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSwipes } from '@/services/repurposeApi';
 import { emotionColors } from '@/components/repurpose/cards/ShortPostCard';
+import { AITextPopup } from '@/components/AITextPopup';
 import type { Swipe } from '@/types';
 
 interface AddShortPostModalProps {
@@ -21,6 +22,7 @@ export default function AddShortPostModal({
     const [selectedSwipe, setSelectedSwipe] = useState<number | null>(null);
     const [swipes, setSwipes] = useState<Swipe[]>([]);
     const [loadingSwipes, setLoadingSwipes] = useState(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         if (!isOpen || swipes.length > 0) return;
@@ -125,14 +127,22 @@ export default function AddShortPostModal({
                             </div>
                         )
                     ) : (
-                        <textarea
-                            value={customContent}
-                            onChange={(e) => setCustomContent(e.target.value)}
-                            placeholder="Write your short post..."
-                            className="w-full min-h-80 rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
-                            rows={18}
-                            style={{ fieldSizing: 'content' } as React.CSSProperties}
-                        />
+                        <>
+                            <textarea
+                                ref={textareaRef}
+                                value={customContent}
+                                onChange={(e) => setCustomContent(e.target.value)}
+                                placeholder="Write your short post..."
+                                className="w-full min-h-80 rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                rows={18}
+                                style={{ fieldSizing: 'content' } as React.CSSProperties}
+                            />
+                            <AITextPopup
+                                textareaRef={textareaRef}
+                                value={customContent}
+                                onChange={setCustomContent}
+                            />
+                        </>
                     )}
                 </div>
 
