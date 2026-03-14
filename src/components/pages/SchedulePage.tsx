@@ -63,8 +63,10 @@ type DayOfWeek =
 
 interface ScheduledPost {
     id: number;
+    ids: number[];          // all API record IDs in this group
     content: string;
-    platform: Platform;
+    platform: Platform;     // primary platform (first in group)
+    platforms: Platform[];  // all platforms
     postType: PostType;
     threadCount?: number;
     scheduledAt: string;
@@ -168,8 +170,10 @@ function mapApiPost(apiPost: ApiScheduledPost): ScheduledPost {
         API_TO_UI_PLATFORM[apiPost.platform] || (apiPost.platform as Platform);
     return {
         id: apiPost.id,
+        ids: [apiPost.id],
         content: getSchedulableContent(apiPost),
         platform: uiPlatform,
+        platforms: [uiPlatform],
         postType: (apiPost.schedulable_type === "thread"
             ? "thread"
             : "short") as PostType,
@@ -183,6 +187,23 @@ function mapApiPost(apiPost: ApiScheduledPost): ScheduledPost {
         postId: apiPost.post_id,
         schedulableId: apiPost.schedulable_id,
     };
+}
+
+function groupScheduledPosts(posts: ScheduledPost[]): ScheduledPost[] {
+    const groups = new Map<string, ScheduledPost>();
+    for (const post of posts) {
+        const key = `${post.schedulableId}-${post.postType}-${post.scheduledAt}`;
+        const existing = groups.get(key);
+        if (existing) {
+            existing.ids.push(...post.ids);
+            if (!existing.platforms.includes(post.platform)) {
+                existing.platforms.push(post.platform);
+            }
+        } else {
+            groups.set(key, { ...post, ids: [...post.ids], platforms: [...post.platforms] });
+        }
+    }
+    return Array.from(groups.values());
 }
 
 // ============================================
@@ -503,7 +524,7 @@ function ScheduledPostCard({
     onDelete,
 }: {
     post: ScheduledPost;
-    onDelete: (id: number) => void;
+    onDelete: (id: number, allIds?: number[]) => void;
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -536,7 +557,9 @@ function ScheduledPostCard({
             <div className="flex-1 min-w-0">
                 {/* Badges row */}
                 <div className="flex items-center gap-2 mb-2">
-                    <PlatformBadge platform={post.platform} />
+                    {post.platforms.map(p => (
+                        <PlatformBadge key={p} platform={p} />
+                    ))}
                     <PostTypeBadge
                         postType={post.postType}
                         threadCount={post.threadCount}
@@ -590,7 +613,7 @@ function ScheduledPostCard({
                         )}
                         <button
                             onClick={() => {
-                                onDelete(post.id);
+                                onDelete(post.id, post.ids);
                                 setMenuOpen(false);
                             }}
                             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
@@ -619,7 +642,9 @@ function PublishedPostCard({ post }: { post: ScheduledPost }) {
             <div className="flex-1 min-w-0">
                 {/* Badges row */}
                 <div className="flex items-center gap-2 mb-2">
-                    <PlatformBadge platform={post.platform} />
+                    {post.platforms.map(p => (
+                        <PlatformBadge key={p} platform={p} />
+                    ))}
                     <PostTypeBadge
                         postType={post.postType}
                         threadCount={post.threadCount}
@@ -986,7 +1011,7 @@ export default function SchedulePage() {
 
         getScheduledPosts()
             .then((data) => {
-                setPosts(data.map(mapApiPost));
+                setPosts(groupScheduledPosts(data.map(mapApiPost)));
             })
             .catch((error) => {
                 console.error(
@@ -1052,7 +1077,7 @@ export default function SchedulePage() {
 
     const filteredPosts = queuePosts.filter((post) => {
         const matchesPlatform =
-            platformFilter === "all" || post.platform === platformFilter;
+            platformFilter === "all" || post.platforms.includes(platformFilter as Platform);
         const matchesType =
             typeFilter === "all" || post.postType === typeFilter;
         return matchesPlatform && matchesType;
@@ -1061,7 +1086,7 @@ export default function SchedulePage() {
     const filteredPublishedPosts = publishedPosts.filter((post) => {
         const matchesPlatform =
             publishedPlatformFilter === "all" ||
-            post.platform === publishedPlatformFilter;
+            post.platforms.includes(publishedPlatformFilter as Platform);
         const matchesType =
             publishedTypeFilter === "all" ||
             post.postType === publishedTypeFilter;
@@ -1069,10 +1094,11 @@ export default function SchedulePage() {
     });
     const publishedGrouped = groupPostsByDate(filteredPublishedPosts);
 
-    const handleDeletePost = async (id: number) => {
+    const handleDeletePost = async (id: number, allIds?: number[]) => {
         try {
-            await deleteScheduledPost(id);
-            setPosts(posts.filter((p) => p.id !== id));
+            const idsToDelete = allIds && allIds.length > 0 ? allIds : [id];
+            await Promise.all(idsToDelete.map(deleteScheduledPost));
+            setPosts(posts.filter((p) => !idsToDelete.includes(p.id)));
             toast.success("Scheduled post removed");
         } catch (error) {
             toast.error("Failed to remove post");
@@ -1848,7 +1874,7 @@ export default function SchedulePage() {
                     onScheduled={() => {
                         setIsPickerOpen(false);
                         getScheduledPosts()
-                            .then((data) => setPosts(data.map(mapApiPost)))
+                            .then((data) => setPosts(groupScheduledPosts(data.map(mapApiPost))))
                             .catch(() => toast.error('Failed to refresh schedule'));
                     }}
                 />

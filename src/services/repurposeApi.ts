@@ -46,6 +46,14 @@ export async function updateShortPost(shortPostId: number, data: {
     return apiRequest<ShortPost>(`/repurpose/short-posts/${shortPostId}`, data as Record<string, unknown>, 'PATCH');
 }
 
+export async function createStandaloneShortPost(data: {
+    content: string;
+    social_account_ids?: number[];
+    scheduled_at?: string;
+}): Promise<{ short_post: ShortPost; scheduled_posts: import('@/types').ScheduledPost[] }> {
+    return apiRequest('/repurpose/short-posts/standalone', data as Record<string, unknown>);
+}
+
 // ============================================
 // THREADS
 // ============================================

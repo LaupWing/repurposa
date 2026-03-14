@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from '@wordpress/element';
 import { X, ChevronDown, ChevronRight, ChevronLeft, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogs } from '@/services/blogApi';
-import { getShortPosts, getThreads, getVisuals } from '@/services/repurposeApi';
+import { getShortPosts, getThreads, getVisuals, createStandaloneShortPost } from '@/services/repurposeApi';
 import { getSocialAccounts } from '@/services/profileApi';
 import { createScheduledPost } from '@/services/scheduleApi';
 import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM } from '@/components/repurpose/modals/schedule-utils';
@@ -398,10 +398,42 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                             {createText.length} chars
                                         </span>
                                         <button
-                                            disabled={!createText.trim() || isScheduling}
-                                            onClick={() => {
-                                                // TODO: create short post via API, then schedule
-                                                toast.info('Create & schedule coming soon');
+                                            disabled={!createText.trim() || isScheduling || platforms.length === 0}
+                                            onClick={async () => {
+                                                if (platforms.length === 0) {
+                                                    toast.error('Select at least one platform');
+                                                    return;
+                                                }
+                                                setIsScheduling(true);
+                                                try {
+                                                    const accountIds = platforms
+                                                        .map(platformId => {
+                                                            const apiPlatform = UI_TO_API_PLATFORM[platformId];
+                                                            return socialAccounts.find(a => a.platform === apiPlatform)?.id;
+                                                        })
+                                                        .filter((id): id is number => id !== undefined);
+
+                                                    await createStandaloneShortPost({
+                                                        content: createText.trim(),
+                                                        social_account_ids: accountIds,
+                                                        scheduled_at: scheduledAt.toISOString(),
+                                                    });
+
+                                                    const platformNames = platforms
+                                                        .map(id => SCHEDULE_PLATFORMS.find(p => p.id === id)?.name)
+                                                        .filter(Boolean)
+                                                        .join(', ');
+                                                    const formattedTime = scheduledAt.toLocaleString(undefined, {
+                                                        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                                                    });
+                                                    toast.success('Post created & scheduled!', { description: `${platformNames} · ${formattedTime}` });
+                                                    onScheduled();
+                                                    onClose();
+                                                } catch {
+                                                    toast.error('Failed to create & schedule post');
+                                                } finally {
+                                                    setIsScheduling(false);
+                                                }
                                             }}
                                             className="px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                         >
