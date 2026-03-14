@@ -65,8 +65,7 @@ vi.mock('@/components/repurpose/modals', () => ({
 }));
 
 vi.mock('@/components/repurpose/modals/VisualPreviewModal', () => ({
-    VisualShortPostPreviewModal: () => <div data-testid="visual-sp-preview-modal" />,
-    VisualThreadPreviewModal: () => <div data-testid="visual-thread-preview-modal" />,
+    VisualPreviewModal: () => <div data-testid="visual-preview-modal" />,
 }));
 
 vi.mock('@/components/GeneratingOverlay', () => ({

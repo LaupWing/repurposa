@@ -30,6 +30,7 @@ import {
     Pencil,
     Check,
     Settings,
+    Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProfileStore } from '@/store/profileStore';
@@ -94,12 +95,12 @@ interface EngagementStats {
     bookmarks: number;
 }
 
-interface BaseVisualPreviewModalProps {
+interface VisualPreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
-    content: string | string[];
+    content: string[];
     blogId?: number;
-    sourceType?: 'short_post' | 'thread';
+    sourceType: 'short_post' | 'thread';
     sourceId?: number;
     visualId?: number;
     initialDescription?: string;
@@ -668,11 +669,11 @@ function generateRandomStats(): EngagementStats {
     };
 }
 
-function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, visualId, initialDescription, initialSettings, onSaved }: BaseVisualPreviewModalProps) {
+export function VisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, sourceId, visualId, initialDescription, initialSettings, onSaved }: VisualPreviewModalProps) {
     const { user, socialConnections } = useProfileStore();
     const xConnection = socialConnections.find((c) => c.platform === 'twitter');
 
-    const [editablePosts, setEditablePosts] = useState<string[]>(() => Array.isArray(content) ? [...content] : [content]);
+    const [editablePosts, setEditablePosts] = useState<string[]>(() => [...content]);
     const [editingPostIndex, setEditingPostIndex] = useState<number | null>(null);
     const [editDraft, setEditDraft] = useState('');
     const [currentPostIndex, setCurrentPostIndex] = useState(0);
@@ -698,7 +699,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     const [cropPosition, setCropPosition] = useState<Point>({ x: 0, y: 0 });
     const [cropZoom, setCropZoom] = useState(1);
     const [pendingCroppedArea, setPendingCroppedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-    const defaultDescription = Array.isArray(content) ? content[0] : content;
+    const defaultDescription = content[0] ?? '';
     const [description, setDescription] = useState(initialDescription ?? defaultDescription);
     const [modalTab, setModalTab] = useState<'visual' | 'description'>('visual');
 
@@ -706,7 +707,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     useEffect(() => {
         if (!isOpen) return;
         setCurrentPostIndex(0);
-        setEditablePosts(Array.isArray(content) ? [...content] : [content]);
+        setEditablePosts([...content]);
         setEditingPostIndex(null);
         setEditDraft('');
         setTextSizes(
@@ -729,7 +730,7 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
         setCropPosition({ x: 0, y: 0 });
         setCropZoom(1);
         setPendingCroppedArea(null);
-        setDescription(initialDescription ?? (Array.isArray(content) ? content[0] : content));
+        setDescription(initialDescription ?? (content[0] ?? ''));
         if (initialSettings?.stats) {
             setStats(initialSettings.stats);
         } else {
@@ -1025,59 +1026,109 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                             </div>
 
                             {/* Preview */}
-                            <div className="flex items-center justify-center gap-3">
-                                {/* Left chevron */}
-                                {editablePosts.length > 1 ? (
-                                    <button
-                                        onClick={() => setCurrentPostIndex((i) => Math.max(0, i - 1))}
-                                        disabled={currentPostIndex === 0}
-                                        className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        <ChevronLeft size={22} />
-                                    </button>
-                                ) : null}
-
+                            <div className="flex items-center justify-center">
                                 {/* Card + badge + text size */}
                                 <div className="relative">
-                                    {editablePosts.length > 1 && (
-                                        <div className="absolute -top-3 right-3 z-10 rounded-full bg-black/70 px-2.5 py-0.5 text-xs font-medium text-white shadow-sm">
-                                            Post {currentPostIndex + 1} of {editablePosts.length}
-                                        </div>
-                                    )}
-                                    <div className="relative group">
-                                        <div ref={editingPostIndex === currentPostIndex ? undefined : previewRef}>
-                                            <VisualPreview
-                                                content={editablePosts[currentPostIndex]}
-                                                displayName={displayName}
-                                                handle={handle}
-                                                avatarUrl={avatarUrl}
-                                                avatarCrop={avatarCrop}
-                                                theme={theme}
-                                                style={style}
-                                                stats={stats}
-                                                roundedCorners={corners === 'rounded'}
-                                                gradient={gradient}
-                                                fontFamily={FONT_PRESETS.find(f => f.id === fontFamily)?.family}
-                                                textSize={textSizes[currentPostIndex] || null}
-                                                onOverflowChange={setIsCurrentPostOverflowing}
-                                                isEditing={editingPostIndex === currentPostIndex}
-                                                editValue={editDraft}
-                                                onEditChange={setEditDraft}
-                                            />
-                                        </div>
-                                        {editingPostIndex !== currentPostIndex && (
-                                            <div
-                                                className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors rounded-2xl cursor-pointer"
+                                    <div className="absolute -top-3 right-3 z-10 flex items-center gap-1.5">
+                                        {editablePosts.length > 1 && (
+                                            <button
                                                 onClick={() => {
-                                                    setEditDraft(editablePosts[currentPostIndex]);
-                                                    setEditingPostIndex(currentPostIndex);
+                                                    if (editablePosts.length <= 1) return;
+                                                    setEditablePosts(prev => prev.filter((_, i) => i !== currentPostIndex));
+                                                    setTextSizes(prev => {
+                                                        const next: Record<number, TextSize> = {};
+                                                        for (const [k, v] of Object.entries(prev)) {
+                                                            const idx = Number(k);
+                                                            if (idx < currentPostIndex) next[idx] = v;
+                                                            else if (idx > currentPostIndex) next[idx - 1] = v;
+                                                        }
+                                                        return next;
+                                                    });
+                                                    setCurrentPostIndex(i => Math.min(i, editablePosts.length - 2));
+                                                    setEditingPostIndex(null);
                                                 }}
+                                                className="h-5 w-5 flex items-center justify-center rounded-full bg-red-500/80 text-white hover:bg-red-600 transition-colors"
+                                                title="Delete this slide"
                                             >
-                                                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Pencil size={14} className="text-gray-700" />
-                                                    <span className="text-sm font-medium text-gray-700">Edit text</span>
-                                                </div>
+                                                <Trash2 size={10} />
+                                            </button>
+                                        )}
+                                        <div className="rounded-full bg-black/70 px-2.5 py-0.5 text-xs font-medium text-white shadow-sm">
+                                            Slide {currentPostIndex + 1} of {editablePosts.length}
+                                        </div>
+                                    </div>
+                                    <div className="relative">
+                                        {/* Preview + edit overlay */}
+                                        <div className="group">
+                                            <div ref={editingPostIndex === currentPostIndex ? undefined : previewRef}>
+                                                <VisualPreview
+                                                    content={editablePosts[currentPostIndex]}
+                                                    displayName={displayName}
+                                                    handle={handle}
+                                                    avatarUrl={avatarUrl}
+                                                    avatarCrop={avatarCrop}
+                                                    theme={theme}
+                                                    style={style}
+                                                    stats={stats}
+                                                    roundedCorners={corners === 'rounded'}
+                                                    gradient={gradient}
+                                                    fontFamily={FONT_PRESETS.find(f => f.id === fontFamily)?.family}
+                                                    textSize={textSizes[currentPostIndex] || null}
+                                                    onOverflowChange={setIsCurrentPostOverflowing}
+                                                    isEditing={editingPostIndex === currentPostIndex}
+                                                    editValue={editDraft}
+                                                    onEditChange={setEditDraft}
+                                                />
                                             </div>
+                                            {editingPostIndex !== currentPostIndex && (
+                                                <div
+                                                    className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors rounded-2xl cursor-pointer"
+                                                    onClick={() => {
+                                                        setEditDraft(editablePosts[currentPostIndex]);
+                                                        setEditingPostIndex(currentPostIndex);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Pencil size={14} className="text-gray-700" />
+                                                        <span className="text-sm font-medium text-gray-700">Edit text</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {/* Left chevron */}
+                                        {editablePosts.length > 1 && (
+                                            <button
+                                                onClick={() => setCurrentPostIndex((i) => Math.max(0, i - 1))}
+                                                disabled={currentPostIndex === 0}
+                                                className="absolute -left-4 top-1/2 -translate-x-full -translate-y-1/2 h-10 w-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors z-20"
+                                            >
+                                                <ChevronLeft size={22} />
+                                            </button>
+                                        )}
+                                        {/* Right chevron */}
+                                        {editablePosts.length > 1 && (
+                                            <button
+                                                onClick={() => setCurrentPostIndex((i) => Math.min(editablePosts.length - 1, i + 1))}
+                                                disabled={currentPostIndex === editablePosts.length - 1}
+                                                className="absolute -right-4 top-1/2 translate-x-full -translate-y-1/2 h-10 w-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors z-20"
+                                            >
+                                                <ChevronRight size={22} />
+                                            </button>
+                                        )}
+                                        {/* Add slide — only on last slide */}
+                                        {currentPostIndex === editablePosts.length - 1 && (
+                                            <button
+                                                onClick={() => {
+                                                    setEditablePosts(prev => [...prev, '']);
+                                                    setCurrentPostIndex(editablePosts.length);
+                                                    setEditDraft('');
+                                                    setEditingPostIndex(editablePosts.length);
+                                                }}
+                                                className="absolute -right-4 top-1/2 translate-x-full -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 shadow-sm transition-colors z-20"
+                                                title="Add slide"
+                                            >
+                                                <Plus size={14} />
+                                            </button>
                                         )}
                                     </div>
                                     {/* Bottom bar: edit controls or text size toggle */}
@@ -1157,16 +1208,6 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
                                     )}
                                 </div>
 
-                                {/* Right chevron */}
-                                {editablePosts.length > 1 ? (
-                                    <button
-                                        onClick={() => setCurrentPostIndex((i) => Math.min(editablePosts.length - 1, i + 1))}
-                                        disabled={currentPostIndex === editablePosts.length - 1}
-                                        className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        <ChevronRight size={22} />
-                                    </button>
-                                ) : null}
                             </div>
 
                         </>
@@ -1231,22 +1272,3 @@ function BaseVisualPreviewModal({ isOpen, onClose, content, blogId, sourceType, 
     );
 }
 
-// ============================================
-// TYPED WRAPPER EXPORTS
-// ============================================
-
-interface VisualShortPostPreviewModalProps extends Omit<BaseVisualPreviewModalProps, 'content' | 'sourceType'> {
-    content: string;
-}
-
-export function VisualShortPostPreviewModal(props: VisualShortPostPreviewModalProps) {
-    return <BaseVisualPreviewModal {...props} sourceType="short_post" />;
-}
-
-interface VisualThreadPreviewModalProps extends Omit<BaseVisualPreviewModalProps, 'content' | 'sourceType'> {
-    content: string[];
-}
-
-export function VisualThreadPreviewModal(props: VisualThreadPreviewModalProps) {
-    return <BaseVisualPreviewModal {...props} sourceType="thread" />;
-}

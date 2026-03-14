@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import type { ShortPost, ThreadItem, Visual } from '@/types';
 import { GeneratingOverlay } from '@/components/GeneratingOverlay';
-import { VisualShortPostPreviewModal, VisualThreadPreviewModal } from './modals/VisualPreviewModal';
+import { VisualPreviewModal } from './modals/VisualPreviewModal';
 import ShortPostCard from './cards/ShortPostCard';
 import ThreadCard from './cards/ThreadCard';
 import VisualCard from './cards/VisualCard';
@@ -284,31 +284,18 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                         </div>
 
                         {vis.viewingVisual && (
-                            vis.viewingVisual.source_type === 'thread' && Array.isArray(vis.viewingVisual.content) ? (
-                                <VisualThreadPreviewModal
-                                    isOpen={true}
-                                    onClose={() => vis.setViewingVisual(null)}
-                                    content={vis.viewingVisual.content}
-                                    blogId={blogId}
-                                    sourceId={vis.viewingVisual.source_id}
-                                    visualId={vis.viewingVisual.id}
-                                    initialDescription={vis.viewingVisual.description}
-                                    initialSettings={vis.viewingVisual.settings}
-                                    onSaved={vis.onVisualUpdated}
-                                />
-                            ) : (
-                                <VisualShortPostPreviewModal
-                                    isOpen={true}
-                                    onClose={() => vis.setViewingVisual(null)}
-                                    content={Array.isArray(vis.viewingVisual.content) ? vis.viewingVisual.content[0] : vis.viewingVisual.content}
-                                    blogId={blogId}
-                                    sourceId={vis.viewingVisual.source_id}
-                                    visualId={vis.viewingVisual.id}
-                                    initialDescription={vis.viewingVisual.description}
-                                    initialSettings={vis.viewingVisual.settings}
-                                    onSaved={vis.onVisualUpdated}
-                                />
-                            )
+                            <VisualPreviewModal
+                                isOpen={true}
+                                onClose={() => vis.setViewingVisual(null)}
+                                content={Array.isArray(vis.viewingVisual.content) ? vis.viewingVisual.content : [vis.viewingVisual.content]}
+                                sourceType={vis.viewingVisual.source_type}
+                                blogId={blogId}
+                                sourceId={vis.viewingVisual.source_id}
+                                visualId={vis.viewingVisual.id}
+                                initialDescription={vis.viewingVisual.description}
+                                initialSettings={vis.viewingVisual.settings}
+                                onSaved={vis.onVisualUpdated}
+                            />
                         )}
 
                         {sourcePickerModal}

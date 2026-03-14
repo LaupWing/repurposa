@@ -23,7 +23,7 @@ import { Tooltip } from '@wordpress/components';
 import type { ShortPostSchedule, Visual, MediaItem } from '@/types';
 import { AITextPopup } from '@/components/AITextPopup';
 import ImagePickerModal from '@/components/ImagePickerModal';
-import { VisualShortPostPreviewModal, VisualPreview, GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
+import { VisualPreviewModal, VisualPreview, GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
 import { ConfirmDeleteModal } from '@/components/repurpose/modals';
 import { ImageGrid } from './ImageGrid';
 import { createElement } from '@wordpress/element';
@@ -622,10 +622,11 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                     setShowCtaImagePicker(false);
                 }}
             />
-            <VisualShortPostPreviewModal
+            <VisualPreviewModal
                 isOpen={showVisualModal}
                 onClose={() => setShowVisualModal(false)}
-                content={pattern.content}
+                content={[pattern.content]}
+                sourceType="short_post"
                 blogId={blogId}
                 sourceId={pattern.id}
                 onSaved={(visual) => {

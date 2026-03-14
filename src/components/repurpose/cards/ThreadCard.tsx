@@ -23,7 +23,7 @@ import { Tooltip } from '@wordpress/components';
 import type { ThreadItem, Visual } from '@/types';
 import { AITextPopup } from '@/components/AITextPopup';
 import ImagePickerModal from '@/components/ImagePickerModal';
-import { VisualThreadPreviewModal } from '@/components/repurpose/modals/VisualPreviewModal';
+import { VisualPreviewModal } from '@/components/repurpose/modals/VisualPreviewModal';
 import { ConfirmDeleteModal } from '@/components/repurpose/modals';
 import { emotionColors } from './ShortPostCard';
 import { ImageGrid } from './ImageGrid';
@@ -710,10 +710,11 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                 </div>
             )}
 
-            <VisualThreadPreviewModal
+            <VisualPreviewModal
                 isOpen={showVisualModal}
                 onClose={() => setShowVisualModal(false)}
                 content={thread.posts.map(p => p.content)}
+                sourceType="thread"
                 blogId={blogId}
                 sourceId={thread.id}
                 onSaved={(visual) => {

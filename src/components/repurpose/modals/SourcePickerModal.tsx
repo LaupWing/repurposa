@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import type { ThreadItem, Visual } from '@/types';
 import type { ShortPostPattern } from '@/components/repurpose/cards/ShortPostCard';
-import { VisualShortPostPreviewModal, VisualThreadPreviewModal } from './VisualPreviewModal';
+import { VisualPreviewModal } from './VisualPreviewModal';
 
 interface VisualSource {
     type: 'short_post' | 'thread';
@@ -170,25 +170,15 @@ export default function SourcePickerModal({
             )}
 
             {creatingSource && (
-                creatingSource.type === 'thread' && Array.isArray(creatingSource.content) ? (
-                    <VisualThreadPreviewModal
-                        isOpen={true}
-                        onClose={onCreatingSourceClose}
-                        content={creatingSource.content}
-                        blogId={blogId}
-                        sourceId={creatingSource.id}
-                        onSaved={onVisualSaved}
-                    />
-                ) : (
-                    <VisualShortPostPreviewModal
-                        isOpen={true}
-                        onClose={onCreatingSourceClose}
-                        content={typeof creatingSource.content === 'string' ? creatingSource.content : creatingSource.content[0]}
-                        blogId={blogId}
-                        sourceId={creatingSource.id}
-                        onSaved={onVisualSaved}
-                    />
-                )
+                <VisualPreviewModal
+                    isOpen={true}
+                    onClose={onCreatingSourceClose}
+                    content={Array.isArray(creatingSource.content) ? creatingSource.content : [creatingSource.content]}
+                    sourceType={creatingSource.type}
+                    blogId={blogId}
+                    sourceId={creatingSource.id}
+                    onSaved={onVisualSaved}
+                />
             )}
         </>
     );
