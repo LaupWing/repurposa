@@ -167,7 +167,9 @@ export default function SchedulePostModal({
                     setSelectedSlotIndex(init.slotIndex);
                     setSlotPage(init.slotPage);
                     setSelectedPlatforms(init.platforms);
-                    setInitialSelection({ slotIndex: init.slotIndex, platforms: [...init.platforms] });
+                    // Only set initialSelection when editing an already-scheduled post
+                    const hasPending = (post.scheduled_posts || []).some((sp) => sp.status === 'pending');
+                    setInitialSelection(hasPending ? { slotIndex: init.slotIndex, platforms: [...init.platforms] } : null);
                 } else {
                     setUpcomingSlots([]);
                     setSelectedPlatforms(['x']);
