@@ -42,6 +42,7 @@ import type { ScheduledPost as ApiScheduledPost } from "@/types";
 import { useProfileStore } from "@/store/profileStore";
 import { TimezonePicker } from "@/components/TimezonePicker";
 import SlotContentPicker from "@/components/schedule/SlotContentPicker";
+import ScheduledPostDetail from "@/components/schedule/ScheduledPostDetail";
 import type { SchedulePlatform } from "@/components/repurpose/modals/schedule-utils";
 
 // ============================================
@@ -522,9 +523,11 @@ function StatusIndicator({ status }: { status: PostStatus }) {
 function ScheduledPostCard({
     post,
     onDelete,
+    onClick,
 }: {
     post: ScheduledPost;
     onDelete: (id: number, allIds?: number[]) => void;
+    onClick?: () => void;
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -545,7 +548,10 @@ function ScheduledPostCard({
     }, [menuOpen]);
 
     return (
-        <div className="group flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+        <div
+            onClick={onClick}
+            className="group flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
+        >
             {/* Time column */}
             <div className="shrink-0 w-16 pt-0.5">
                 <span className="text-sm font-semibold text-gray-900">
@@ -572,13 +578,14 @@ function ScheduledPostCard({
                     {post.content}
                 </p>
 
-                {/* Source blog */}
-                {post.blogTitle && (
-                    <p className="text-xs text-gray-400">
-                        From:{" "}
-                        <span className="text-gray-500">{post.blogTitle}</span>
-                    </p>
-                )}
+                {/* Source */}
+                <p className="text-xs text-gray-400">
+                    {post.blogTitle ? (
+                        <>From: <span className="text-gray-500">{post.blogTitle}</span></>
+                    ) : (
+                        <span className="text-gray-400">Standalone</span>
+                    )}
+                </p>
             </div>
 
             {/* Actions */}
@@ -657,13 +664,14 @@ function PublishedPostCard({ post }: { post: ScheduledPost }) {
                     {post.content}
                 </p>
 
-                {/* Source blog */}
-                {post.blogTitle && (
-                    <p className="text-xs text-gray-400">
-                        From:{" "}
-                        <span className="text-gray-500">{post.blogTitle}</span>
-                    </p>
-                )}
+                {/* Source */}
+                <p className="text-xs text-gray-400">
+                    {post.blogTitle ? (
+                        <>From: <span className="text-gray-500">{post.blogTitle}</span></>
+                    ) : (
+                        <span className="text-gray-400">Standalone</span>
+                    )}
+                </p>
             </div>
 
             {/* View link */}
@@ -984,6 +992,7 @@ export default function SchedulePage() {
     const [isPickerOpen, setIsPickerOpen] = useState(false);
     const [pickerSlotDate, setPickerSlotDate] = useState<Date | null>(null);
     const [pickerSlotPlatforms, setPickerSlotPlatforms] = useState<Platform[]>([]);
+    const [detailPost, setDetailPost] = useState<ScheduledPost | null>(null);
 
     // Map social connections to UI platform names
     const connectedPlatforms: Platform[] = socialConnections
@@ -1422,6 +1431,7 @@ export default function SchedulePage() {
                                                                 key={entry.post.id}
                                                                 post={entry.post}
                                                                 onDelete={handleDeletePost}
+                                                                onClick={() => setDetailPost(entry.post!)}
                                                             />
                                                         ) : (
                                                             <EmptySlotCard
@@ -1877,6 +1887,21 @@ export default function SchedulePage() {
                             .then((data) => setPosts(groupScheduledPosts(data.map(mapApiPost))))
                             .catch(() => toast.error('Failed to refresh schedule'));
                     }}
+                />
+            )}
+
+            {/* Scheduled Post Detail Modal */}
+            {detailPost && (
+                <ScheduledPostDetail
+                    isOpen={true}
+                    onClose={() => setDetailPost(null)}
+                    onUpdated={() => {
+                        setDetailPost(null);
+                        getScheduledPosts()
+                            .then((data) => setPosts(groupScheduledPosts(data.map(mapApiPost))))
+                            .catch(() => toast.error('Failed to refresh schedule'));
+                    }}
+                    post={detailPost}
                 />
             )}
         </div>
