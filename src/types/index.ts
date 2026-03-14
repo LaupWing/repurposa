@@ -130,6 +130,8 @@ export interface ShortPost {
     metadata: ShortPostMetadata;
     scheduled_posts?: ShortPostSchedule[];
     visuals?: Visual[];
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface GenerateShortPostsResponse {

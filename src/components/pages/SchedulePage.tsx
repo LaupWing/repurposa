@@ -23,6 +23,7 @@ import {
     Loader2,
     CheckCircle,
     ExternalLink,
+    FileText,
 } from "lucide-react";
 import {
     RiTwitterXFill,
@@ -38,7 +39,8 @@ import {
     getScheduledPosts,
     deleteScheduledPost,
 } from "@/services/scheduleApi";
-import type { ScheduledPost as ApiScheduledPost } from "@/types";
+import type { ScheduledPost as ApiScheduledPost, ShortPost as ApiShortPost } from "@/types";
+import { getStandaloneShortPosts, deleteShortPost, updateShortPost } from "@/services/repurposeApi";
 import { useProfileStore } from "@/store/profileStore";
 import { TimezonePicker } from "@/components/TimezonePicker";
 import SlotContentPicker from "@/components/schedule/SlotContentPicker";
@@ -52,7 +54,7 @@ import type { SchedulePlatform } from "@/components/repurpose/modals/schedule-ut
 type Platform = "x" | "linkedin" | "threads" | "instagram" | "facebook";
 type PostType = "short" | "thread";
 type PostStatus = "pending" | "publishing" | "published" | "failed";
-type TabType = "queue" | "published" | "times";
+type TabType = "queue" | "published" | "drafts" | "times";
 type DayOfWeek =
     | "monday"
     | "tuesday"
@@ -984,6 +986,8 @@ export default function SchedulePage() {
     const [isPublishedFilterOpen, setIsPublishedFilterOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [weeksAhead, setWeeksAhead] = useState(2);
+    const [drafts, setDrafts] = useState<ApiShortPost[]>([]);
+    const [isLoadingDrafts, setIsLoadingDrafts] = useState(false);
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const filterRef = useRef<HTMLDivElement>(null);
     const publishedFilterRef = useRef<HTMLDivElement>(null);
@@ -1031,6 +1035,12 @@ export default function SchedulePage() {
             .finally(() => {
                 setIsLoadingPosts(false);
             });
+
+        setIsLoadingDrafts(true);
+        getStandaloneShortPosts()
+            .then(setDrafts)
+            .catch(() => {})
+            .finally(() => setIsLoadingDrafts(false));
     }, []);
 
     // Close filter dropdown on outside click
@@ -1219,6 +1229,28 @@ export default function SchedulePage() {
                 >
                     <CheckCircle size={16} />
                     Published
+                </button>
+                <button
+                    onClick={() => setActiveTab("drafts")}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                        activeTab === "drafts"
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                    <FileText size={16} />
+                    Drafts
+                    {drafts.length > 0 && (
+                        <span
+                            className={`px-1.5 py-0.5 text-xs rounded-full ${
+                                activeTab === "drafts"
+                                    ? "bg-blue-100 text-blue-600"
+                                    : "bg-gray-100 text-gray-500"
+                            }`}
+                        >
+                            {drafts.length}
+                        </span>
+                    )}
                 </button>
                 <button
                     onClick={() => setActiveTab("times")}
@@ -1650,6 +1682,81 @@ export default function SchedulePage() {
                                 Posts that have been successfully published to
                                 your social accounts will appear here.
                             </p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ============ DRAFTS TAB ============ */}
+            {activeTab === "drafts" && (
+                <div>
+                    {isLoadingDrafts ? (
+                        <div className="space-y-3 animate-pulse">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="h-20 bg-gray-100 rounded-lg" />
+                            ))}
+                        </div>
+                    ) : drafts.length === 0 ? (
+                        <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
+                            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-5">
+                                <FileText size={28} className="text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                No drafts yet
+                            </h3>
+                            <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                                Standalone posts you create from the schedule will appear here when they&apos;re not scheduled.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {drafts.map((draft) => {
+                                const hasSchedule = draft.scheduled_posts && draft.scheduled_posts.length > 0;
+                                return (
+                                    <div
+                                        key={draft.id}
+                                        className="group flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                                    >
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                                    <FileText size={11} />
+                                                    Short Post
+                                                </span>
+                                                {hasSchedule && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600">
+                                                        <Clock size={10} />
+                                                        Scheduled
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-gray-700 leading-relaxed line-clamp-2 mb-1">
+                                                {draft.content}
+                                            </p>
+                                            <span className="text-xs text-gray-400">
+                                                Created {draft.created_at ? new Date(draft.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                                            </span>
+                                        </div>
+                                        <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await deleteShortPost(draft.id);
+                                                        setDrafts(prev => prev.filter(d => d.id !== draft.id));
+                                                        toast.success('Draft deleted');
+                                                    } catch {
+                                                        toast.error('Failed to delete draft');
+                                                    }
+                                                }}
+                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
