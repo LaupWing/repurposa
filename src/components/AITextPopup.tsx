@@ -174,6 +174,11 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
             clearTimeout(timeout);
             timeout = setTimeout(checkSelection, 50);
         };
+        const handleDocumentMouseUp = () => {
+            if (status !== 'idle') return;
+            clearTimeout(timeout);
+            timeout = setTimeout(checkSelection, 50);
+        };
         const handleKeyUp = (e: KeyboardEvent) => {
             if (status !== 'idle') return;
             if (e.shiftKey) {
@@ -188,6 +193,10 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (status !== 'idle') return;
+            if (e.key === 'a' && (e.metaKey || e.ctrlKey)) {
+                clearTimeout(timeout);
+                timeout = setTimeout(checkSelection, 50);
+            }
             if (e.key === 'Backspace' || e.key === 'Delete') {
                 setHasSelection(false);
             }
@@ -207,6 +216,7 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
         textarea.addEventListener('mousedown', handleMouseDown);
         textarea.addEventListener('keyup', handleKeyUp);
         textarea.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('mouseup', handleDocumentMouseUp);
         document.addEventListener('mousedown', handleClickOutside);
 
         return () => {
@@ -215,6 +225,7 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
             textarea.removeEventListener('mousedown', handleMouseDown);
             textarea.removeEventListener('keyup', handleKeyUp);
             textarea.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('mouseup', handleDocumentMouseUp);
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [textareaRef, status, dismiss]);
