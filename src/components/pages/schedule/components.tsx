@@ -436,7 +436,7 @@ export function DayRow({
             ...schedule,
             slots: [
                 ...schedule.slots,
-                { id: generateSlotId(), time: "09:00", platforms: ["x"] },
+                { id: generateSlotId(), time: "09:00", platforms: connectedPlatforms?.length ? [...connectedPlatforms] : ["x"] },
             ],
         });
     };
