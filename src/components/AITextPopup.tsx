@@ -140,71 +140,42 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
         resetAI();
     }, [resetAI]);
 
-    // Selection detection
+    // Selection detection via selectionchange
     useEffect(() => {
         const textarea = textareaRef.current;
         if (!textarea) return;
 
-        let timeout: ReturnType<typeof setTimeout>;
+        const computePosition = (selectionStart: number) => {
+            const rect = textarea.getBoundingClientRect();
+            const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20;
+            const paddingTop = parseFloat(getComputedStyle(textarea).paddingTop) || 0;
 
-        const checkSelection = () => {
+            const textBefore = textarea.value.substring(0, selectionStart);
+            const lines = textBefore.split('\n');
+            const charPerLine = Math.floor(textarea.clientWidth / (parseFloat(getComputedStyle(textarea).fontSize) * 0.6)) || 80;
+            let totalLines = 0;
+            for (const line of lines) {
+                totalLines += Math.max(1, Math.ceil(line.length / charPerLine));
+            }
+            const lineOffset = (totalLines - 1) * lineHeight;
+
+            return {
+                top: rect.top + paddingTop + lineOffset - textarea.scrollTop - 44,
+                left: rect.left,
+            };
+        };
+
+        const handleSelectionChange = () => {
+            if (status !== 'idle') return;
+            if (document.activeElement !== textarea) return;
+
             const { selectionStart, selectionEnd } = textarea;
-            if (selectionStart !== selectionEnd) {
+            const selectedText = textarea.value.slice(selectionStart, selectionEnd);
+            if (selectionStart !== selectionEnd && selectedText.trim()) {
                 setSelection({ start: selectionStart, end: selectionEnd });
-
-                const rect = textarea.getBoundingClientRect();
-                const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20;
-                const paddingTop = parseFloat(getComputedStyle(textarea).paddingTop) || 0;
-
-                const textBefore = textarea.value.substring(0, selectionStart);
-                const lines = textBefore.split('\n');
-                const charPerLine = Math.floor(textarea.clientWidth / (parseFloat(getComputedStyle(textarea).fontSize) * 0.6)) || 80;
-                let totalLines = 0;
-                for (const line of lines) {
-                    totalLines += Math.max(1, Math.ceil(line.length / charPerLine));
-                }
-                const lineOffset = (totalLines - 1) * lineHeight;
-
-                setPosition({
-                    top: rect.top + paddingTop + lineOffset - textarea.scrollTop - 44,
-                    left: rect.left,
-                });
-
+                setPosition(computePosition(selectionStart));
                 setHasSelection(true);
-            } else if (status === 'idle') {
-                setHasSelection(false);
-            }
-        };
-
-        const handleMouseUp = () => {
-            if (status !== 'idle') return;
-            clearTimeout(timeout);
-            timeout = setTimeout(checkSelection, 50);
-        };
-        const handleDocumentMouseUp = () => {
-            if (status !== 'idle') return;
-            clearTimeout(timeout);
-            timeout = setTimeout(checkSelection, 50);
-        };
-        const handleKeyUp = (e: KeyboardEvent) => {
-            if (status !== 'idle') return;
-            if (e.shiftKey) {
-                clearTimeout(timeout);
-                timeout = setTimeout(checkSelection, 50);
-            }
-        };
-        const handleMouseDown = () => {
-            if (status !== 'idle') return;
-            setHasSelection(false);
-        };
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (status !== 'idle') return;
-            if (e.key === 'a' && (e.metaKey || e.ctrlKey)) {
-                clearTimeout(timeout);
-                timeout = setTimeout(checkSelection, 50);
-            }
-            if (e.key === 'Backspace' || e.key === 'Delete') {
+            } else {
                 setHasSelection(false);
             }
         };
@@ -212,26 +183,16 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
         const handleClickOutside = (e: MouseEvent) => {
             const target = e.target as Node;
             if (popupRef.current?.contains(target)) return;
-            // In preview/loading, clicking anywhere outside the popup dismisses
             if (status !== 'idle' || !textarea.contains(target)) {
                 dismiss();
             }
         };
 
-        textarea.addEventListener('mouseup', handleMouseUp);
-        textarea.addEventListener('mousedown', handleMouseDown);
-        textarea.addEventListener('keyup', handleKeyUp);
-        textarea.addEventListener('keydown', handleKeyDown);
-        document.addEventListener('mouseup', handleDocumentMouseUp);
+        document.addEventListener('selectionchange', handleSelectionChange);
         document.addEventListener('mousedown', handleClickOutside);
 
         return () => {
-            clearTimeout(timeout);
-            textarea.removeEventListener('mouseup', handleMouseUp);
-            textarea.removeEventListener('mousedown', handleMouseDown);
-            textarea.removeEventListener('keyup', handleKeyUp);
-            textarea.removeEventListener('keydown', handleKeyDown);
-            document.removeEventListener('mouseup', handleDocumentMouseUp);
+            document.removeEventListener('selectionchange', handleSelectionChange);
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [textareaRef, status, dismiss]);
