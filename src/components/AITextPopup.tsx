@@ -32,9 +32,16 @@ interface DiffWord {
     text: string;
 }
 
+function tokenize(text: string): string[] {
+    // Split into words and newline tokens, preserving line breaks
+    return text.split(/(\n)/).flatMap(part =>
+        part === '\n' ? ['\n'] : part.split(/[ \t]+/).filter(Boolean)
+    );
+}
+
 function computeWordDiff(oldText: string, newText: string): DiffWord[] {
-    const oldWords = oldText.split(/\s+/).filter(Boolean);
-    const newWords = newText.split(/\s+/).filter(Boolean);
+    const oldWords = tokenize(oldText);
+    const newWords = tokenize(newText);
 
     const m = oldWords.length;
     const n = newWords.length;
@@ -387,21 +394,35 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
                 <div className="bg-white border border-gray-200 rounded-xl shadow-xl max-w-lg">
                     {/* Inline diff */}
                     <div className="px-4 py-3 max-h-60 overflow-y-auto">
-                        <p className="text-sm leading-relaxed">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
                             {diffWords.map((word, i) => {
+                                const isNewline = word.text === '\n';
+                                const prevIsNewline = i > 0 && diffWords[i - 1].text === '\n';
+                                const sep = i === 0 || isNewline || prevIsNewline ? '' : ' ';
+
+                                if (isNewline) {
+                                    if (word.type === 'removed') {
+                                        return <span key={i} className="bg-red-100 text-red-700">{'↵\n'}</span>;
+                                    }
+                                    if (word.type === 'added') {
+                                        return <span key={i} className="bg-green-100 text-green-700">{'↵\n'}</span>;
+                                    }
+                                    return <br key={i} />;
+                                }
+
                                 if (word.type === 'equal') {
-                                    return <span key={i}>{i > 0 ? ' ' : ''}{word.text}</span>;
+                                    return <span key={i}>{sep}{word.text}</span>;
                                 }
                                 if (word.type === 'removed') {
                                     return (
                                         <span key={i} className="bg-red-100 text-red-700 line-through decoration-red-400/70">
-                                            {i > 0 ? ' ' : ''}{word.text}
+                                            {sep}{word.text}
                                         </span>
                                     );
                                 }
                                 return (
                                     <span key={i} className="bg-green-100 text-green-700">
-                                        {i > 0 ? ' ' : ''}{word.text}
+                                        {sep}{word.text}
                                     </span>
                                 );
                             })}
