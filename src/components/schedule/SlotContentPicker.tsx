@@ -382,11 +382,15 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                     <textarea
                                         ref={createTextareaRef}
                                         value={createText}
-                                        onChange={(e) => setCreateText(e.target.value)}
+                                        onChange={(e) => {
+                                            setCreateText(e.target.value);
+                                            e.target.style.height = 'auto';
+                                            e.target.style.height = e.target.scrollHeight + 'px';
+                                        }}
                                         placeholder="Write your post..."
                                         rows={6}
                                         autoFocus
-                                        className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100 placeholder:text-gray-300"
+                                        className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100 placeholder:text-gray-300 overflow-hidden"
                                     />
                                     <AITextPopup
                                         textareaRef={createTextareaRef}
