@@ -23,12 +23,12 @@ import { getBlog } from '@/services/blogApi';
 import { usePostPolling } from '@/hooks/usePostPolling';
 import type { BlogPost } from '@/types';
 import { GeneratingOverlay } from '@/components/GeneratingOverlay';
-import type { ContentTab, BlogViewPageProps } from '@/components/blog-view/types';
-import { BlogEditor } from '@/components/blog-view/BlogEditor';
-import { RegenerateModal } from '@/components/blog-view/RegenerateModal';
-import { SettingsPanel } from '@/components/blog-view/SettingsPanel';
-import { TabButton } from '@/components/blog-view/TabButton';
-import { DisabledTabsOverlay } from '@/components/blog-view/DisabledTabsOverlay';
+import type { ContentTab, BlogViewPageProps } from './types';
+import { BlogEditor } from './BlogEditor';
+import { RegenerateModal } from './RegenerateModal';
+import { SettingsPanel } from './SettingsPanel';
+import { TabButton } from './TabButton';
+import { DisabledTabsOverlay } from './DisabledTabsOverlay';
 
 export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
     // Read short_post_id from URL for deep-linking from schedule queue

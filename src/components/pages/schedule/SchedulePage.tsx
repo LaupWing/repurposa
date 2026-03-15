@@ -16,17 +16,17 @@ import {
 } from "@/services/scheduleApi";
 import type { ShortPost as ApiShortPost } from "@/types";
 import { getStandaloneShortPosts } from "@/services/repurposeApi";
-import type { Platform, TabType, WeeklySchedule, ScheduledPost } from "./schedule/types";
-import { API_TO_UI_PLATFORM } from "./schedule/types";
-import { mapApiPost, groupScheduledPosts, mapScheduleFromApi } from "./schedule/helpers";
+import type { Platform, TabType, WeeklySchedule, ScheduledPost } from "./types";
+import { API_TO_UI_PLATFORM } from "./types";
+import { mapApiPost, groupScheduledPosts, mapScheduleFromApi } from "./helpers";
 import { useProfileStore } from "@/store/profileStore";
-import SlotContentPicker from "@/components/schedule/SlotContentPicker";
-import ScheduledPostDetail from "@/components/schedule/ScheduledPostDetail";
+import SlotContentPicker from "./SlotContentPicker";
+import ScheduledPostDetail from "./ScheduledPostDetail";
 import type { SchedulePlatform } from "@/components/repurpose/modals/schedule-utils";
-import { QueueTab } from "./schedule/tabs/QueueTab";
-import { PublishedTab } from "./schedule/tabs/PublishedTab";
-import { DraftsTab } from "./schedule/tabs/DraftsTab";
-import { TimesTab } from "./schedule/tabs/TimesTab";
+import { QueueTab } from "./tabs/QueueTab";
+import { PublishedTab } from "./tabs/PublishedTab";
+import { DraftsTab } from "./tabs/DraftsTab";
+import { TimesTab } from "./tabs/TimesTab";
 
 export default function SchedulePage() {
     const { socialConnections } = useProfileStore();
