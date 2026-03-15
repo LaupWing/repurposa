@@ -211,10 +211,9 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
 
         const handleClickOutside = (e: MouseEvent) => {
             const target = e.target as Node;
-            if (
-                !textarea.contains(target) &&
-                !popupRef.current?.contains(target)
-            ) {
+            if (popupRef.current?.contains(target)) return;
+            // In preview/loading, clicking anywhere outside the popup dismisses
+            if (status !== 'idle' || !textarea.contains(target)) {
                 dismiss();
             }
         };
