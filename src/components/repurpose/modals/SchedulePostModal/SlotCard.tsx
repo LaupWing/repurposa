@@ -1,16 +1,20 @@
-import { Check, Clock, AlertTriangle } from 'lucide-react';
+import { Check, Clock, AlertTriangle, Repeat2 } from 'lucide-react';
 import { Tooltip } from '@wordpress/components';
 import type { SchedulePlatform, UpcomingSlot } from '../schedule-utils';
 import { SCHEDULE_PLATFORMS } from '../schedule-utils';
 import type { PlatformState } from './platform-states';
+
+const REPOST_PLATFORMS: SchedulePlatform[] = ['x', 'threads'];
 
 interface SlotCardProps {
     slot: UpcomingSlot;
     isSelected: boolean;
     platformStates: Map<SchedulePlatform, PlatformState>;
     selectedPlatforms: SchedulePlatform[];
+    autoRepost: boolean;
     onSelect: () => void;
     onTogglePlatform: (id: SchedulePlatform) => void;
+    onToggleAutoRepost: () => void;
 }
 
 export default function SlotCard({
@@ -18,18 +22,40 @@ export default function SlotCard({
     isSelected,
     platformStates,
     selectedPlatforms,
+    autoRepost,
     onSelect,
     onTogglePlatform,
+    onToggleAutoRepost,
 }: SlotCardProps) {
+    const hasRepostPlatform = isSelected && selectedPlatforms.some(p => REPOST_PLATFORMS.includes(p));
+
     return (
         <div
             onClick={() => onSelect()}
-            className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+            className={`relative flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
                 isSelected
                     ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
             }`}
         >
+            {hasRepostPlatform && (
+                <Tooltip text={autoRepost ? 'Auto-repost enabled' : 'Enable auto-repost'} delay={0} placement="top">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleAutoRepost();
+                        }}
+                        className={`absolute -top-2.5 -right-2.5 flex items-center gap-1 px-1.5 rounded-full text-[11px] font-medium border transition-all z-10 ${
+                            autoRepost
+                                ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                                : 'bg-white text-blue-600 border-blue-300 hover:bg-blue-50'
+                        }`}
+                    >
+                        <Repeat2 size={12} />
+                        RT
+                    </button>
+                </Tooltip>
+            )}
             <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
                 isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300 bg-white'
             }`}>

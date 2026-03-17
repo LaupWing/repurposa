@@ -8,6 +8,7 @@ import {
     AlertTriangle,
     X,
     Trash2,
+    Repeat2,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
@@ -71,6 +72,7 @@ export default function SchedulePostModal({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [removingId, setRemovingId] = useState<number | null>(null);
     const [initialSelection, setInitialSelection] = useState<{ slotIndex: number | null; platforms: SchedulePlatform[] } | null>(null);
+    const [autoRepost, setAutoRepost] = useState(false);
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // Compute platform states (no slot context — for global checks)
@@ -153,6 +155,7 @@ export default function SchedulePostModal({
         setUseCustom(false);
         setSlotPage(0);
         setIsSubmitting(false);
+        setAutoRepost(false);
 
         setLoadingSlots(true);
         Promise.all([getPublishingSchedule(), getSocialAccounts(), getScheduledPosts({ status: 'pending' })])
@@ -168,7 +171,7 @@ export default function SchedulePostModal({
                     setSlotPage(init.slotPage);
                     setSelectedPlatforms(init.platforms);
                     // Only set initialSelection when editing an already-scheduled post
-                    const hasPending = (post.scheduled_posts || []).some((sp) => sp.status === 'pending');
+                    const hasPending = (post?.scheduled_posts || []).some((sp) => sp.status === 'pending');
                     setInitialSelection(hasPending ? { slotIndex: init.slotIndex, platforms: [...init.platforms] } : null);
                 } else {
                     setUpcomingSlots([]);
@@ -396,7 +399,7 @@ export default function SchedulePostModal({
                             {/* Platform selection (custom mode) */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Platforms</label>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     {SCHEDULE_PLATFORMS.map((p) => {
                                         const state = globalStates.get(p.id)!;
                                         const active = selectedPlatforms.includes(p.id);
@@ -434,6 +437,19 @@ export default function SchedulePostModal({
                                             </Tooltip>
                                         );
                                     })}
+                                    {selectedPlatforms.some(p => p === 'x' || p === 'threads') && (
+                                        <button
+                                            onClick={() => setAutoRepost(prev => !prev)}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto ${
+                                                autoRepost
+                                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                                            }`}
+                                        >
+                                            <Repeat2 size={12} />
+                                            Auto-Repost
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -473,7 +489,7 @@ export default function SchedulePostModal({
                     ) : (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Next available slots</label>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-2 overflow-visible">
                                 {pageSlots.map((slot, idx) => {
                                     const absoluteIdx = pageStart + idx;
                                     const slotStates = buildPlatformStates(post, contentType, threadPosts, socialAccounts, existingScheduled, slot);
@@ -484,8 +500,10 @@ export default function SchedulePostModal({
                                             isSelected={selectedSlotIndex === absoluteIdx && !useCustom}
                                             platformStates={slotStates}
                                             selectedPlatforms={selectedPlatforms}
+                                            autoRepost={autoRepost}
                                             onSelect={() => handleSelectSlot(absoluteIdx)}
                                             onTogglePlatform={togglePlatform}
+                                            onToggleAutoRepost={() => setAutoRepost(prev => !prev)}
                                         />
                                     );
                                 })}
