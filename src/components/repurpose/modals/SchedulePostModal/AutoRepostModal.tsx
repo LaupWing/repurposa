@@ -1,5 +1,10 @@
 import { useState } from '@wordpress/element';
-import { X, Repeat2, CalendarDays, Plus, Trash2 } from 'lucide-react';
+import { X, Repeat2, CalendarDays, Plus, Trash2, Settings2 } from 'lucide-react';
+import { SCHEDULE_PLATFORMS } from '../schedule-utils';
+import type { SchedulePlatform } from '../schedule-utils';
+
+export type RepostPlatform = 'x' | 'threads';
+const REPOST_PLATFORMS: RepostPlatform[] = ['x', 'threads'];
 
 export interface RepostInterval {
     days: number;
@@ -10,7 +15,9 @@ interface AutoRepostModalProps {
     isOpen: boolean;
     publishDate: Date;
     intervals: RepostInterval[];
-    onSave: (intervals: RepostInterval[]) => void;
+    platforms: RepostPlatform[];
+    availablePlatforms: RepostPlatform[];
+    onSave: (intervals: RepostInterval[], platforms: RepostPlatform[]) => void;
     onClose: () => void;
 }
 
@@ -43,14 +50,29 @@ export default function AutoRepostModal({
     isOpen,
     publishDate,
     intervals: initialIntervals,
+    platforms: initialPlatforms,
+    availablePlatforms,
     onSave,
     onClose,
 }: AutoRepostModalProps) {
     const [intervals, setIntervals] = useState<RepostInterval[]>(
         initialIntervals.length > 0 ? initialIntervals : DEFAULT_INTERVALS
     );
+    const [selectedPlatforms, setSelectedPlatforms] = useState<RepostPlatform[]>(
+        initialPlatforms.length > 0 ? initialPlatforms : availablePlatforms
+    );
 
     if (!isOpen) return null;
+
+    const togglePlatform = (id: RepostPlatform) => {
+        setSelectedPlatforms(prev => {
+            if (prev.includes(id)) {
+                if (prev.length === 1) return prev;
+                return prev.filter(p => p !== id);
+            }
+            return [...prev, id];
+        });
+    };
 
     const updateInterval = (index: number, field: 'days' | 'hours', value: number) => {
         setIntervals(prev => prev.map((item, i) =>
@@ -67,7 +89,7 @@ export default function AutoRepostModal({
         setIntervals(prev => [...prev, { days: (last?.days || 0) + 1, hours: 0 }]);
     };
 
-    const hasValidIntervals = intervals.length > 0 && intervals.every(i => i.days > 0 || i.hours > 0);
+    const hasValidIntervals = intervals.length > 0 && selectedPlatforms.length > 0 && intervals.every(i => i.days > 0 || i.hours > 0);
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
@@ -87,6 +109,39 @@ export default function AutoRepostModal({
                     <p className="text-xs text-gray-500">
                         Automatically repost after publishing to boost reach. Reposts are removed after 12 hours.
                     </p>
+
+                    {/* Platform toggles + Set as default */}
+                    <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center gap-1.5">
+                            {REPOST_PLATFORMS.map(id => {
+                                const platform = SCHEDULE_PLATFORMS.find(p => p.id === id);
+                                if (!platform) return null;
+                                const connected = availablePlatforms.includes(id);
+                                const active = selectedPlatforms.includes(id);
+                                return (
+                                    <button
+                                        key={id}
+                                        onClick={() => connected && togglePlatform(id)}
+                                        disabled={!connected}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                                            !connected
+                                                ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                : active
+                                                    ? `${platform.bg} text-white`
+                                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {platform.icon}
+                                        {platform.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <button className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 transition-colors">
+                            <Settings2 size={11} />
+                            Set as default
+                        </button>
+                    </div>
                 </div>
 
                 {/* Body */}
@@ -173,7 +228,7 @@ export default function AutoRepostModal({
                             Cancel
                         </button>
                         <button
-                            onClick={() => onSave(intervals)}
+                            onClick={() => onSave(intervals, selectedPlatforms)}
                             disabled={!hasValidIntervals}
                             className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
                         >

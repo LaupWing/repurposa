@@ -33,7 +33,7 @@ import { type PlatformState, buildPlatformStates } from './platform-states';
 import SlotCard from './SlotCard';
 import StatusBars from './StatusBars';
 import ContentPreview from './ContentPreview';
-import AutoRepostModal, { type RepostInterval } from './AutoRepostModal';
+import AutoRepostModal, { type RepostInterval, type RepostPlatform } from './AutoRepostModal';
 
 interface SchedulePostModalProps {
     isOpen: boolean;
@@ -75,6 +75,7 @@ export default function SchedulePostModal({
     const [initialSelection, setInitialSelection] = useState<{ slotIndex: number | null; platforms: SchedulePlatform[] } | null>(null);
     const [autoRepost, setAutoRepost] = useState(false);
     const [repostIntervals, setRepostIntervals] = useState<RepostInterval[]>([]);
+    const [repostPlatforms, setRepostPlatforms] = useState<RepostPlatform[]>([]);
     const [showRepostModal, setShowRepostModal] = useState(false);
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -160,6 +161,7 @@ export default function SchedulePostModal({
         setIsSubmitting(false);
         setAutoRepost(false);
         setRepostIntervals([]);
+        setRepostPlatforms([]);
         setShowRepostModal(false);
 
         setLoadingSlots(true);
@@ -601,8 +603,15 @@ export default function SchedulePostModal({
                         : new Date(`${date}T${time}`)
                 }
                 intervals={repostIntervals}
-                onSave={(intervals) => {
+                platforms={repostPlatforms}
+                availablePlatforms={
+                    (['x', 'threads'] as RepostPlatform[]).filter(p =>
+                        socialAccounts.some(a => a.platform === (p === 'x' ? 'twitter' : p))
+                    )
+                }
+                onSave={(intervals, platforms) => {
                     setRepostIntervals(intervals);
+                    setRepostPlatforms(platforms);
                     setAutoRepost(true);
                     setShowRepostModal(false);
                 }}
