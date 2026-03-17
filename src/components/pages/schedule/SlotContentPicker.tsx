@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
-import { X, ChevronDown, ChevronRight, ChevronLeft, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus } from 'lucide-react';
+import { X, ChevronDown, ChevronRight, ChevronLeft, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus, Repeat2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogs } from '@/services/blogApi';
 import { getShortPosts, getThreads, getVisuals, createStandaloneShortPost } from '@/services/repurposeApi';
@@ -9,6 +9,7 @@ import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM } from '@/components/repurpose/m
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
 import { AITextPopup } from '@/components/AITextPopup';
+import AutoRepostModal, { type RepostInterval, type RepostPlatform } from '@/components/repurpose/modals/SchedulePostModal/AutoRepostModal';
 import type { BlogPost, ShortPost, ThreadItem, Visual, SocialAccount } from '@/types';
 
 // ============================================
@@ -116,6 +117,12 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
     const [createText, setCreateText] = useState('');
     const createTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+    // Auto-repost
+    const [autoRepost, setAutoRepost] = useState(false);
+    const [repostIntervals, setRepostIntervals] = useState<RepostInterval[]>([]);
+    const [repostPlatforms, setRepostPlatforms] = useState<RepostPlatform[]>([]);
+    const [showRepostModal, setShowRepostModal] = useState(false);
+
     // Reset state when modal opens
     useEffect(() => {
         if (!isOpen) return;
@@ -129,6 +136,10 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
         setView('list');
         setCreateType('short_post');
         setCreateText('');
+        setAutoRepost(false);
+        setRepostIntervals([]);
+        setRepostPlatforms([]);
+        setShowRepostModal(false);
 
         setIsLoadingBlogs(true);
         Promise.all([
@@ -335,6 +346,23 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                 <span className="text-xs text-gray-400">No connected accounts</span>
                             )}
                         </div>
+
+                        {platforms.some(p => p === 'x' || p === 'threads') && (
+                            <>
+                                <div className="h-4 w-px bg-gray-200" />
+                                <button
+                                    onClick={() => autoRepost ? setAutoRepost(false) : setShowRepostModal(true)}
+                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all ${
+                                        autoRepost
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                                    }`}
+                                >
+                                    <Repeat2 size={12} />
+                                    RT
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -696,6 +724,25 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                     )}
                 </div>
             </div>
+
+            <AutoRepostModal
+                isOpen={showRepostModal}
+                publishDate={scheduledAt}
+                intervals={repostIntervals}
+                platforms={repostPlatforms}
+                availablePlatforms={
+                    (['x', 'threads'] as RepostPlatform[]).filter(p =>
+                        socialAccounts.some(a => a.platform === (p === 'x' ? 'twitter' : p))
+                    )
+                }
+                onSave={(intervals, savedPlatforms) => {
+                    setRepostIntervals(intervals);
+                    setRepostPlatforms(savedPlatforms);
+                    setAutoRepost(true);
+                    setShowRepostModal(false);
+                }}
+                onClose={() => setShowRepostModal(false)}
+            />
         </div>
     );
 }
