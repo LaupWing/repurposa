@@ -33,6 +33,7 @@ import { type PlatformState, buildPlatformStates } from './platform-states';
 import SlotCard from './SlotCard';
 import StatusBars from './StatusBars';
 import ContentPreview from './ContentPreview';
+import AutoRepostModal, { type RepostInterval } from './AutoRepostModal';
 
 interface SchedulePostModalProps {
     isOpen: boolean;
@@ -73,6 +74,8 @@ export default function SchedulePostModal({
     const [removingId, setRemovingId] = useState<number | null>(null);
     const [initialSelection, setInitialSelection] = useState<{ slotIndex: number | null; platforms: SchedulePlatform[] } | null>(null);
     const [autoRepost, setAutoRepost] = useState(false);
+    const [repostIntervals, setRepostIntervals] = useState<RepostInterval[]>([]);
+    const [showRepostModal, setShowRepostModal] = useState(false);
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // Compute platform states (no slot context — for global checks)
@@ -156,6 +159,8 @@ export default function SchedulePostModal({
         setSlotPage(0);
         setIsSubmitting(false);
         setAutoRepost(false);
+        setRepostIntervals([]);
+        setShowRepostModal(false);
 
         setLoadingSlots(true);
         Promise.all([getPublishingSchedule(), getSocialAccounts(), getScheduledPosts({ status: 'pending' })])
@@ -439,7 +444,7 @@ export default function SchedulePostModal({
                                     })}
                                     {selectedPlatforms.some(p => p === 'x' || p === 'threads') && (
                                         <button
-                                            onClick={() => setAutoRepost(prev => !prev)}
+                                            onClick={() => autoRepost ? setAutoRepost(false) : setShowRepostModal(true)}
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto ${
                                                 autoRepost
                                                     ? 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -503,7 +508,7 @@ export default function SchedulePostModal({
                                             autoRepost={autoRepost}
                                             onSelect={() => handleSelectSlot(absoluteIdx)}
                                             onTogglePlatform={togglePlatform}
-                                            onToggleAutoRepost={() => setAutoRepost(prev => !prev)}
+                                            onToggleAutoRepost={() => autoRepost ? setAutoRepost(false) : setShowRepostModal(true)}
                                         />
                                     );
                                 })}
@@ -587,6 +592,22 @@ export default function SchedulePostModal({
                     </div>
                 </div>
             </div>
+
+            <AutoRepostModal
+                isOpen={showRepostModal}
+                publishDate={
+                    selectedSlotIndex !== null && !useCustom
+                        ? upcomingSlots[selectedSlotIndex].date
+                        : new Date(`${date}T${time}`)
+                }
+                intervals={repostIntervals}
+                onSave={(intervals) => {
+                    setRepostIntervals(intervals);
+                    setAutoRepost(true);
+                    setShowRepostModal(false);
+                }}
+                onClose={() => setShowRepostModal(false)}
+            />
         </div>
     );
 }
