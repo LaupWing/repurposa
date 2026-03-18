@@ -13,7 +13,7 @@ import {
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { getPublishingSchedule, createScheduledPost, updateScheduledPost, getScheduledPosts, deleteScheduledPost } from '@/services/scheduleApi';
+import { getPublishingSchedule, createScheduledPost, updateScheduledPost, getScheduledPosts, deleteScheduledPost, createRepostSchedule, getRepostSchedule } from '@/services/scheduleApi';
 import { getSocialAccounts } from '@/services/profileApi';
 import { renderVisual } from '@/services/repurposeApi';
 import type { SocialAccount, ScheduledPost as ScheduledPostType, ShortPostSchedule, Visual } from '@/types';
@@ -180,6 +180,19 @@ export default function SchedulePostModal({
                     // Only set initialSelection when editing an already-scheduled post
                     const hasPending = (post?.scheduled_posts || []).some((sp) => sp.status === 'pending');
                     setInitialSelection(hasPending ? { slotIndex: init.slotIndex, platforms: [...init.platforms] } : null);
+
+                    // Fetch existing repost schedule from any pending scheduled post
+                    const pendingRepostable = (post?.scheduled_posts || []).filter(
+                        (sp) => sp.status === 'pending' && (sp.platform === 'twitter' || sp.platform === 'threads')
+                    );
+                    if (pendingRepostable.length > 0) {
+                        getRepostSchedule(pendingRepostable[0].id).then((repostData) => {
+                            if (repostData && repostData.status === 'active') {
+                                setRepostIntervals(repostData.intervals);
+                                setAutoRepost(true);
+                            }
+                        }).catch(() => {});
+                    }
                 } else {
                     setUpcomingSlots([]);
                     setSelectedPlatforms(['x']);
@@ -303,6 +316,14 @@ export default function SchedulePostModal({
                 status: r.status,
                 scheduled_at: r.scheduled_at,
             }));
+
+            // Create repost schedules for repostable platforms
+            if (autoRepost && repostIntervals.length > 0) {
+                const repostable = results.filter(r => r.platform === 'twitter' || r.platform === 'threads');
+                await Promise.all(
+                    repostable.map(r => createRepostSchedule(r.id, repostIntervals))
+                );
+            }
 
             const platformNames = selectedPlatforms
                 .map((id) => SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name)

@@ -41,6 +41,27 @@ export async function deleteScheduledPost(id: number): Promise<void> {
     await apiRequest<void>(`/scheduled-posts/${id}`, {}, 'DELETE');
 }
 
+export async function createRepostSchedule(
+    scheduledPostId: number,
+    intervals: { days: number; hours: number }[]
+): Promise<void> {
+    await apiRequest<void>(
+        `/scheduled-posts/${scheduledPostId}/repost-schedule`,
+        { intervals } as Record<string, unknown>
+    );
+}
+
+export async function getRepostSchedule(
+    scheduledPostId: number
+): Promise<{ intervals: { days: number; hours: number }[]; status: string } | null> {
+    const response = await apiRequest<{ data: { intervals: { days: number; hours: number }[]; status: string } | null }>(
+        `/scheduled-posts/${scheduledPostId}/repost-schedule`,
+        {},
+        'GET'
+    );
+    return response.data;
+}
+
 // ============================================
 // PUBLISH NOW
 // ============================================

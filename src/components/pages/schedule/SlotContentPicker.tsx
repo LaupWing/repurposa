@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { getBlogs } from '@/services/blogApi';
 import { getShortPosts, getThreads, getVisuals, createStandaloneShortPost } from '@/services/repurposeApi';
 import { getSocialAccounts } from '@/services/profileApi';
-import { createScheduledPost } from '@/services/scheduleApi';
+import { createScheduledPost, createRepostSchedule } from '@/services/scheduleApi';
 import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM } from '@/components/repurpose/modals/schedule-utils';
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
@@ -215,7 +215,15 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                     post_id: blogId,
                 });
             });
-            await Promise.all(promises);
+            const results = (await Promise.all(promises)).filter(Boolean);
+
+            // Create repost schedules for repostable platforms
+            if (autoRepost && repostIntervals.length > 0) {
+                const repostable = results.filter(r => r && (r.platform === 'twitter' || r.platform === 'threads'));
+                await Promise.all(
+                    repostable.map(r => createRepostSchedule(r!.id, repostIntervals))
+                );
+            }
 
             const platformNames = platforms
                 .map(id => SCHEDULE_PLATFORMS.find(p => p.id === id)?.name)
