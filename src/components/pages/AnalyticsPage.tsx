@@ -5,7 +5,7 @@
  * Each card shows metrics per platform with a toggle inside.
  */
 
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import {
     Eye,
     Heart,
@@ -17,14 +17,25 @@ import {
     BarChart2,
     Quote,
     ExternalLink,
+    Loader2,
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
+import { getAnalyticsSummary, getAnalyticsPosts } from '@/services/analyticsApi';
+import type { AnalyticsSummary, AnalyticsPost } from '@/services/analyticsApi';
 
 // ============================================
 // TYPES
 // ============================================
 
 type Platform = 'x' | 'linkedin' | 'threads' | 'instagram' | 'facebook';
+
+const API_TO_UI_PLATFORM: Record<string, Platform> = {
+    twitter: 'x',
+    linkedin: 'linkedin',
+    threads: 'threads',
+    instagram: 'instagram',
+    facebook: 'facebook',
+};
 
 interface PostMetrics {
     views: number;
@@ -42,6 +53,7 @@ interface PlatformData {
     platform: Platform;
     publishedAt: string;
     metrics: PostMetrics;
+    postUrl?: string | null;
 }
 
 interface BlogPost {
@@ -51,95 +63,54 @@ interface BlogPost {
 }
 
 // ============================================
-// MOCK DATA
+// DATA MAPPING
 // ============================================
 
-const MOCK_BLOG_POSTS: BlogPost[] = [
-    {
-        id: 1,
-        title: 'Why You Don\'t Need Redux Anymore',
-        platforms: [
-            {
-                platform: 'x',
-                publishedAt: '2026-03-08T09:00:00Z',
-                metrics: { views: 14820, likes: 312, comments: 47, shares: 89, clicks: 203, bookmarks: 156, quotes: 18 },
-            },
-            {
-                platform: 'linkedin',
-                publishedAt: '2026-03-08T09:00:00Z',
-                metrics: { views: 8430, likes: 284, comments: 63, shares: 41, clicks: 312, reach: 6200 },
-            },
-            {
-                platform: 'threads',
-                publishedAt: '2026-03-08T10:00:00Z',
-                metrics: { views: 6210, likes: 198, comments: 34, shares: 52, clicks: 87, quotes: 11 },
-            },
-        ],
-    },
-    {
-        id: 2,
-        title: 'The Mom Test: How to Talk to Customers',
-        platforms: [
-            {
-                platform: 'x',
-                publishedAt: '2026-03-07T09:00:00Z',
-                metrics: { views: 22100, likes: 891, comments: 112, shares: 234, clicks: 445, bookmarks: 389, quotes: 67 },
-            },
-            {
-                platform: 'instagram',
-                publishedAt: '2026-03-07T09:00:00Z',
-                metrics: { views: 11340, likes: 567, comments: 29, shares: 78, saves: 234, reach: 9800 },
-            },
-            {
-                platform: 'facebook',
-                publishedAt: '2026-03-07T09:30:00Z',
-                metrics: { views: 4320, likes: 143, comments: 21, shares: 37, clicks: 95 },
-            },
-        ],
-    },
-    {
-        id: 3,
-        title: 'Ship First, Refactor Later',
-        platforms: [
-            {
-                platform: 'x',
-                publishedAt: '2026-03-06T09:00:00Z',
-                metrics: { views: 9870, likes: 423, comments: 58, shares: 134, clicks: 287, bookmarks: 201, quotes: 32 },
-            },
-            {
-                platform: 'linkedin',
-                publishedAt: '2026-03-06T09:00:00Z',
-                metrics: { views: 5670, likes: 178, comments: 44, shares: 29, clicks: 187, reach: 4100 },
-            },
-            {
-                platform: 'threads',
-                publishedAt: '2026-03-06T10:00:00Z',
-                metrics: { views: 3890, likes: 124, comments: 18, shares: 31, clicks: 54, quotes: 8 },
-            },
-            {
-                platform: 'instagram',
-                publishedAt: '2026-03-06T11:00:00Z',
-                metrics: { views: 7240, likes: 389, comments: 15, shares: 45, saves: 167, reach: 6100 },
-            },
-        ],
-    },
-    {
-        id: 4,
-        title: 'How to Level Up as a Developer',
-        platforms: [
-            {
-                platform: 'linkedin',
-                publishedAt: '2026-03-05T09:00:00Z',
-                metrics: { views: 12800, likes: 534, comments: 91, shares: 67, clicks: 423, reach: 10200 },
-            },
-            {
-                platform: 'threads',
-                publishedAt: '2026-03-05T09:30:00Z',
-                metrics: { views: 4560, likes: 201, comments: 28, shares: 44, clicks: 73, quotes: 14 },
-            },
-        ],
-    },
-];
+function mapApiPostsToBlogs(apiPosts: AnalyticsPost[]): BlogPost[] {
+    const groups = new Map<string, BlogPost>();
+
+    for (const post of apiPosts) {
+        if (!post.latest_analytics) continue;
+
+        const a = post.latest_analytics;
+        const uiPlatform = API_TO_UI_PLATFORM[post.platform] || post.platform as Platform;
+        const groupKey = post.post_id ? `post-${post.post_id}` : `schedulable-${post.schedulable_id}`;
+        const title = post.post?.title || 'Standalone Post';
+
+        const platformData: PlatformData = {
+            platform: uiPlatform,
+            publishedAt: post.published_at,
+            postUrl: post.platform_post_url,
+            metrics: {
+                views: a.views,
+                likes: a.likes,
+                comments: a.comments,
+                shares: a.shares,
+                clicks: a.clicks || undefined,
+                quotes: a.quotes ?? undefined,
+                saves: a.saves ?? undefined,
+                reach: a.reach ?? undefined,
+                profile_clicks: a.profile_clicks ?? undefined,
+            } as PostMetrics,
+        };
+
+        const existing = groups.get(groupKey);
+        if (existing) {
+            // Don't add duplicate platforms
+            if (!existing.platforms.some(p => p.platform === uiPlatform)) {
+                existing.platforms.push(platformData);
+            }
+        } else {
+            groups.set(groupKey, {
+                id: post.post_id || post.schedulable_id,
+                title,
+                platforms: [platformData],
+            });
+        }
+    }
+
+    return Array.from(groups.values());
+}
 
 // ============================================
 // PLATFORM CONFIG
@@ -285,20 +256,42 @@ function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: 
 
 export default function AnalyticsPage() {
     const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
+    const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+    const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        setIsLoading(true);
+        Promise.all([
+            getAnalyticsSummary('all'),
+            getAnalyticsPosts('all'),
+        ]).then(([summaryData, postsData]) => {
+            console.log('[AnalyticsPage] summary:', JSON.stringify(summaryData, null, 2));
+            console.log('[AnalyticsPage] raw posts:', JSON.stringify(postsData, null, 2));
+            const mapped = mapApiPostsToBlogs(postsData);
+            console.log('[AnalyticsPage] mapped blogs:', JSON.stringify(mapped, null, 2));
+            setSummary(summaryData);
+            setBlogPosts(mapped);
+        }).catch((err) => {
+            console.error('[AnalyticsPage] Failed to load:', err);
+        }).finally(() => setIsLoading(false));
+    }, []);
 
     // Filter out posts that don't have data for the selected platform
     const visiblePosts = platformFilter === 'all'
-        ? MOCK_BLOG_POSTS
-        : MOCK_BLOG_POSTS.filter(p => p.platforms.some(pl => pl.platform === platformFilter));
+        ? blogPosts
+        : blogPosts.filter(p => p.platforms.some(pl => pl.platform === platformFilter));
 
-    // Aggregate totals
-    const allMetrics = MOCK_BLOG_POSTS.flatMap(p => p.platforms.map(pl => pl.metrics));
-    const totalViews  = allMetrics.reduce((s, m) => s + m.views, 0);
-    const totalLikes  = allMetrics.reduce((s, m) => s + m.likes, 0);
-    const totalClicks = allMetrics.reduce((s, m) => s + (m.clicks ?? 0), 0);
-    const avgEng = (allMetrics.reduce((s, m) => {
-        return s + (m.likes + m.comments + m.shares) / (m.views || 1);
-    }, 0) / allMetrics.length * 100).toFixed(1) + '%';
+    // Aggregate totals from summary endpoint
+    const totalViews  = summary?.totals.total_views ?? 0;
+    const totalLikes  = summary?.totals.total_likes ?? 0;
+    const totalClicks = summary?.totals.total_clicks ?? 0;
+    const allMetrics = blogPosts.flatMap(p => p.platforms.map(pl => pl.metrics));
+    const avgEng = allMetrics.length > 0
+        ? (allMetrics.reduce((s, m) => {
+            return s + (m.likes + m.comments + m.shares) / (m.views || 1);
+        }, 0) / allMetrics.length * 100).toFixed(1) + '%'
+        : '0%';
 
     return (
         <div className="p-6">
@@ -313,6 +306,13 @@ export default function AnalyticsPage() {
                 </div>
             </div>
 
+            {isLoading && (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 size={24} className="animate-spin text-gray-400" />
+                </div>
+            )}
+
+            {!isLoading && <>
             {/* Summary stats */}
             <div className="grid grid-cols-4 gap-4 mb-6">
                 {[
@@ -342,7 +342,7 @@ export default function AnalyticsPage() {
                 </button>
                 {ALL_PLATFORMS.map(id => {
                     const p = PLATFORM_CONFIG[id];
-                    const hasData = MOCK_BLOG_POSTS.some(post => post.platforms.some(pl => pl.platform === id));
+                    const hasData = blogPosts.some(post => post.platforms.some(pl => pl.platform === id));
                     if (!hasData) return null;
                     return (
                         <button
@@ -373,6 +373,7 @@ export default function AnalyticsPage() {
                     <p className="text-sm text-gray-500">Published posts will show their analytics here.</p>
                 </div>
             )}
+            </>}
         </div>
     );
 }
