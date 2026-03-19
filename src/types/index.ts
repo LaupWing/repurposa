@@ -252,6 +252,7 @@ export interface ScheduledPost {
     } | null;
     social_account?: { id: number; platform: string; platform_username: string };
     post?: { id: number; title: string } | null;
+    repost_schedule?: { id: number; scheduled_post_id: number } | null;
     created_at: string;
     updated_at: string;
 }

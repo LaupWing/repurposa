@@ -1,11 +1,13 @@
-import { useState, useRef } from '@wordpress/element';
-import { X, Clock, Pencil, Check, Loader2, FileText } from 'lucide-react';
+import { useState, useRef, useEffect } from '@wordpress/element';
+import { X, Clock, Pencil, Check, Loader2, FileText, Repeat2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { updateShortPost } from '@/services/repurposeApi';
-import { deleteScheduledPost, updateScheduledPost } from '@/services/scheduleApi';
+import { deleteScheduledPost, updateScheduledPost, getRepostSchedule, createRepostSchedule, deleteRepostSchedule } from '@/services/scheduleApi';
 import { SCHEDULE_PLATFORMS } from '@/components/repurpose/modals/schedule-utils';
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { AITextPopup } from '@/components/AITextPopup';
+import AutoRepostModal from '@/components/repurpose/modals/SchedulePostModal/AutoRepostModal';
+import type { RepostInterval, RepostPlatform } from '@/components/repurpose/modals/SchedulePostModal/AutoRepostModal';
 
 interface ScheduledPostDetailProps {
     isOpen: boolean;
@@ -23,8 +25,11 @@ interface ScheduledPostDetailProps {
         postId?: number | null;
         schedulableId?: number;
         threadCount?: number;
+        hasRepost?: boolean;
     };
 }
+
+const REPOST_PLATFORMS: SchedulePlatform[] = ['x', 'threads'];
 
 export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post }: ScheduledPostDetailProps) {
     const [isEditing, setIsEditing] = useState(false);
@@ -34,6 +39,18 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post }
     const [isEditingTime, setIsEditingTime] = useState(false);
     const [scheduledAt, setScheduledAt] = useState(() => new Date(post.scheduledAt));
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [repostIntervals, setRepostIntervals] = useState<RepostInterval[]>([]);
+    const [hasRepost, setHasRepost] = useState(post.hasRepost || false);
+    const [showRepostModal, setShowRepostModal] = useState(false);
+    const [isRemovingRepost, setIsRemovingRepost] = useState(false);
+
+    // Fetch repost schedule details when opened and has repost
+    useEffect(() => {
+        if (!isOpen || !hasRepost || post.ids.length === 0) return;
+        getRepostSchedule(post.ids[0]).then(data => {
+            if (data?.intervals) setRepostIntervals(data.intervals);
+        }).catch(() => {});
+    }, [isOpen, hasRepost, post.ids[0]]);
 
     if (!isOpen) return null;
 
@@ -78,6 +95,43 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post }
             onUpdated();
         } catch {
             toast.error('Failed to update schedule');
+        }
+    };
+
+    const repostPlatforms = post.platforms.filter(p => REPOST_PLATFORMS.includes(p)) as RepostPlatform[];
+
+    const handleRemoveRepost = async () => {
+        setIsRemovingRepost(true);
+        try {
+            // Fetch repost schedule to get its ID, then delete
+            const schedule = await getRepostSchedule(post.ids[0]);
+            if (schedule?.id) {
+                await deleteRepostSchedule(schedule.id);
+            }
+            setHasRepost(false);
+            setRepostIntervals([]);
+            toast.success('Repost schedule removed');
+            onUpdated();
+        } catch {
+            toast.error('Failed to remove repost schedule');
+        } finally {
+            setIsRemovingRepost(false);
+        }
+    };
+
+    const handleRepostSave = async (intervals: RepostInterval[], _platforms: RepostPlatform[]) => {
+        try {
+            const repostableIds = post.ids.filter((_id, i) =>
+                REPOST_PLATFORMS.includes(post.platforms[i])
+            );
+            await Promise.all(repostableIds.map(id => createRepostSchedule(id, intervals)));
+            setRepostIntervals(intervals);
+            setHasRepost(true);
+            setShowRepostModal(false);
+            toast.success('Repost schedule updated');
+            onUpdated();
+        } catch {
+            toast.error('Failed to update repost schedule');
         }
     };
 
@@ -170,9 +224,34 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post }
                                     </span>
                                 );
                             })}
+                            {repostPlatforms.length > 0 && (
+                                <button
+                                    onClick={() => setShowRepostModal(true)}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                        hasRepost
+                                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'
+                                    }`}
+                                >
+                                    <Repeat2 size={12} />
+                                    {hasRepost ? 'Repost' : 'Repost'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
+
+                {showRepostModal && (
+                    <AutoRepostModal
+                        isOpen
+                        publishDate={scheduledAt}
+                        intervals={repostIntervals}
+                        platforms={repostPlatforms as RepostPlatform[]}
+                        availablePlatforms={repostPlatforms as RepostPlatform[]}
+                        onSave={handleRepostSave}
+                        onClose={() => setShowRepostModal(false)}
+                    />
+                )}
 
                 {/* Body — content preview / editor */}
                 <div className="px-5 py-5">

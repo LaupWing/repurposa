@@ -31,6 +31,7 @@ export interface ScheduledPost {
     blogTitle?: string;
     postId?: number | null;
     schedulableId?: number;
+    hasRepost?: boolean;
 }
 
 export interface TimeSlot {

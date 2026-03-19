@@ -53,13 +53,17 @@ export async function createRepostSchedule(
 
 export async function getRepostSchedule(
     scheduledPostId: number
-): Promise<{ intervals: { days: number; hours: number }[]; status: string } | null> {
-    const response = await apiRequest<{ data: { intervals: { days: number; hours: number }[]; status: string } | null }>(
+): Promise<{ id: number; intervals: { days: number; hours: number }[]; status: string } | null> {
+    const response = await apiRequest<{ data: { id: number; intervals: { days: number; hours: number }[]; status: string } | null }>(
         `/scheduled-posts/${scheduledPostId}/repost-schedule`,
         {},
         'GET'
     );
     return response.data;
+}
+
+export async function deleteRepostSchedule(repostScheduleId: number): Promise<void> {
+    await apiRequest<void>(`/repost-schedules/${repostScheduleId}`, {}, 'DELETE');
 }
 
 // ============================================

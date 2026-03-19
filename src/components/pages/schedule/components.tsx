@@ -7,6 +7,7 @@ import {
     Pencil,
     MoreHorizontal,
     ExternalLink,
+    Repeat2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Platform, PostType, PostStatus, DayOfWeek, TimeSlot, DaySchedule, ScheduledPost } from './types';
@@ -148,6 +149,12 @@ export function ScheduledPostCard({
                         threadCount={post.threadCount}
                     />
                     <StatusIndicator status={post.status} />
+                    {post.hasRepost && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-700">
+                            <Repeat2 size={12} />
+                            Repost
+                        </span>
+                    )}
                 </div>
 
                 {/* Post content preview */}
@@ -236,6 +243,12 @@ export function PublishedPostCard({ post }: { post: ScheduledPost }) {
                         threadCount={post.threadCount}
                     />
                     <StatusIndicator status={post.status} />
+                    {post.hasRepost && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-700">
+                            <Repeat2 size={12} />
+                            Repost
+                        </span>
+                    )}
                 </div>
 
                 {/* Post content preview */}

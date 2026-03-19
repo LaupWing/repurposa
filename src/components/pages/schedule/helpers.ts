@@ -43,6 +43,7 @@ export function mapApiPost(apiPost: ApiScheduledPost): ScheduledPost {
         blogTitle: apiPost.post?.title,
         postId: apiPost.post_id,
         schedulableId: apiPost.schedulable_id,
+        hasRepost: !!apiPost.repost_schedule,
     };
 }
 
@@ -56,6 +57,7 @@ export function groupScheduledPosts(posts: ScheduledPost[]): ScheduledPost[] {
             if (!existing.platforms.includes(post.platform)) {
                 existing.platforms.push(post.platform);
             }
+            if (post.hasRepost) existing.hasRepost = true;
         } else {
             groups.set(key, { ...post, ids: [...post.ids], platforms: [...post.platforms] });
         }
