@@ -242,15 +242,23 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post }
                 </div>
 
                 {showRepostModal && (
-                    <AutoRepostModal
-                        isOpen
-                        publishDate={scheduledAt}
-                        intervals={repostIntervals}
-                        platforms={repostPlatforms as RepostPlatform[]}
-                        availablePlatforms={repostPlatforms as RepostPlatform[]}
-                        onSave={handleRepostSave}
-                        onClose={() => setShowRepostModal(false)}
-                    />
+                    <>
+                        {console.log('[ScheduledPostDetail→AutoRepostModal] passing:', JSON.stringify({
+                            repostIntervals,
+                            repostPlatforms,
+                            postPlatforms: post.platforms,
+                            hasRepost,
+                        })) as unknown as null}
+                        <AutoRepostModal
+                            isOpen
+                            publishDate={scheduledAt}
+                            intervals={repostIntervals}
+                            platforms={repostPlatforms as RepostPlatform[]}
+                            availablePlatforms={repostPlatforms as RepostPlatform[]}
+                            onSave={handleRepostSave}
+                            onClose={() => setShowRepostModal(false)}
+                        />
+                    </>
                 )}
 
                 {/* Body — content preview / editor */}

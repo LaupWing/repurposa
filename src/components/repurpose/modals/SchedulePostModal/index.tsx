@@ -616,8 +616,8 @@ export default function SchedulePostModal({
                 </div>
             </div>
 
-            <AutoRepostModal
-                isOpen={showRepostModal}
+            {showRepostModal && <AutoRepostModal
+                isOpen
                 publishDate={
                     selectedSlotIndex !== null && !useCustom
                         ? upcomingSlots[selectedSlotIndex].date
@@ -637,7 +637,7 @@ export default function SchedulePostModal({
                     setShowRepostModal(false);
                 }}
                 onClose={() => setShowRepostModal(false)}
-            />
+            />}
         </div>
     );
 }

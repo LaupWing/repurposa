@@ -62,6 +62,17 @@ export default function AutoRepostModal({
         initialPlatforms.length > 0 ? initialPlatforms : availablePlatforms
     );
 
+    console.log('[AutoRepostModal] props:', JSON.stringify({
+        isOpen,
+        initialIntervals: initialIntervals,
+        initialPlatforms: initialPlatforms,
+        availablePlatforms: availablePlatforms,
+    }));
+    console.log('[AutoRepostModal] state:', JSON.stringify({
+        intervals,
+        selectedPlatforms,
+    }));
+
     if (!isOpen) return null;
 
     const togglePlatform = (id: RepostPlatform) => {

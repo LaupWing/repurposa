@@ -733,8 +733,8 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                 </div>
             </div>
 
-            <AutoRepostModal
-                isOpen={showRepostModal}
+            {showRepostModal && <AutoRepostModal
+                isOpen
                 publishDate={scheduledAt}
                 intervals={repostIntervals}
                 platforms={repostPlatforms}
@@ -750,7 +750,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                     setShowRepostModal(false);
                 }}
                 onClose={() => setShowRepostModal(false)}
-            />
+            />}
         </div>
     );
 }
