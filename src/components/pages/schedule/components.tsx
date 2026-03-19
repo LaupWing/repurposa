@@ -148,13 +148,13 @@ export function ScheduledPostCard({
                         postType={post.postType}
                         threadCount={post.threadCount}
                     />
-                    <StatusIndicator status={post.status} />
                     {post.hasRepost && (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-700">
                             <Repeat2 size={12} />
                             Repost
                         </span>
                     )}
+                    <StatusIndicator status={post.status} />
                 </div>
 
                 {/* Post content preview */}
@@ -242,13 +242,13 @@ export function PublishedPostCard({ post }: { post: ScheduledPost }) {
                         postType={post.postType}
                         threadCount={post.threadCount}
                     />
-                    <StatusIndicator status={post.status} />
                     {post.hasRepost && (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-700">
                             <Repeat2 size={12} />
                             Repost
                         </span>
                     )}
+                    <StatusIndicator status={post.status} />
                 </div>
 
                 {/* Post content preview */}
