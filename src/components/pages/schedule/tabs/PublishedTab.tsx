@@ -31,7 +31,7 @@ export function PublishedTab({ posts }: PublishedTabProps) {
         const matchesType = typeFilter === "all" || post.postType === typeFilter;
         return matchesPlatform && matchesType;
     });
-    const grouped = groupPostsByDate(filteredPosts);
+    const grouped = groupPostsByDate(filteredPosts, 'desc');
 
     return (
         <div>

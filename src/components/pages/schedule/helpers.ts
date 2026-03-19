@@ -136,12 +136,14 @@ export function formatTime(dateString: string): string {
 
 export function groupPostsByDate(
     posts: ScheduledPost[],
+    order: 'asc' | 'desc' = 'asc',
 ): Map<string, ScheduledPost[]> {
     const groups = new Map<string, ScheduledPost[]>();
+    const dir = order === 'asc' ? 1 : -1;
     const sorted = [...posts].sort(
         (a, b) =>
-            new Date(a.scheduledAt).getTime() -
-            new Date(b.scheduledAt).getTime(),
+            dir * (new Date(a.scheduledAt).getTime() -
+            new Date(b.scheduledAt).getTime()),
     );
 
     for (const post of sorted) {
