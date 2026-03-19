@@ -3,13 +3,9 @@ import { X, Repeat2, CalendarDays, Plus, Trash2, Settings2 } from 'lucide-react'
 import { SCHEDULE_PLATFORMS } from '../schedule-utils';
 import type { SchedulePlatform } from '../schedule-utils';
 
-export type RepostPlatform = 'x' | 'threads';
+import type { RepostPlatform, RepostInterval } from '@/hooks/useAutoRepost';
+export type { RepostPlatform, RepostInterval };
 const REPOST_PLATFORMS: RepostPlatform[] = ['x', 'threads'];
-
-export interface RepostInterval {
-    days: number;
-    hours: number;
-}
 
 interface AutoRepostModalProps {
     isOpen: boolean;
@@ -61,17 +57,6 @@ export default function AutoRepostModal({
     const [selectedPlatforms, setSelectedPlatforms] = useState<RepostPlatform[]>(
         initialPlatforms.length > 0 ? initialPlatforms : availablePlatforms
     );
-
-    console.log('[AutoRepostModal] props:', JSON.stringify({
-        isOpen,
-        initialIntervals: initialIntervals,
-        initialPlatforms: initialPlatforms,
-        availablePlatforms: availablePlatforms,
-    }));
-    console.log('[AutoRepostModal] state:', JSON.stringify({
-        intervals,
-        selectedPlatforms,
-    }));
 
     if (!isOpen) return null;
 

@@ -4,12 +4,13 @@ import { toast } from 'sonner';
 import { getBlogs } from '@/services/blogApi';
 import { getShortPosts, getThreads, getVisuals, createStandaloneShortPost } from '@/services/repurposeApi';
 import { getSocialAccounts } from '@/services/profileApi';
-import { createScheduledPost, createRepostSchedule } from '@/services/scheduleApi';
+import { createScheduledPost } from '@/services/scheduleApi';
 import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM } from '@/components/repurpose/modals/schedule-utils';
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
 import { AITextPopup } from '@/components/AITextPopup';
-import AutoRepostModal, { type RepostInterval, type RepostPlatform } from '@/components/repurpose/modals/SchedulePostModal/AutoRepostModal';
+import AutoRepostModal from '@/components/repurpose/modals/SchedulePostModal/AutoRepostModal';
+import { useAutoRepost } from '@/hooks/useAutoRepost';
 import type { BlogPost, ShortPost, ThreadItem, Visual, SocialAccount } from '@/types';
 
 // ============================================
@@ -118,10 +119,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
     const createTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Auto-repost
-    const [autoRepost, setAutoRepost] = useState(false);
-    const [repostIntervals, setRepostIntervals] = useState<RepostInterval[]>([]);
-    const [repostPlatforms, setRepostPlatforms] = useState<RepostPlatform[]>([]);
-    const [showRepostModal, setShowRepostModal] = useState(false);
+    const repost = useAutoRepost(socialAccounts);
 
     // Reset state when modal opens
     useEffect(() => {
@@ -218,12 +216,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
             const results = (await Promise.all(promises)).filter(Boolean);
 
             // Create repost schedules for repostable platforms
-            if (autoRepost && repostIntervals.length > 0) {
-                const repostable = results.filter(r => r && (r.platform === 'twitter' || r.platform === 'threads'));
-                await Promise.all(
-                    repostable.map(r => createRepostSchedule(r!.id, repostIntervals))
-                );
-            }
+            await repost.createSchedules(results.filter(Boolean).map(r => ({ id: r!.id, platform: r!.platform })));
 
             const platformNames = platforms
                 .map(id => SCHEDULE_PLATFORMS.find(p => p.id === id)?.name)
@@ -359,9 +352,9 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                             <>
                                 <div className="h-4 w-px bg-gray-200" />
                                 <button
-                                    onClick={() => autoRepost ? setAutoRepost(false) : setShowRepostModal(true)}
+                                    onClick={() => repost.toggle()}
                                     className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all ${
-                                        autoRepost
+                                        repost.enabled
                                             ? 'bg-blue-600 text-white hover:bg-blue-700'
                                             : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
                                     }`}
@@ -733,23 +726,14 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                 </div>
             </div>
 
-            {showRepostModal && <AutoRepostModal
+            {repost.showModal && <AutoRepostModal
                 isOpen
                 publishDate={scheduledAt}
-                intervals={repostIntervals}
-                platforms={repostPlatforms}
-                availablePlatforms={
-                    (['x', 'threads'] as RepostPlatform[]).filter(p =>
-                        socialAccounts.some(a => a.platform === (p === 'x' ? 'twitter' : p))
-                    )
-                }
-                onSave={(intervals, savedPlatforms) => {
-                    setRepostIntervals(intervals);
-                    setRepostPlatforms(savedPlatforms);
-                    setAutoRepost(true);
-                    setShowRepostModal(false);
-                }}
-                onClose={() => setShowRepostModal(false)}
+                intervals={repost.intervals}
+                platforms={repost.platforms}
+                availablePlatforms={repost.availablePlatforms}
+                onSave={repost.save}
+                onClose={repost.closeModal}
             />}
         </div>
     );

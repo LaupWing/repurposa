@@ -13,7 +13,7 @@ import {
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { getPublishingSchedule, createScheduledPost, updateScheduledPost, getScheduledPosts, deleteScheduledPost, createRepostSchedule, getRepostSchedule } from '@/services/scheduleApi';
+import { getPublishingSchedule, createScheduledPost, updateScheduledPost, getScheduledPosts, deleteScheduledPost } from '@/services/scheduleApi';
 import { getSocialAccounts } from '@/services/profileApi';
 import { renderVisual } from '@/services/repurposeApi';
 import type { SocialAccount, ScheduledPost as ScheduledPostType, ShortPostSchedule, Visual } from '@/types';
@@ -33,7 +33,8 @@ import { type PlatformState, buildPlatformStates } from './platform-states';
 import SlotCard from './SlotCard';
 import StatusBars from './StatusBars';
 import ContentPreview from './ContentPreview';
-import AutoRepostModal, { type RepostInterval, type RepostPlatform } from './AutoRepostModal';
+import AutoRepostModal from './AutoRepostModal';
+import { useAutoRepost } from '@/hooks/useAutoRepost';
 
 interface SchedulePostModalProps {
     isOpen: boolean;
@@ -73,10 +74,7 @@ export default function SchedulePostModal({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [removingId, setRemovingId] = useState<number | null>(null);
     const [initialSelection, setInitialSelection] = useState<{ slotIndex: number | null; platforms: SchedulePlatform[] } | null>(null);
-    const [autoRepost, setAutoRepost] = useState(false);
-    const [repostIntervals, setRepostIntervals] = useState<RepostInterval[]>([]);
-    const [repostPlatforms, setRepostPlatforms] = useState<RepostPlatform[]>([]);
-    const [showRepostModal, setShowRepostModal] = useState(false);
+    const repost = useAutoRepost(socialAccounts);
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // Compute platform states (no slot context — for global checks)
@@ -318,12 +316,7 @@ export default function SchedulePostModal({
             }));
 
             // Create repost schedules for repostable platforms
-            if (autoRepost && repostIntervals.length > 0) {
-                const repostable = results.filter(r => r.platform === 'twitter' || r.platform === 'threads');
-                await Promise.all(
-                    repostable.map(r => createRepostSchedule(r.id, repostIntervals))
-                );
-            }
+            await repost.createSchedules(results.map(r => ({ id: r.id, platform: r.platform })));
 
             const platformNames = selectedPlatforms
                 .map((id) => SCHEDULE_PLATFORMS.find((p) => p.id === id)?.name)
@@ -467,9 +460,9 @@ export default function SchedulePostModal({
                                     })}
                                     {selectedPlatforms.some(p => p === 'x' || p === 'threads') && (
                                         <button
-                                            onClick={() => autoRepost ? setAutoRepost(false) : setShowRepostModal(true)}
+                                            onClick={() => repost.toggle()}
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto ${
-                                                autoRepost
+                                                repost.enabled
                                                     ? 'bg-blue-600 text-white hover:bg-blue-700'
                                                     : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
                                             }`}
@@ -528,10 +521,10 @@ export default function SchedulePostModal({
                                             isSelected={selectedSlotIndex === absoluteIdx && !useCustom}
                                             platformStates={slotStates}
                                             selectedPlatforms={selectedPlatforms}
-                                            autoRepost={autoRepost}
+                                            autoRepost={repost.enabled}
                                             onSelect={() => handleSelectSlot(absoluteIdx)}
                                             onTogglePlatform={togglePlatform}
-                                            onToggleAutoRepost={() => autoRepost ? setAutoRepost(false) : setShowRepostModal(true)}
+                                            onToggleAutoRepost={() => repost.toggle()}
                                         />
                                     );
                                 })}
@@ -616,27 +609,18 @@ export default function SchedulePostModal({
                 </div>
             </div>
 
-            {showRepostModal && <AutoRepostModal
+            {repost.showModal && <AutoRepostModal
                 isOpen
                 publishDate={
                     selectedSlotIndex !== null && !useCustom
                         ? upcomingSlots[selectedSlotIndex].date
                         : new Date(`${date}T${time}`)
                 }
-                intervals={repostIntervals}
-                platforms={repostPlatforms}
-                availablePlatforms={
-                    (['x', 'threads'] as RepostPlatform[]).filter(p =>
-                        socialAccounts.some(a => a.platform === (p === 'x' ? 'twitter' : p))
-                    )
-                }
-                onSave={(intervals, platforms) => {
-                    setRepostIntervals(intervals);
-                    setRepostPlatforms(platforms);
-                    setAutoRepost(true);
-                    setShowRepostModal(false);
-                }}
-                onClose={() => setShowRepostModal(false)}
+                intervals={repost.intervals}
+                platforms={repost.platforms}
+                availablePlatforms={repost.availablePlatforms}
+                onSave={repost.save}
+                onClose={repost.closeModal}
             />}
         </div>
     );
