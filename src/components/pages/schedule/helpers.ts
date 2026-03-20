@@ -47,6 +47,8 @@ export function mapApiPost(apiPost: ApiScheduledPost): ScheduledPost {
     };
 }
 
+const PLATFORM_ORDER: Platform[] = ['x', 'linkedin', 'threads', 'instagram', 'facebook'];
+
 export function groupScheduledPosts(posts: ScheduledPost[]): ScheduledPost[] {
     const groups = new Map<string, ScheduledPost>();
     for (const post of posts) {
@@ -61,6 +63,10 @@ export function groupScheduledPosts(posts: ScheduledPost[]): ScheduledPost[] {
         } else {
             groups.set(key, { ...post, ids: [...post.ids], platforms: [...post.platforms] });
         }
+    }
+    // Sort platforms in consistent order
+    for (const group of groups.values()) {
+        group.platforms.sort((a, b) => PLATFORM_ORDER.indexOf(a) - PLATFORM_ORDER.indexOf(b));
     }
     return Array.from(groups.values());
 }

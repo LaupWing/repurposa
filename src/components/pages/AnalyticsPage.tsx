@@ -109,6 +109,11 @@ function mapApiPostsToBlogs(apiPosts: AnalyticsPost[]): BlogPost[] {
         }
     }
 
+    const platformOrder: Platform[] = ['x', 'linkedin', 'threads', 'instagram', 'facebook'];
+    for (const blog of groups.values()) {
+        blog.platforms.sort((a, b) => platformOrder.indexOf(a.platform) - platformOrder.indexOf(b.platform));
+    }
+
     return Array.from(groups.values());
 }
 

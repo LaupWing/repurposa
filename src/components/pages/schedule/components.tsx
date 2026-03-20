@@ -158,7 +158,7 @@ export function ScheduledPostCard({
                 </div>
 
                 {/* Post content preview */}
-                <p className="text-sm text-gray-700 leading-relaxed line-clamp-2 mb-1.5">
+                <p className="text-sm text-gray-700 leading-relaxed line-clamp-2 whitespace-pre-line mb-1.5">
                     {post.content}
                 </p>
 
@@ -252,7 +252,7 @@ export function PublishedPostCard({ post }: { post: ScheduledPost }) {
                 </div>
 
                 {/* Post content preview */}
-                <p className="text-sm text-gray-700 leading-relaxed line-clamp-2 mb-1.5">
+                <p className="text-sm text-gray-700 leading-relaxed line-clamp-2 whitespace-pre-line mb-1.5">
                     {post.content}
                 </p>
 
