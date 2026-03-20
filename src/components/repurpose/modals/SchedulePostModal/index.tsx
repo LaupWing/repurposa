@@ -157,10 +157,7 @@ export default function SchedulePostModal({
         setUseCustom(false);
         setSlotPage(0);
         setIsSubmitting(false);
-        setAutoRepost(false);
-        setRepostIntervals([]);
-        setRepostPlatforms([]);
-        setShowRepostModal(false);
+        repost.reset();
 
         setLoadingSlots(true);
         Promise.all([getPublishingSchedule(), getSocialAccounts(), getScheduledPosts({ status: 'pending' })])
@@ -186,8 +183,8 @@ export default function SchedulePostModal({
                     if (pendingRepostable.length > 0) {
                         getRepostSchedule(pendingRepostable[0].id).then((repostData) => {
                             if (repostData && repostData.status === 'active') {
-                                setRepostIntervals(repostData.intervals);
-                                setAutoRepost(true);
+                                repost.setIntervals(repostData.intervals);
+                                repost.setEnabled(true);
                             }
                         }).catch(() => {});
                     }

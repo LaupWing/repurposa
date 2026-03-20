@@ -50,16 +50,28 @@ export function useAutoRepost(socialAccounts: SocialAccount[]) {
         await Promise.all(repostable.map(r => createRepostSchedule(r.id, intervals)));
     };
 
+    const reset = () => {
+        setEnabled(false);
+        setIntervals([]);
+        setPlatforms([]);
+        setShowModal(false);
+    };
+
     return {
         enabled,
+        setEnabled,
         intervals,
+        setIntervals,
         platforms,
+        setPlatforms,
         availablePlatforms,
         showModal,
+        setShowModal,
         toggle,
         openModal,
         closeModal,
         save,
+        reset,
         createSchedules,
     };
 }

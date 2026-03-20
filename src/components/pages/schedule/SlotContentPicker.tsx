@@ -134,10 +134,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
         setView('list');
         setCreateType('short_post');
         setCreateText('');
-        setAutoRepost(false);
-        setRepostIntervals([]);
-        setRepostPlatforms([]);
-        setShowRepostModal(false);
+        repost.reset();
 
         setIsLoadingBlogs(true);
         Promise.all([
