@@ -86,7 +86,7 @@ function mapApiPostsToBlogs(apiPosts: AnalyticsPost[]): BlogPost[] {
 
         const a = post.latest_analytics;
         const uiPlatform = API_TO_UI_PLATFORM[post.platform] || post.platform as Platform;
-        const groupKey = post.post_id ? `post-${post.post_id}` : `schedulable-${post.schedulable_id}`;
+        const groupKey = `${post.schedulable_type}-${post.schedulable_id}`;
         const title = post.post?.title || 'Standalone Post';
         const postType: PostType = post.schedulable_type.includes('Thread') ? 'thread'
             : post.schedulable_type.includes('Visual') ? 'visual'
