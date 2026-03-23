@@ -20,6 +20,9 @@ import {
     Loader2,
     ChevronDown,
     ArrowUpDown,
+    MessageSquare,
+    ListOrdered,
+    Image,
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -62,9 +65,12 @@ interface PlatformData {
     scheduledPostId: number;
 }
 
+type PostType = 'short' | 'thread' | 'visual';
+
 interface BlogPost {
     id: number;
     title: string;
+    postType: PostType;
     platforms: PlatformData[];
 }
 
@@ -82,6 +88,9 @@ function mapApiPostsToBlogs(apiPosts: AnalyticsPost[]): BlogPost[] {
         const uiPlatform = API_TO_UI_PLATFORM[post.platform] || post.platform as Platform;
         const groupKey = post.post_id ? `post-${post.post_id}` : `schedulable-${post.schedulable_id}`;
         const title = post.post?.title || 'Standalone Post';
+        const postType: PostType = post.schedulable_type.includes('Thread') ? 'thread'
+            : post.schedulable_type.includes('Visual') ? 'visual'
+            : 'short';
 
         const platformData: PlatformData = {
             platform: uiPlatform,
@@ -112,6 +121,7 @@ function mapApiPostsToBlogs(apiPosts: AnalyticsPost[]): BlogPost[] {
             groups.set(groupKey, {
                 id: post.post_id || post.schedulable_id,
                 title,
+                postType,
                 platforms: [platformData],
             });
         }
@@ -501,10 +511,17 @@ function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: 
 
     return (
         <div className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all p-4">
-            {/* Published date */}
-            <p className="text-[10px] text-gray-400 mb-1.5">
-                {new Date(data.publishedAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-            </p>
+            {/* Post type badge + published date */}
+            <div className="flex items-center gap-2 mb-1.5">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                    {post.postType === 'short' && <><MessageSquare size={13} /> Short Post</>}
+                    {post.postType === 'thread' && <><ListOrdered size={13} /> Thread</>}
+                    {post.postType === 'visual' && <><Image size={13} /> Visual</>}
+                </span>
+                <span className="text-[10px] text-gray-400">
+                    {new Date(data.publishedAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </span>
+            </div>
 
             {/* Post content + external link */}
             <div className="flex items-start justify-between gap-2 mb-3">
