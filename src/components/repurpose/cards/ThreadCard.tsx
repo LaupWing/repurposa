@@ -310,7 +310,7 @@ interface ThreadCardProps {
     isPublished?: boolean;
 }
 
-export default function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onPublishNow, onDelete, onInsertCtaPost, onGenerateCta, onAddImage, onRemoveImage, onReorderImages, blogId, onVisualSaved }: ThreadCardProps) {
+export default function ThreadCard({ thread, index, onEditPost, onDeletePost, onInsertPost, onEditHook, onSchedule, onPublishNow, onDelete, onInsertCtaPost, onGenerateCta, onAddImage, onRemoveImage, onReorderImages, blogId, onVisualSaved, isPublished }: ThreadCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditingHook, setIsEditingHook] = useState(false);
     const [editHookContent, setEditHookContent] = useState(thread.hook);
@@ -616,7 +616,7 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                         setCtaAfterIndex(idx);
                                         setIsCtaOpen(true);
                                         setCtaContent('');
-                                        generateCtaForIndex(idx);
+                                        if (isPublished) generateCtaForIndex(idx);
                                     }}
                                 />
                                 {/* Inline CTA input after this post */}
@@ -659,14 +659,28 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                                     {ctaContent.length}/280
                                                 </span>
                                                 <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={handleGenerateCtaClick}
-                                                        disabled={isGeneratingCta}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-                                                    >
-                                                        <Sparkles size={12} />
-                                                        Regenerate
-                                                    </button>
+                                                    {!isPublished ? (
+                                                        <Tooltip text="Publish the blog first to generate a CTA with link" placement="bottom" delay={0}>
+                                                            <span className="inline-block">
+                                                                <button
+                                                                    disabled
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 rounded-lg opacity-40 cursor-not-allowed pointer-events-none"
+                                                                >
+                                                                    <Sparkles size={12} />
+                                                                    Generate
+                                                                </button>
+                                                            </span>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <button
+                                                            onClick={handleGenerateCtaClick}
+                                                            disabled={isGeneratingCta}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                                                        >
+                                                            <Sparkles size={12} />
+                                                            {ctaContent ? 'Regenerate' : 'Generate'}
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => { setIsCtaOpen(false); setCtaContent(''); }}
                                                         disabled={isGeneratingCta}
@@ -701,7 +715,7 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                     setCtaAfterIndex(lastIdx);
                                     setIsCtaOpen(true);
                                     setCtaContent('');
-                                    generateCtaForIndex(lastIdx);
+                                    if (isPublished) generateCtaForIndex(lastIdx);
                                 }}
                             />
                             <span className="ml-2 text-xs text-gray-400">Add</span>

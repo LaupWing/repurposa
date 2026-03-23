@@ -17,6 +17,7 @@ import {
     Send,
     Loader2,
     Sparkles,
+    MessageSquarePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
@@ -117,9 +118,14 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
     const [showVisualModal, setShowVisualModal] = useState(false);
     const [showVisualsPopover, setShowVisualsPopover] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showCtaPopover, setShowCtaPopover] = useState(false);
+    const [isWritingCta, setIsWritingCta] = useState(false);
+    const [writeCtaContent, setWriteCtaContent] = useState('');
     const menuRef = useRef<HTMLDivElement>(null);
+    const ctaPopoverRef = useRef<HTMLDivElement>(null);
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
     const editCtaTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const writeCtaTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Seed edit textarea when pending CTA arrives
     useEffect(() => {
@@ -139,6 +145,18 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
         document.addEventListener('mousedown', handleClick);
         return () => document.removeEventListener('mousedown', handleClick);
     }, [menuOpen]);
+
+    // Close CTA popover on outside click
+    useEffect(() => {
+        if (!showCtaPopover) return;
+        const handleClick = (e: MouseEvent) => {
+            if (ctaPopoverRef.current && !ctaPopoverRef.current.contains(e.target as Node)) {
+                setShowCtaPopover(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [showCtaPopover]);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(pattern.content);
@@ -174,6 +192,14 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
     const handleCancelCtaEdit = () => {
         setEditCtaContent(pattern.cta_content || '');
         setIsEditingCta(false);
+    };
+
+    const handleSaveWrittenCta = () => {
+        if (!writeCtaContent.trim()) return;
+        onAcceptCta(writeCtaContent);
+        setIsWritingCta(false);
+        setWriteCtaContent('');
+        toast.success('CTA added');
     };
 
     return (
@@ -384,6 +410,58 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                             >
                                 <Calendar size={14} />
                             </button>
+                            {/* Add CTA button */}
+                            {!pattern.cta_content && !isWritingCta && !pattern.pending_cta && !pattern.is_generating_cta && (
+                                <div className="relative" ref={ctaPopoverRef}>
+                                    <button
+                                        onClick={() => setShowCtaPopover(!showCtaPopover)}
+                                        className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${
+                                            showCtaPopover ? 'bg-gray-100 text-gray-600' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                                        }`}
+                                    >
+                                        <MessageSquarePlus size={14} />
+                                    </button>
+                                    {showCtaPopover && (
+                                        <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-20">
+                                            <button
+                                                onClick={() => {
+                                                    setShowCtaPopover(false);
+                                                    setIsWritingCta(true);
+                                                    setWriteCtaContent('');
+                                                }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            >
+                                                <Pencil size={14} className="shrink-0" />
+                                                Write your own
+                                            </button>
+                                            {!isPublished ? (
+                                                <Tooltip text="Publish the blog first to generate a CTA with link" placement="bottom" delay={0}>
+                                                    <span className="block">
+                                                        <button
+                                                            disabled
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors opacity-40 cursor-not-allowed pointer-events-none"
+                                                        >
+                                                            <Sparkles size={14} className="shrink-0" />
+                                                            Generate with AI
+                                                        </button>
+                                                    </span>
+                                                </Tooltip>
+                                            ) : (
+                                                <button
+                                                    onClick={() => {
+                                                        setShowCtaPopover(false);
+                                                        onAddCta();
+                                                    }}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                >
+                                                    <Sparkles size={14} className="shrink-0" />
+                                                    Generate with AI
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             {/* More menu */}
                             <div className="relative" ref={menuRef}>
                                 <button
@@ -441,8 +519,8 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                 )}
             </div>
 
-            {/* CTA generation states (no existing CTA + published) */}
-            {!pattern.cta_content && isPublished && (
+            {/* CTA states: writing manually, generating, or pending AI result */}
+            {!pattern.cta_content && (isWritingCta || pattern.is_generating_cta || pattern.pending_cta) && (
                 <div className="ml-6 mt-2">
                     {pattern.is_generating_cta ? (
                         <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg">
@@ -491,15 +569,46 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <button
-                            onClick={onAddCta}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                            <Plus size={14} />
-                            Add CTA Reply
-                        </button>
-                    )}
+                    ) : isWritingCta ? (
+                        <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                                <Share2 size={12} />
+                                Write CTA Reply
+                            </div>
+                            <AITextPopup textareaRef={writeCtaTextareaRef} value={writeCtaContent} onChange={setWriteCtaContent} />
+                            <textarea
+                                ref={writeCtaTextareaRef}
+                                value={writeCtaContent}
+                                onChange={(e) => setWriteCtaContent(e.target.value)}
+                                placeholder="Write your CTA reply..."
+                                className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                rows={3}
+                                style={{ fieldSizing: 'content' } as React.CSSProperties}
+                                autoFocus
+                            />
+                            <div className="flex items-center justify-between pt-1">
+                                <span className={`font-mono text-[10px] ${writeCtaContent.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                    {writeCtaContent.length}/280
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => { setIsWritingCta(false); setWriteCtaContent(''); }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSaveWrittenCta}
+                                        disabled={!writeCtaContent.trim()}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <Check size={12} />
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
             )}
 
