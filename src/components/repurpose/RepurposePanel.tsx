@@ -193,14 +193,10 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 );
 
             case 'visuals': {
-                if (sp.shortPosts.length === 0 && th.threads.length === 0) {
-                    return <DependencyGate type="visuals" onSwitchTab={onSwitchTab} />;
-                }
-
                 const hasShortPosts = sp.shortPosts.length > 0;
                 const hasThreads = th.threads.length > 0;
-                const activePickerTab = vis.sourcePickerTab === 'threads' && !hasThreads ? 'short_posts'
-                    : vis.sourcePickerTab === 'short_posts' && !hasShortPosts ? 'threads'
+                const activePickerTab = vis.sourcePickerTab === 'threads' && !hasThreads ? (hasShortPosts ? 'short_posts' : 'custom')
+                    : vis.sourcePickerTab === 'short_posts' && !hasShortPosts ? (hasThreads ? 'threads' : 'custom')
                     : vis.sourcePickerTab;
 
                 const sourcePickerModal = (

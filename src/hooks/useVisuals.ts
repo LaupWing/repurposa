@@ -14,9 +14,9 @@ export function useVisuals(
 
     // Source picker state
     const [showSourcePicker, setShowSourcePicker] = useState(false);
-    const [sourcePickerTab, setSourcePickerTab] = useState<'short_posts' | 'threads'>('short_posts');
+    const [sourcePickerTab, setSourcePickerTab] = useState<'short_posts' | 'threads' | 'custom'>('short_posts');
     const [sourcePickerSearch, setSourcePickerSearch] = useState('');
-    const [creatingVisualSource, setCreatingVisualSource] = useState<{ type: 'short_post' | 'thread'; id: number; content: string | string[] } | null>(null);
+    const [creatingVisualSource, setCreatingVisualSource] = useState<{ type: 'short_post' | 'thread' | 'standalone'; id: number; content: string | string[] } | null>(null);
 
     // Sync highlight prop into local state
     useEffect(() => {
@@ -63,7 +63,7 @@ export function useVisuals(
         setSourcePickerSearch('');
     };
 
-    const selectSource = (source: { type: 'short_post' | 'thread'; id: number; content: string | string[] }) => {
+    const selectSource = (source: { type: 'short_post' | 'thread' | 'standalone'; id: number; content: string | string[] }) => {
         setCreatingVisualSource(source);
         setShowSourcePicker(false);
         setSourcePickerSearch('');

@@ -1,6 +1,8 @@
+import { useState, useRef } from '@wordpress/element';
 import {
     FileText,
     Layout,
+    Pencil,
     X,
     Search,
 } from 'lucide-react';
@@ -9,7 +11,7 @@ import type { ShortPostPattern } from '@/components/repurpose/cards/ShortPostCar
 import { VisualPreviewModal } from './VisualPreviewModal';
 
 interface VisualSource {
-    type: 'short_post' | 'thread';
+    type: 'short_post' | 'thread' | 'standalone';
     id: number;
     content: string | string[];
 }
@@ -19,8 +21,8 @@ interface SourcePickerModalProps {
     onClose: () => void;
     search: string;
     onSearchChange: (value: string) => void;
-    activeTab: 'short_posts' | 'threads';
-    onTabChange: (tab: 'short_posts' | 'threads') => void;
+    activeTab: 'short_posts' | 'threads' | 'custom';
+    onTabChange: (tab: 'short_posts' | 'threads' | 'custom') => void;
     shortPosts: ShortPostPattern[];
     threads: ThreadItem[];
     onSelect: (source: VisualSource) => void;
@@ -49,6 +51,8 @@ export default function SourcePickerModal({
     const hasShortPosts = shortPosts.length > 0;
     const hasThreads = threads.length > 0;
     const searchLower = search.toLowerCase();
+    const [customText, setCustomText] = useState('');
+    const customTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     const filteredShortPosts = hasShortPosts
         ? shortPosts.filter(s => s.content.toLowerCase().includes(searchLower))
@@ -71,10 +75,10 @@ export default function SourcePickerModal({
                             </button>
                         </div>
 
-                        {/* Tabs + Search */}
+                        {/* Tabs */}
                         <div className="px-5 pt-3 pb-0 space-y-3">
-                            {hasShortPosts && hasThreads && (
-                                <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+                            <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+                                {hasShortPosts && (
                                     <button
                                         onClick={() => onTabChange('short_posts')}
                                         className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
@@ -89,6 +93,8 @@ export default function SourcePickerModal({
                                             {shortPosts.length}
                                         </span>
                                     </button>
+                                )}
+                                {hasThreads && (
                                     <button
                                         onClick={() => onTabChange('threads')}
                                         className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
@@ -103,31 +109,44 @@ export default function SourcePickerModal({
                                             {threads.length}
                                         </span>
                                     </button>
+                                )}
+                                <button
+                                    onClick={() => onTabChange('custom')}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                        activeTab === 'custom'
+                                            ? 'bg-white text-gray-900 shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    <Pencil size={13} />
+                                    Write your own
+                                </button>
+                            </div>
+
+                            {/* Search (only for short posts / threads tabs) */}
+                            {activeTab !== 'custom' && (
+                                <div className="relative">
+                                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={search}
+                                        onChange={(e) => onSearchChange(e.target.value)}
+                                        placeholder={activeTab === 'threads' ? 'Search threads...' : 'Search short posts...'}
+                                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-blue-300 focus:ring-1 focus:ring-blue-200 outline-none transition-colors"
+                                    />
+                                    {search && (
+                                        <button
+                                            onClick={() => onSearchChange('')}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X size={13} />
+                                        </button>
+                                    )}
                                 </div>
                             )}
-
-                            {/* Search */}
-                            <div className="relative">
-                                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(e) => onSearchChange(e.target.value)}
-                                    placeholder={activeTab === 'threads' ? 'Search threads...' : 'Search short posts...'}
-                                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-blue-300 focus:ring-1 focus:ring-blue-200 outline-none transition-colors"
-                                />
-                                {search && (
-                                    <button
-                                        onClick={() => onSearchChange('')}
-                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-600"
-                                    >
-                                        <X size={13} />
-                                    </button>
-                                )}
-                            </div>
                         </div>
 
-                        {/* Content list */}
+                        {/* Content */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-2">
                             {activeTab === 'short_posts' && (
                                 filteredShortPosts.length > 0 ? (
@@ -164,6 +183,35 @@ export default function SourcePickerModal({
                                     </div>
                                 )
                             )}
+                            {activeTab === 'custom' && (
+                                <div className="space-y-3">
+                                    <textarea
+                                        ref={customTextareaRef}
+                                        value={customText}
+                                        onChange={(e) => setCustomText(e.target.value)}
+                                        placeholder="Write the text for your visual..."
+                                        rows={6}
+                                        autoFocus
+                                        className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                        style={{ fieldSizing: 'content', minHeight: '140px' } as React.CSSProperties}
+                                    />
+                                    <div className="flex items-center justify-between">
+                                        <span className={`font-mono text-[10px] ${customText.length > 280 ? 'text-amber-500' : 'text-gray-400'}`}>
+                                            {customText.length} chars
+                                        </span>
+                                        <button
+                                            disabled={!customText.trim()}
+                                            onClick={() => {
+                                                onSelect({ type: 'standalone', id: 0, content: customText.trim() });
+                                                setCustomText('');
+                                            }}
+                                            className="px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        >
+                                            Create Visual
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -176,7 +224,7 @@ export default function SourcePickerModal({
                     content={Array.isArray(creatingSource.content) ? creatingSource.content : [creatingSource.content]}
                     sourceType={creatingSource.type}
                     blogId={blogId}
-                    sourceId={creatingSource.id}
+                    sourceId={creatingSource.type !== 'standalone' ? creatingSource.id : undefined}
                     onSaved={onVisualSaved}
                 />
             )}

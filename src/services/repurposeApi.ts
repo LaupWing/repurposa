@@ -108,12 +108,16 @@ export async function getVisuals(blogId: number): Promise<Visual[]> {
 }
 
 export async function createVisual(blogId: number, data: {
-    source_type: 'short_post' | 'thread';
+    source_type: 'short_post' | 'thread' | 'standalone';
     source_id: number;
     content: string[];
     description?: string;
     settings: VisualSettings;
 }): Promise<Visual> {
+    if (data.source_type === 'standalone') {
+        const { source_type: _, source_id: __, ...rest } = data;
+        return apiRequest<Visual>('/visuals/standalone', rest as unknown as Record<string, unknown>);
+    }
     return apiRequest<Visual>(`/posts/${blogId}/visuals`, data as unknown as Record<string, unknown>);
 }
 

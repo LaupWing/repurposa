@@ -100,7 +100,7 @@ interface VisualPreviewModalProps {
     onClose: () => void;
     content: string[];
     blogId?: number;
-    sourceType: 'short_post' | 'thread';
+    sourceType: 'short_post' | 'thread' | 'standalone';
     sourceId?: number;
     visualId?: number;
     initialDescription?: string;
@@ -784,10 +784,10 @@ export function VisualPreviewModal({ isOpen, onClose, content, blogId, sourceTyp
             if (isEditing) {
                 visual = await updateVisual(visualId, { content: editablePosts, description, settings });
             } else {
-                if (!blogId || !sourceType || !sourceId) return;
-                visual = await createVisual(blogId, {
+                if (!sourceType || (sourceType !== 'standalone' && (!blogId || !sourceId))) return;
+                visual = await createVisual(blogId || 0, {
                     source_type: sourceType,
-                    source_id: sourceId,
+                    source_id: sourceId || 0,
                     content: editablePosts,
                     description,
                     settings,
@@ -1256,7 +1256,7 @@ export function VisualPreviewModal({ isOpen, onClose, content, blogId, sourceTyp
                         <Download size={16} />
                         {downloading ? 'Generating...' : 'Download'}
                     </button>
-                    {(isEditing || (blogId && sourceType && sourceId)) && (
+                    {(isEditing || (sourceType === 'standalone') || (blogId && sourceType && sourceId)) && (
                         <button
                             onClick={handleSave}
                             disabled={saving}
