@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
-import { X, ChevronDown, ChevronRight, ChevronLeft, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus, Repeat2 } from 'lucide-react';
+import { X, ChevronDown, ChevronRight, ChevronLeft, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus, Repeat2, ImagePlus, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogs } from '@/services/blogApi';
 import { getShortPosts, getThreads, getVisuals, createStandaloneShortPost, createStandaloneThread } from '@/services/repurposeApi';
@@ -9,6 +9,8 @@ import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM } from '@/components/repurpose/m
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
 import { AITextPopup } from '@/components/AITextPopup';
+import ImagePickerModal from '@/components/ImagePickerModal';
+import { ImageGrid } from '@/components/repurpose/cards/ImageGrid';
 import AutoRepostModal from '@/components/repurpose/modals/SchedulePostModal/AutoRepostModal';
 import { useAutoRepost } from '@/hooks/useAutoRepost';
 import type { BlogPost, ShortPost, ThreadItem, Visual, SocialAccount } from '@/types';
@@ -120,6 +122,17 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
     const [threadPosts, setThreadPosts] = useState<string[]>(['']);
     const threadPostRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
+    // Images & CTA for short post composer
+    const [createImages, setCreateImages] = useState<string[]>([]);
+    const [showCreateImagePicker, setShowCreateImagePicker] = useState(false);
+    const [createCta, setCreateCta] = useState('');
+    const [showCtaField, setShowCtaField] = useState(false);
+    const createCtaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Images for thread posts (per-post)
+    const [threadPostImages, setThreadPostImages] = useState<Record<number, string[]>>({});
+    const [threadImagePickerIdx, setThreadImagePickerIdx] = useState<number | null>(null);
+
     // Auto-repost
     const repost = useAutoRepost(socialAccounts);
 
@@ -137,6 +150,12 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
         setCreateType('short_post');
         setCreateText('');
         setThreadPosts(['']);
+        setCreateImages([]);
+        setShowCreateImagePicker(false);
+        setCreateCta('');
+        setShowCtaField(false);
+        setThreadPostImages({});
+        setThreadImagePickerIdx(null);
         repost.reset();
 
         setIsLoadingBlogs(true);
@@ -409,29 +428,103 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
 
                             {/* Short Post Composer */}
                             {createType === 'short_post' && (
-                                <div className="relative">
-                                    <textarea
-                                        ref={createTextareaRef}
-                                        value={createText}
-                                        onChange={(e) => {
-                                            setCreateText(e.target.value);
-                                            e.target.style.height = 'auto';
-                                            e.target.style.height = e.target.scrollHeight + 'px';
-                                        }}
-                                        placeholder="Write your post..."
-                                        rows={6}
-                                        autoFocus
-                                        className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100 placeholder:text-gray-300 overflow-hidden"
-                                    />
-                                    <AITextPopup
-                                        textareaRef={createTextareaRef}
-                                        value={createText}
-                                        onChange={setCreateText}
-                                    />
-                                    <div className="flex items-center justify-between mt-2">
-                                        <span className={`text-[11px] ${createText.length > 280 ? 'text-amber-500' : 'text-gray-300'}`}>
-                                            {createText.length} chars
-                                        </span>
+                                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                    {/* Content */}
+                                    <div className="mb-3">
+                                        <AITextPopup textareaRef={createTextareaRef} value={createText} onChange={setCreateText} />
+                                        <textarea
+                                            ref={createTextareaRef}
+                                            value={createText}
+                                            onChange={(e) => setCreateText(e.target.value)}
+                                            placeholder="Write your post..."
+                                            rows={5}
+                                            autoFocus
+                                            className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                            style={{ fieldSizing: 'content', minHeight: '120px' } as React.CSSProperties}
+                                        />
+                                    </div>
+
+                                    {/* Image Grid */}
+                                    {createImages.length > 0 && (
+                                        <ImageGrid
+                                            media={createImages}
+                                            onRemove={(i) => setCreateImages(prev => prev.filter((_, idx) => idx !== i))}
+                                            onReorder={(from, to) => {
+                                                setCreateImages(prev => {
+                                                    const updated = [...prev];
+                                                    const [moved] = updated.splice(from, 1);
+                                                    updated.splice(to, 0, moved);
+                                                    return updated;
+                                                });
+                                            }}
+                                            onAddClick={() => setShowCreateImagePicker(true)}
+                                        />
+                                    )}
+
+                                    {/* Footer */}
+                                    <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                                        <div className="flex items-center gap-3">
+                                            <span className={`font-mono text-[10px] ${createText.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                                {createText.length}/280
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => setShowCreateImagePicker(true)}
+                                                disabled={createImages.length >= 4}
+                                                className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <ImagePlus size={14} />
+                                            </button>
+                                            {!showCtaField && (
+                                                <button
+                                                    onClick={() => setShowCtaField(true)}
+                                                    className="h-7 flex items-center gap-1 px-2 rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors text-xs"
+                                                >
+                                                    <Share2 size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* CTA Reply */}
+                                    {showCtaField && (
+                                        <div className="relative ml-6 mt-3">
+                                            <div className="absolute top-0 left-4 h-4 w-0.5 bg-gray-200" style={{ top: '-12px' }} />
+                                            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                                                        <Share2 size={12} className="text-gray-400" />
+                                                        Reply · CTA
+                                                    </div>
+                                                    <button
+                                                        onClick={() => { setShowCtaField(false); setCreateCta(''); }}
+                                                        className="p-0.5 text-gray-300 hover:text-red-400 transition-colors"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                                <textarea
+                                                    ref={createCtaRef}
+                                                    value={createCta}
+                                                    onChange={(e) => setCreateCta(e.target.value)}
+                                                    placeholder="Read more here..."
+                                                    rows={2}
+                                                    autoFocus
+                                                    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                                    style={{ fieldSizing: 'content' } as React.CSSProperties}
+                                                />
+                                                <div className="mt-2 flex items-center">
+                                                    <span className={`font-mono text-[10px] ${createCta.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                                        {createCta.length}/280
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Create & Schedule */}
+                                    <div className="mt-4 flex justify-end">
                                         <button
                                             disabled={!createText.trim() || isScheduling || platforms.length === 0}
                                             onClick={async () => {
@@ -475,24 +568,41 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                             {isScheduling ? <Loader2 size={12} className="animate-spin" /> : 'Create & Schedule'}
                                         </button>
                                     </div>
+
+                                    <ImagePickerModal
+                                        isOpen={showCreateImagePicker}
+                                        onClose={() => setShowCreateImagePicker(false)}
+                                        onSelect={(url) => {
+                                            setCreateImages(prev => [...prev, url]);
+                                            setShowCreateImagePicker(false);
+                                        }}
+                                    />
                                 </div>
                             )}
 
                             {/* Thread Composer */}
                             {createType === 'thread' && (
-                                <div className="space-y-2">
-                                    {threadPosts.map((post, idx) => (
-                                        <div key={idx} className="relative flex gap-2">
-                                            {/* Thread connector */}
-                                            <div className="flex flex-col items-center pt-3">
-                                                <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[9px] font-bold text-gray-500 shrink-0">
-                                                    {idx + 1}
-                                                </div>
-                                                {idx < threadPosts.length - 1 && (
-                                                    <div className="w-0.5 flex-1 bg-gray-200 mt-1" />
-                                                )}
+                                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                    {threadPosts.map((post, idx) => {
+                                        const postImages = threadPostImages[idx] || [];
+                                        const isLast = idx === threadPosts.length - 1;
+                                        return (
+                                        <div key={idx} className="relative pb-4 pl-8 last:pb-0">
+                                            {/* Thread line */}
+                                            {!isLast && (
+                                                <div className="absolute top-6 left-2.75 h-[calc(100%-12px)] w-0.5 bg-gray-200" />
+                                            )}
+                                            {/* Number dot */}
+                                            <div className="absolute top-0 left-0 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-[10px] font-medium text-gray-500">
+                                                {idx + 1}
                                             </div>
-                                            <div className="flex-1 min-w-0">
+                                            {/* Content */}
+                                            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                                <AITextPopup textareaRef={{ current: threadPostRefs.current[idx] }} value={post} onChange={(val) => {
+                                                    const updated = [...threadPosts];
+                                                    updated[idx] = val;
+                                                    setThreadPosts(updated);
+                                                }} />
                                                 <textarea
                                                     ref={el => { threadPostRefs.current[idx] = el; }}
                                                     value={post}
@@ -500,40 +610,84 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                                         const updated = [...threadPosts];
                                                         updated[idx] = e.target.value;
                                                         setThreadPosts(updated);
-                                                        e.target.style.height = 'auto';
-                                                        e.target.style.height = e.target.scrollHeight + 'px';
                                                     }}
                                                     placeholder={idx === 0 ? 'Hook — grab attention...' : `Post ${idx + 1}...`}
                                                     rows={3}
                                                     autoFocus={idx === threadPosts.length - 1}
-                                                    className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100 placeholder:text-gray-300 overflow-hidden"
+                                                    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                                    style={{ fieldSizing: 'content', minHeight: '80px' } as React.CSSProperties}
                                                 />
-                                                {threadPosts.length > 1 && (
-                                                    <button
-                                                        onClick={() => setThreadPosts(prev => prev.filter((_, i) => i !== idx))}
-                                                        className="absolute top-2 right-1 p-1 text-gray-300 hover:text-red-400 transition-colors"
-                                                    >
-                                                        <X size={12} />
-                                                    </button>
+                                                {/* Per-post images */}
+                                                {postImages.length > 0 && (
+                                                    <div className="mt-2">
+                                                        <ImageGrid
+                                                            media={postImages}
+                                                            onRemove={(i) => setThreadPostImages(prev => ({
+                                                                ...prev,
+                                                                [idx]: (prev[idx] || []).filter((_, imgIdx) => imgIdx !== i),
+                                                            }))}
+                                                            onReorder={(from, to) => setThreadPostImages(prev => {
+                                                                const imgs = [...(prev[idx] || [])];
+                                                                const [moved] = imgs.splice(from, 1);
+                                                                imgs.splice(to, 0, moved);
+                                                                return { ...prev, [idx]: imgs };
+                                                            })}
+                                                            onAddClick={() => setThreadImagePickerIdx(idx)}
+                                                        />
+                                                    </div>
                                                 )}
+                                                {/* Per-post footer */}
+                                                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                                                    <span className={`font-mono text-[10px] ${post.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                                        {post.length}/280
+                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={() => setThreadImagePickerIdx(idx)}
+                                                            disabled={postImages.length >= 4}
+                                                            className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        >
+                                                            <ImagePlus size={14} />
+                                                        </button>
+                                                        {threadPosts.length > 1 && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setThreadPosts(prev => prev.filter((_, i) => i !== idx));
+                                                                    setThreadPostImages(prev => {
+                                                                        const updated: Record<number, string[]> = {};
+                                                                        Object.entries(prev).forEach(([key, val]) => {
+                                                                            const k = Number(key);
+                                                                            if (k < idx) updated[k] = val;
+                                                                            else if (k > idx) updated[k - 1] = val;
+                                                                        });
+                                                                        return updated;
+                                                                    });
+                                                                }}
+                                                                className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
 
                                     {/* Add post button */}
-                                    <button
-                                        onClick={() => setThreadPosts(prev => [...prev, ''])}
-                                        className="flex items-center gap-1.5 ml-7 px-3 py-1.5 text-xs font-medium text-gray-500 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-                                    >
-                                        <Plus size={12} />
-                                        Add post
-                                    </button>
+                                    <div className="pl-8 pt-1">
+                                        <button
+                                            onClick={() => setThreadPosts(prev => [...prev, ''])}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <Plus size={12} />
+                                            Add post
+                                        </button>
+                                    </div>
 
-                                    {/* Footer */}
-                                    <div className="flex items-center justify-between mt-3 pt-2">
-                                        <span className="text-[11px] text-gray-300">
-                                            {threadPosts.length} post{threadPosts.length !== 1 ? 's' : ''} · {threadPosts.reduce((s, p) => s + p.length, 0)} chars
-                                        </span>
+                                    {/* Create & Schedule */}
+                                    <div className="mt-4 flex justify-end">
                                         <button
                                             disabled={!threadPosts[0]?.trim() || threadPosts.filter(p => p.trim()).length < 2 || isScheduling || platforms.length === 0}
                                             onClick={async () => {
@@ -583,6 +737,19 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                             {isScheduling ? <Loader2 size={12} className="animate-spin" /> : 'Create & Schedule'}
                                         </button>
                                     </div>
+
+                                    <ImagePickerModal
+                                        isOpen={threadImagePickerIdx !== null}
+                                        onClose={() => setThreadImagePickerIdx(null)}
+                                        onSelect={(url) => {
+                                            const idx = threadImagePickerIdx!;
+                                            setThreadPostImages(prev => ({
+                                                ...prev,
+                                                [idx]: [...(prev[idx] || []), url],
+                                            }));
+                                            setThreadImagePickerIdx(null);
+                                        }}
+                                    />
                                 </div>
                             )}
                         </div>
