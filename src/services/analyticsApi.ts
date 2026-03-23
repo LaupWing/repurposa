@@ -58,3 +58,24 @@ export async function getAnalyticsPosts(period: string = '30d', platform?: strin
     const response = await apiRequest<{ data: AnalyticsPost[] }>(`/analytics?${params}`, {}, 'GET');
     return response.data;
 }
+
+export interface AnalyticsSnapshot {
+    id: number;
+    scheduled_post_id: number;
+    platform: string;
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    clicks: number;
+    quotes: number | null;
+    saves: number | null;
+    reach: number | null;
+    profile_clicks: number | null;
+    fetched_at: string;
+}
+
+export async function getPostSnapshots(scheduledPostId: number): Promise<AnalyticsSnapshot[]> {
+    const response = await apiRequest<{ data: AnalyticsSnapshot[] }>(`/analytics/${scheduledPostId}`, {}, 'GET');
+    return response.data;
+}

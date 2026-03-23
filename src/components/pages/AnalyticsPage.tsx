@@ -18,10 +18,12 @@ import {
     Quote,
     ExternalLink,
     Loader2,
+    ChevronDown,
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
-import { getAnalyticsSummary, getAnalyticsPosts } from '@/services/analyticsApi';
-import type { AnalyticsSummary, AnalyticsPost } from '@/services/analyticsApi';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { getAnalyticsSummary, getAnalyticsPosts, getPostSnapshots } from '@/services/analyticsApi';
+import type { AnalyticsSummary, AnalyticsPost, AnalyticsSnapshot } from '@/services/analyticsApi';
 
 // ============================================
 // TYPES
@@ -55,6 +57,7 @@ interface PlatformData {
     metrics: PostMetrics;
     postUrl?: string | null;
     content?: string | null;
+    scheduledPostId: number;
 }
 
 interface BlogPost {
@@ -83,6 +86,7 @@ function mapApiPostsToBlogs(apiPosts: AnalyticsPost[]): BlogPost[] {
             publishedAt: post.published_at,
             postUrl: post.platform_post_url,
             content: post.schedulable_content,
+            scheduledPostId: post.id,
             metrics: {
                 views: a.views,
                 likes: a.likes,
@@ -165,6 +169,185 @@ function Metric({ icon, value, label }: { icon: React.ReactNode; value: string; 
     );
 }
 
+const CHART_METRICS = [
+    { key: 'views', color: '#3b82f6', label: 'Views' },
+    { key: 'likes', color: '#ef4444', label: 'Likes' },
+    { key: 'comments', color: '#8b5cf6', label: 'Comments' },
+    { key: 'shares', color: '#10b981', label: 'Shares' },
+] as const;
+
+type TimeMode = 'hours' | 'time';
+type RangeMode = '24h' | 'all';
+
+function GrowthChart({ scheduledPostId, publishedAt }: { scheduledPostId: number; publishedAt: string }) {
+    const [snapshots, setSnapshots] = useState<AnalyticsSnapshot[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [activeMetric, setActiveMetric] = useState<string>('views');
+    const [timeMode, setTimeMode] = useState<TimeMode>('hours');
+    const [rangeMode, setRangeMode] = useState<RangeMode>('24h');
+
+    useEffect(() => {
+        setIsLoading(true);
+        getPostSnapshots(scheduledPostId)
+            .then(setSnapshots)
+            .catch(() => {})
+            .finally(() => setIsLoading(false));
+    }, [scheduledPostId]);
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-8">
+                <Loader2 size={16} className="animate-spin text-gray-300" />
+            </div>
+        );
+    }
+
+    if (snapshots.length === 0) {
+        return (
+            <div className="text-center py-6 text-xs text-gray-400">
+                No data yet — check back in an hour
+            </div>
+        );
+    }
+
+    const pubTime = new Date(publishedAt).getTime();
+
+    // Filter based on range mode
+    const cutoff = pubTime + 24.5 * 60 * 60 * 1000;
+    const first24h = snapshots.filter(s => new Date(s.fetched_at).getTime() <= cutoff);
+    const dataSource = rangeMode === '24h' && first24h.length > 0 ? first24h : snapshots;
+
+    const chartData = dataSource.map(s => {
+        const fetchedAt = new Date(s.fetched_at);
+        const hoursAfter = Math.round((fetchedAt.getTime() - pubTime) / (1000 * 60 * 60));
+        const daysAfter = Math.round((fetchedAt.getTime() - pubTime) / (1000 * 60 * 60 * 24));
+        const timeStr = fetchedAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+        let label: string;
+        if (timeMode === 'time') {
+            label = rangeMode === 'all'
+                ? fetchedAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                : timeStr;
+        } else {
+            label = rangeMode === 'all' ? `${daysAfter}d` : `${hoursAfter}h`;
+        }
+
+        return {
+            label,
+            views: s.views,
+            likes: s.likes,
+            comments: s.comments,
+            shares: s.shares,
+        };
+    });
+
+    // Extrapolate to 24h if in 24h mode and last data point is before 24h
+    if (rangeMode === '24h' && dataSource.length >= 2) {
+        const lastSnap = dataSource[dataSource.length - 1];
+        const lastHour = Math.round((new Date(lastSnap.fetched_at).getTime() - pubTime) / (1000 * 60 * 60));
+        if (lastHour < 24) {
+            const prevSnap = dataSource[dataSource.length - 2];
+            const prevHour = Math.round((new Date(prevSnap.fetched_at).getTime() - pubTime) / (1000 * 60 * 60));
+            const hourDiff = lastHour - prevHour || 1;
+            const hoursToExtrap = 24 - lastHour;
+            const ratio = hoursToExtrap / hourDiff;
+
+            const extrapolate = (last: number, prev: number) => Math.round(last + (last - prev) * ratio);
+
+            const pubAt24 = new Date(pubTime + 24 * 60 * 60 * 1000);
+            chartData.push({
+                label: timeMode === 'time'
+                    ? pubAt24.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+                    : '24h',
+                views: extrapolate(lastSnap.views, prevSnap.views),
+                likes: extrapolate(lastSnap.likes, prevSnap.likes),
+                comments: extrapolate(lastSnap.comments, prevSnap.comments),
+                shares: extrapolate(lastSnap.shares, prevSnap.shares),
+            });
+        }
+    }
+
+    const metric = CHART_METRICS.find(m => m.key === activeMetric) || CHART_METRICS[0];
+
+    return (
+        <div>
+            {/* Header: metric pills + range/time toggles */}
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1">
+                    {CHART_METRICS.map(m => (
+                        <button
+                            key={m.key}
+                            onClick={() => setActiveMetric(m.key)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                                activeMetric === m.key
+                                    ? 'text-white'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                            }`}
+                            style={activeMetric === m.key ? { backgroundColor: m.color } : undefined}
+                        >
+                            {m.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setRangeMode(prev => prev === '24h' ? 'all' : '24h')}
+                        className="text-[10px] font-medium text-gray-400 hover:text-gray-600 transition-colors px-1.5 py-0.5 rounded hover:bg-gray-100"
+                    >
+                        {rangeMode === '24h' ? 'All time' : 'First 24h'}
+                    </button>
+                    <span className="text-gray-200">·</span>
+                    <button
+                        onClick={() => setTimeMode(prev => prev === 'hours' ? 'time' : 'hours')}
+                        className="text-[10px] font-medium text-gray-400 hover:text-gray-600 transition-colors px-1.5 py-0.5 rounded hover:bg-gray-100"
+                    >
+                        {timeMode === 'hours' ? 'Show time' : 'Show hours'}
+                    </button>
+                </div>
+            </div>
+            <div
+                style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}
+                onMouseDown={(e) => e.preventDefault()}
+            >
+            <ResponsiveContainer width="100%" height={160}>
+                <AreaChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }}>
+                    <defs>
+                        <linearGradient id={`grad-${scheduledPostId}-${metric.key}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={metric.color} stopOpacity={0.35} />
+                            <stop offset="95%" stopColor={metric.color} stopOpacity={0.02} />
+                        </linearGradient>
+                    </defs>
+                    <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 10, fill: '#6b7280' }}
+                        stroke="#d1d5db"
+                        tickLine={false}
+                    />
+                    <YAxis
+                        tick={{ fontSize: 10, fill: '#6b7280' }}
+                        stroke="#d1d5db"
+                        tickLine={false}
+                    />
+                    <Tooltip
+                        contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #d1d5db', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '8px 12px' }}
+                        labelStyle={{ fontWeight: 600, color: '#111827', marginBottom: 2 }}
+                    />
+                    <Area
+                        type="monotone"
+                        dataKey={metric.key}
+                        stroke={metric.color}
+                        strokeWidth={2}
+                        fill={`url(#grad-${scheduledPostId}-${metric.key})`}
+                        dot={chartData.length === 1 ? { r: 4, fill: metric.color, strokeWidth: 0 } : false}
+                        activeDot={{ r: 3, strokeWidth: 0 }}
+                    />
+                </AreaChart>
+            </ResponsiveContainer>
+            </div>
+        </div>
+    );
+}
+
 function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: Platform | 'all' }) {
     const availablePlatforms = post.platforms.map(p => p.platform);
     const defaultPlatform = forcePlatform !== 'all' && availablePlatforms.includes(forcePlatform)
@@ -172,6 +355,7 @@ function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: 
         : availablePlatforms[0];
 
     const [activePlatform, setActivePlatform] = useState<Platform>(defaultPlatform);
+    const [showChart, setShowChart] = useState(false);
 
     // When forcePlatform changes from outside, sync if available
     const displayPlatform = forcePlatform !== 'all' && availablePlatforms.includes(forcePlatform)
@@ -217,11 +401,22 @@ function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: 
                         </button>
                     );
                 })}
-                <span className="ml-auto text-xs text-gray-400 flex items-center gap-1">
+                <button
+                    onClick={() => setShowChart(!showChart)}
+                    className="ml-auto text-xs text-gray-400 flex items-center gap-1 hover:text-gray-600 transition-colors"
+                >
                     <TrendingUp size={11} />
                     {engRate(m)}
-                </span>
+                    <ChevronDown size={11} className={`transition-transform ${showChart ? 'rotate-180' : ''}`} />
+                </button>
             </div>
+
+            {/* Growth chart (expandable) */}
+            {showChart && (
+                <div className="mb-4 pb-1">
+                    <GrowthChart scheduledPostId={data.scheduledPostId} publishedAt={data.publishedAt} />
+                </div>
+            )}
 
             {/* Core metrics */}
             <div className="flex items-start gap-2 py-3 border-y border-gray-100">
