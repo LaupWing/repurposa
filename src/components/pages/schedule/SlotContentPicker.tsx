@@ -134,7 +134,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
     const [threadImagePickerIdx, setThreadImagePickerIdx] = useState<number | null>(null);
 
     // Auto-repost
-    const repost = useAutoRepost(socialAccounts);
+    const repost = useAutoRepost(socialAccounts, platforms);
 
     // Reset state when modal opens
     useEffect(() => {

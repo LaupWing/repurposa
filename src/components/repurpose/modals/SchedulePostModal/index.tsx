@@ -74,7 +74,7 @@ export default function SchedulePostModal({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [removingId, setRemovingId] = useState<number | null>(null);
     const [initialSelection, setInitialSelection] = useState<{ slotIndex: number | null; platforms: SchedulePlatform[] } | null>(null);
-    const repost = useAutoRepost(socialAccounts);
+    const repost = useAutoRepost(socialAccounts, selectedPlatforms);
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // Compute platform states (no slot context — for global checks)

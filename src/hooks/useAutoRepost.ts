@@ -12,15 +12,40 @@ export interface RepostInterval {
 
 const REPOST_PLATFORM_IDS: RepostPlatform[] = ['x', 'threads'];
 
-export function useAutoRepost(socialAccounts: SocialAccount[]) {
+export function useAutoRepost(socialAccounts: SocialAccount[], selectedSchedulePlatforms?: string[]) {
     const [enabled, setEnabled] = useState(false);
     const [intervals, setIntervals] = useState<RepostInterval[]>([]);
     const [platforms, setPlatforms] = useState<RepostPlatform[]>([]);
     const [showModal, setShowModal] = useState(false);
 
-    const availablePlatforms = REPOST_PLATFORM_IDS.filter(p =>
+    // Only show repost-capable platforms that are both connected AND selected for scheduling
+    const connectedRepost = REPOST_PLATFORM_IDS.filter(p =>
         socialAccounts.some(a => a.platform === (p === 'x' ? 'twitter' : p))
     );
+    const availablePlatforms = selectedSchedulePlatforms
+        ? connectedRepost.filter(p => selectedSchedulePlatforms.includes(p))
+        : connectedRepost;
+
+    // If selected platforms change and remove a repost platform, clean up
+    useEffect(() => {
+        if (!enabled || availablePlatforms.length > 0) return;
+        // No repost-capable platforms left in the selection — disable repost
+        setEnabled(false);
+        setPlatforms([]);
+    }, [availablePlatforms.length, enabled]);
+
+    useEffect(() => {
+        if (!enabled) return;
+        // Remove any repost platforms that are no longer available
+        setPlatforms(prev => {
+            const filtered = prev.filter(p => availablePlatforms.includes(p));
+            if (filtered.length === 0 && prev.length > 0) {
+                setEnabled(false);
+                return [];
+            }
+            return filtered.length !== prev.length ? filtered : prev;
+        });
+    }, [availablePlatforms.join(','), enabled]);
 
     const toggle = () => {
         if (enabled) {
