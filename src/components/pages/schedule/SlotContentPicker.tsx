@@ -560,11 +560,16 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                                         })
                                                         .filter((id): id is number => id !== undefined);
 
-                                                    await createStandaloneShortPost({
+                                                    const result = await createStandaloneShortPost({
                                                         content: createText.trim(),
                                                         social_account_ids: accountIds,
                                                         scheduled_at: scheduledAt.toISOString(),
                                                     });
+
+                                                    // Create repost schedules if enabled
+                                                    if (result.scheduled_posts?.length) {
+                                                        await repost.createSchedules(result.scheduled_posts.map(sp => ({ id: sp.id, platform: sp.platform })));
+                                                    }
 
                                                     const platformNames = platforms
                                                         .map(id => SCHEDULE_PLATFORMS.find(p => p.id === id)?.name)
@@ -747,12 +752,17 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                                         })
                                                         .filter((id): id is number => id !== undefined);
 
-                                                    await createStandaloneThread({
+                                                    const result = await createStandaloneThread({
                                                         hook: filledPosts[0],
                                                         posts: filledPosts.slice(1).map(content => ({ content })),
                                                         social_account_ids: accountIds,
                                                         scheduled_at: scheduledAt.toISOString(),
                                                     });
+
+                                                    // Create repost schedules if enabled
+                                                    if (result.scheduled_posts?.length) {
+                                                        await repost.createSchedules(result.scheduled_posts.map(sp => ({ id: sp.id, platform: sp.platform })));
+                                                    }
 
                                                     const platformNames = platforms
                                                         .map(id => SCHEDULE_PLATFORMS.find(p => p.id === id)?.name)
