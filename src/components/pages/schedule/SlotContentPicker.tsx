@@ -96,9 +96,10 @@ interface SlotContentPickerProps {
     slotPlatforms: SchedulePlatform[];
     onClose: () => void;
     onScheduled: () => void;
+    initialDraftContent?: string;
 }
 
-export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onClose, onScheduled }: SlotContentPickerProps) {
+export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onClose, onScheduled, initialDraftContent }: SlotContentPickerProps) {
     const [scheduledAt, setScheduledAt] = useState<Date>(slotDate);
     const [platforms, setPlatforms] = useState<SchedulePlatform[]>(slotPlatforms);
     const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
@@ -146,9 +147,9 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
         setSchedulingItemId(null);
         setExpandedBlogId(null);
         setBlogContent({});
-        setView('list');
+        setView(initialDraftContent ? 'create' : 'list');
         setCreateType('short_post');
-        setCreateText('');
+        setCreateText(initialDraftContent || '');
         setThreadPosts(['']);
         setCreateImages([]);
         setShowCreateImagePicker(false);

@@ -42,6 +42,7 @@ export default function SchedulePage() {
     const [isPickerOpen, setIsPickerOpen] = useState(false);
     const [pickerSlotDate, setPickerSlotDate] = useState<Date | null>(null);
     const [pickerSlotPlatforms, setPickerSlotPlatforms] = useState<Platform[]>([]);
+    const [pickerDraftContent, setPickerDraftContent] = useState<string | undefined>(undefined);
     const [detailPost, setDetailPost] = useState<ScheduledPost | null>(null);
 
     const connectedPlatforms: Platform[] = socialConnections
@@ -195,6 +196,24 @@ export default function SchedulePage() {
                     drafts={drafts}
                     isLoading={isLoadingDrafts}
                     onDraftsChange={setDrafts}
+                    onDraftClick={(draft) => {
+                        if (weeklySchedule) {
+                            const slots = getUpcomingSlotsFromSchedule(weeklySchedule, 1);
+                            if (slots.length > 0) {
+                                setPickerSlotDate(slots[0].date);
+                                setPickerSlotPlatforms(slots[0].platforms as Platform[]);
+                                setPickerDraftContent(draft.content);
+                                setIsPickerOpen(true);
+                                return;
+                            }
+                        }
+                        const nextHour = new Date();
+                        nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+                        setPickerSlotDate(nextHour);
+                        setPickerSlotPlatforms(connectedPlatforms);
+                        setPickerDraftContent(draft.content);
+                        setIsPickerOpen(true);
+                    }}
                 />
             )}
             {activeTab === "times" && (
@@ -212,8 +231,9 @@ export default function SchedulePage() {
                     isOpen={isPickerOpen}
                     slotDate={pickerSlotDate}
                     slotPlatforms={pickerSlotPlatforms as SchedulePlatform[]}
-                    onClose={() => setIsPickerOpen(false)}
-                    onScheduled={() => { setIsPickerOpen(false); refreshPosts(); }}
+                    initialDraftContent={pickerDraftContent}
+                    onClose={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); }}
+                    onScheduled={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); refreshPosts(); }}
                 />
             )}
             {detailPost && (

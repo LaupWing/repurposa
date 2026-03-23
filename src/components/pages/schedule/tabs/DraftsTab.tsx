@@ -7,9 +7,10 @@ interface DraftsTabProps {
     drafts: ApiShortPost[];
     isLoading: boolean;
     onDraftsChange: (updater: (prev: ApiShortPost[]) => ApiShortPost[]) => void;
+    onDraftClick: (draft: ApiShortPost) => void;
 }
 
-export function DraftsTab({ drafts, isLoading, onDraftsChange }: DraftsTabProps) {
+export function DraftsTab({ drafts, isLoading, onDraftsChange, onDraftClick }: DraftsTabProps) {
     if (isLoading) {
         return (
             <div className="space-y-3 animate-pulse">
@@ -41,7 +42,8 @@ export function DraftsTab({ drafts, isLoading, onDraftsChange }: DraftsTabProps)
                 return (
                     <div
                         key={draft.id}
-                        className="group flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                        onClick={() => onDraftClick(draft)}
+                        className="group flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
                     >
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
@@ -65,7 +67,8 @@ export function DraftsTab({ drafts, isLoading, onDraftsChange }: DraftsTabProps)
                         </div>
                         <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                                onClick={async () => {
+                                onClick={async (e) => {
+                                    e.stopPropagation();
                                     try {
                                         await deleteShortPost(draft.id);
                                         onDraftsChange((prev) => prev.filter((d) => d.id !== draft.id));
