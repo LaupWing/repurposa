@@ -63,6 +63,15 @@ export async function deleteShortPost(shortPostId: number): Promise<void> {
     await apiRequest<void>(`/repurpose/short-posts/${shortPostId}`, {}, 'DELETE');
 }
 
+export async function createStandaloneThread(data: {
+    hook: string;
+    posts: { content: string }[];
+    social_account_ids?: number[];
+    scheduled_at?: string;
+}): Promise<{ thread: ThreadItem; scheduled_posts: import('@/types').ScheduledPost[] }> {
+    return apiRequest('/repurpose/threads/standalone', data as Record<string, unknown>);
+}
+
 // ============================================
 // THREADS
 // ============================================

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from '@wordpress/element';
 import { X, ChevronDown, ChevronRight, ChevronLeft, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus, Repeat2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogs } from '@/services/blogApi';
-import { getShortPosts, getThreads, getVisuals, createStandaloneShortPost } from '@/services/repurposeApi';
+import { getShortPosts, getThreads, getVisuals, createStandaloneShortPost, createStandaloneThread } from '@/services/repurposeApi';
 import { getSocialAccounts } from '@/services/profileApi';
 import { createScheduledPost } from '@/services/scheduleApi';
 import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM } from '@/components/repurpose/modals/schedule-utils';
@@ -117,6 +117,8 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
     const [createType, setCreateType] = useState<'short_post' | 'thread' | 'visual'>('short_post');
     const [createText, setCreateText] = useState('');
     const createTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const [threadPosts, setThreadPosts] = useState<string[]>(['']);
+    const threadPostRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
     // Auto-repost
     const repost = useAutoRepost(socialAccounts);
@@ -134,6 +136,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
         setView('list');
         setCreateType('short_post');
         setCreateText('');
+        setThreadPosts(['']);
         repost.reset();
 
         setIsLoadingBlogs(true);
@@ -383,13 +386,15 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                     Short Post
                                 </button>
                                 <button
-                                    disabled
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-gray-100 text-gray-300 cursor-not-allowed"
-                                    title="Coming soon"
+                                    onClick={() => setCreateType('thread')}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                        createType === 'thread'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                                    }`}
                                 >
                                     <MessageSquare size={11} />
                                     Thread
-                                    <span className="text-[9px] text-gray-300 ml-0.5">soon</span>
                                 </button>
                                 <button
                                     disabled
@@ -402,7 +407,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                 </button>
                             </div>
 
-                            {/* Composer */}
+                            {/* Short Post Composer */}
                             {createType === 'short_post' && (
                                 <div className="relative">
                                     <textarea
@@ -461,6 +466,114 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                                     onClose();
                                                 } catch {
                                                     toast.error('Failed to create & schedule post');
+                                                } finally {
+                                                    setIsScheduling(false);
+                                                }
+                                            }}
+                                            className="px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        >
+                                            {isScheduling ? <Loader2 size={12} className="animate-spin" /> : 'Create & Schedule'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Thread Composer */}
+                            {createType === 'thread' && (
+                                <div className="space-y-2">
+                                    {threadPosts.map((post, idx) => (
+                                        <div key={idx} className="relative flex gap-2">
+                                            {/* Thread connector */}
+                                            <div className="flex flex-col items-center pt-3">
+                                                <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[9px] font-bold text-gray-500 shrink-0">
+                                                    {idx + 1}
+                                                </div>
+                                                {idx < threadPosts.length - 1 && (
+                                                    <div className="w-0.5 flex-1 bg-gray-200 mt-1" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <textarea
+                                                    ref={el => { threadPostRefs.current[idx] = el; }}
+                                                    value={post}
+                                                    onChange={(e) => {
+                                                        const updated = [...threadPosts];
+                                                        updated[idx] = e.target.value;
+                                                        setThreadPosts(updated);
+                                                        e.target.style.height = 'auto';
+                                                        e.target.style.height = e.target.scrollHeight + 'px';
+                                                    }}
+                                                    placeholder={idx === 0 ? 'Hook — grab attention...' : `Post ${idx + 1}...`}
+                                                    rows={3}
+                                                    autoFocus={idx === threadPosts.length - 1}
+                                                    className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100 placeholder:text-gray-300 overflow-hidden"
+                                                />
+                                                {threadPosts.length > 1 && (
+                                                    <button
+                                                        onClick={() => setThreadPosts(prev => prev.filter((_, i) => i !== idx))}
+                                                        className="absolute top-2 right-1 p-1 text-gray-300 hover:text-red-400 transition-colors"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {/* Add post button */}
+                                    <button
+                                        onClick={() => setThreadPosts(prev => [...prev, ''])}
+                                        className="flex items-center gap-1.5 ml-7 px-3 py-1.5 text-xs font-medium text-gray-500 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                                    >
+                                        <Plus size={12} />
+                                        Add post
+                                    </button>
+
+                                    {/* Footer */}
+                                    <div className="flex items-center justify-between mt-3 pt-2">
+                                        <span className="text-[11px] text-gray-300">
+                                            {threadPosts.length} post{threadPosts.length !== 1 ? 's' : ''} · {threadPosts.reduce((s, p) => s + p.length, 0)} chars
+                                        </span>
+                                        <button
+                                            disabled={!threadPosts[0]?.trim() || threadPosts.filter(p => p.trim()).length < 2 || isScheduling || platforms.length === 0}
+                                            onClick={async () => {
+                                                if (platforms.length === 0) {
+                                                    toast.error('Select at least one platform');
+                                                    return;
+                                                }
+                                                const filledPosts = threadPosts.filter(p => p.trim());
+                                                if (filledPosts.length < 2) {
+                                                    toast.error('A thread needs at least 2 posts');
+                                                    return;
+                                                }
+                                                setIsScheduling(true);
+                                                try {
+                                                    const accountIds = platforms
+                                                        .map(platformId => {
+                                                            const apiPlatform = UI_TO_API_PLATFORM[platformId];
+                                                            return socialAccounts.find(a => a.platform === apiPlatform)?.id;
+                                                        })
+                                                        .filter((id): id is number => id !== undefined);
+
+                                                    await createStandaloneThread({
+                                                        hook: filledPosts[0],
+                                                        posts: filledPosts.slice(1).map(content => ({ content })),
+                                                        social_account_ids: accountIds,
+                                                        scheduled_at: scheduledAt.toISOString(),
+                                                    });
+
+                                                    const platformNames = platforms
+                                                        .map(id => SCHEDULE_PLATFORMS.find(p => p.id === id)?.name)
+                                                        .filter(Boolean)
+                                                        .join(', ');
+                                                    const formattedTime = scheduledAt.toLocaleString(undefined, {
+                                                        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                                                    });
+                                                    toast.success('Thread created & scheduled!', { description: `${platformNames} · ${formattedTime}` });
+                                                    onScheduled();
+                                                    onClose();
+                                                } catch {
+                                                    toast.error('Failed to create & schedule thread');
                                                 } finally {
                                                     setIsScheduling(false);
                                                 }
