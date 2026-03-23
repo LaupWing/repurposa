@@ -79,3 +79,17 @@ export async function getPostSnapshots(scheduledPostId: number): Promise<Analyti
     const response = await apiRequest<{ data: AnalyticsSnapshot[] }>(`/analytics/${scheduledPostId}`, {}, 'GET');
     return response.data;
 }
+
+export interface DailyTotal {
+    date: string;
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    clicks: number;
+}
+
+export async function getDailyTotals(period: string = '7d'): Promise<DailyTotal[]> {
+    const response = await apiRequest<{ data: DailyTotal[] }>(`/analytics/daily-totals?period=${period}`, {}, 'GET');
+    return response.data;
+}

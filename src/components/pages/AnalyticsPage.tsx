@@ -22,7 +22,8 @@ import {
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { getAnalyticsSummary, getAnalyticsPosts, getPostSnapshots } from '@/services/analyticsApi';
+import { getAnalyticsSummary, getAnalyticsPosts, getPostSnapshots, getDailyTotals } from '@/services/analyticsApi';
+import type { DailyTotal } from '@/services/analyticsApi';
 import type { AnalyticsSummary, AnalyticsPost, AnalyticsSnapshot } from '@/services/analyticsApi';
 
 // ============================================
@@ -165,6 +166,136 @@ function Metric({ icon, value, label }: { icon: React.ReactNode; value: string; 
                 {value}
             </div>
             <span className="text-[10px] text-gray-400 uppercase tracking-wide">{label}</span>
+        </div>
+    );
+}
+
+const OVERVIEW_METRICS = [
+    { key: 'views', color: '#3b82f6', label: 'Views' },
+    { key: 'likes', color: '#ef4444', label: 'Likes' },
+    { key: 'comments', color: '#8b5cf6', label: 'Comments' },
+    { key: 'shares', color: '#10b981', label: 'Shares' },
+    { key: 'clicks', color: '#f59e0b', label: 'Clicks' },
+] as const;
+
+const OVERVIEW_PERIODS = [
+    { key: '7d', label: '7 days' },
+    { key: '30d', label: '30 days' },
+    { key: 'all', label: 'All time' },
+] as const;
+
+function OverviewChart() {
+    const [dailyData, setDailyData] = useState<DailyTotal[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [activeMetric, setActiveMetric] = useState<string>('views');
+    const [period, setPeriod] = useState<string>('7d');
+
+    useEffect(() => {
+        setIsLoading(true);
+        getDailyTotals(period)
+            .then(setDailyData)
+            .catch(() => {})
+            .finally(() => setIsLoading(false));
+    }, [period]);
+
+    const metric = OVERVIEW_METRICS.find(m => m.key === activeMetric) || OVERVIEW_METRICS[0];
+
+    const chartData = dailyData.map(d => ({
+        label: new Date(d.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        views: Number(d.views),
+        likes: Number(d.likes),
+        comments: Number(d.comments),
+        shares: Number(d.shares),
+        clicks: Number(d.clicks),
+    }));
+
+    return (
+        <div className="bg-white rounded-lg border border-gray-200 p-5 mb-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-1.5">
+                    {OVERVIEW_METRICS.map(m => (
+                        <button
+                            key={m.key}
+                            onClick={() => setActiveMetric(m.key)}
+                            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                                activeMetric === m.key
+                                    ? 'text-white'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                            }`}
+                            style={activeMetric === m.key ? { backgroundColor: m.color } : undefined}
+                        >
+                            {m.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex items-center gap-1 bg-gray-50 rounded-md p-0.5">
+                    {OVERVIEW_PERIODS.map(p => (
+                        <button
+                            key={p.key}
+                            onClick={() => setPeriod(p.key)}
+                            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                                period === p.key
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            {p.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Chart */}
+            {isLoading ? (
+                <div className="flex items-center justify-center py-16">
+                    <Loader2 size={20} className="animate-spin text-gray-300" />
+                </div>
+            ) : chartData.length === 0 ? (
+                <div className="text-center py-16 text-sm text-gray-400">
+                    No analytics data for this period
+                </div>
+            ) : (
+                <div
+                    style={{ userSelect: 'none' } as React.CSSProperties}
+                    onMouseDown={(e) => e.preventDefault()}
+                >
+                    <ResponsiveContainer width="100%" height={200}>
+                        <AreaChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }}>
+                            <defs>
+                                <linearGradient id={`overview-grad-${metric.key}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={metric.color} stopOpacity={0.35} />
+                                    <stop offset="95%" stopColor={metric.color} stopOpacity={0.02} />
+                                </linearGradient>
+                            </defs>
+                            <XAxis
+                                dataKey="label"
+                                tick={{ fontSize: 11, fill: '#6b7280' }}
+                                stroke="#d1d5db"
+                                tickLine={false}
+                            />
+                            <YAxis
+                                tick={{ fontSize: 11, fill: '#6b7280' }}
+                                stroke="#d1d5db"
+                                tickLine={false}
+                            />
+                            <Tooltip
+                                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #d1d5db', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '8px 12px' }}
+                                labelStyle={{ fontWeight: 600, color: '#111827', marginBottom: 2 }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey={metric.key}
+                                stroke={metric.color}
+                                strokeWidth={2}
+                                fill={`url(#overview-grad-${metric.key})`}
+                                dot={chartData.length === 1 ? { r: 4, fill: metric.color, strokeWidth: 0 } : false}
+                                activeDot={{ r: 4, strokeWidth: 0 }}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
         </div>
     );
 }
@@ -407,6 +538,7 @@ function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: 
                 >
                     <TrendingUp size={11} />
                     {engRate(m)}
+                    <span className="text-[10px] ml-0.5">{showChart ? 'Hide graph' : 'Show graph'}</span>
                     <ChevronDown size={11} className={`transition-transform ${showChart ? 'rotate-180' : ''}`} />
                 </button>
             </div>
@@ -519,6 +651,9 @@ export default function AnalyticsPage() {
             )}
 
             {!isLoading && <>
+            {/* Overview chart */}
+            <OverviewChart />
+
             {/* Summary stats */}
             <div className="grid grid-cols-4 gap-4 mb-6">
                 {[
