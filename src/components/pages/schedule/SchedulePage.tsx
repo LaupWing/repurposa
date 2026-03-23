@@ -18,7 +18,7 @@ import type { ShortPost as ApiShortPost } from "@/types";
 import { getStandaloneShortPosts } from "@/services/repurposeApi";
 import type { Platform, TabType, WeeklySchedule, ScheduledPost } from "./types";
 import { API_TO_UI_PLATFORM } from "./types";
-import { mapApiPost, groupScheduledPosts, mapScheduleFromApi } from "./helpers";
+import { mapApiPost, groupScheduledPosts, mapScheduleFromApi, getUpcomingSlotsFromSchedule } from "./helpers";
 import { useProfileStore } from "@/store/profileStore";
 import SlotContentPicker from "./SlotContentPicker";
 import ScheduledPostDetail from "./ScheduledPostDetail";
@@ -118,7 +118,26 @@ export default function SchedulePage() {
                     </p>
                 </div>
                 {activeTab === "queue" && (
-                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                    <button
+                        onClick={() => {
+                            if (weeklySchedule) {
+                                const slots = getUpcomingSlotsFromSchedule(weeklySchedule, 1);
+                                if (slots.length > 0) {
+                                    setPickerSlotDate(slots[0].date);
+                                    setPickerSlotPlatforms(slots[0].platforms as Platform[]);
+                                    setIsPickerOpen(true);
+                                    return;
+                                }
+                            }
+                            // Fallback: open with next hour, no pre-selected platforms
+                            const nextHour = new Date();
+                            nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+                            setPickerSlotDate(nextHour);
+                            setPickerSlotPlatforms(connectedPlatforms);
+                            setIsPickerOpen(true);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
                         <Plus size={16} />
                         Schedule Post
                     </button>
