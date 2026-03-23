@@ -54,6 +54,7 @@ interface PlatformData {
     publishedAt: string;
     metrics: PostMetrics;
     postUrl?: string | null;
+    content?: string | null;
 }
 
 interface BlogPost {
@@ -81,6 +82,7 @@ function mapApiPostsToBlogs(apiPosts: AnalyticsPost[]): BlogPost[] {
             platform: uiPlatform,
             publishedAt: post.published_at,
             postUrl: post.platform_post_url,
+            content: post.schedulable_content,
             metrics: {
                 views: a.views,
                 likes: a.likes,
@@ -183,12 +185,16 @@ function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: 
 
     return (
         <div className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all p-4">
-            {/* Blog title + external link */}
+            {/* Post content + external link */}
             <div className="flex items-start justify-between gap-2 mb-3">
-                <h3 className="text-sm font-semibold text-gray-900 leading-snug">{post.title}</h3>
-                <button className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors mt-0.5">
-                    <ExternalLink size={13} />
-                </button>
+                <p className="text-sm text-gray-900 leading-snug line-clamp-2 whitespace-pre-line">
+                    {data.content || post.title}
+                </p>
+                {data.postUrl && (
+                    <a href={data.postUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors mt-0.5">
+                        <ExternalLink size={13} />
+                    </a>
+                )}
             </div>
 
             {/* Platform tabs */}

@@ -30,6 +30,7 @@ export interface AnalyticsPost {
     schedulable_id: number;
     published_at: string;
     post: { id: number; title: string } | null;
+    schedulable_content: string | null;
     latest_analytics: {
         id: number;
         scheduled_post_id: number;
