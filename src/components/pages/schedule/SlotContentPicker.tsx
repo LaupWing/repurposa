@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
-import { X, ChevronDown, ChevronRight, ChevronLeft, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus, Repeat2, ImagePlus, Share2 } from 'lucide-react';
+import { X, ChevronDown, ChevronRight, ChevronLeft, FileText, MessageSquare, Image, Loader2, Clock, Pencil, Check, Plus, Repeat2, ImagePlus, Share2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogs } from '@/services/blogApi';
 import { getShortPosts, getThreads, getVisuals, createStandaloneShortPost, createStandaloneThread } from '@/services/repurposeApi';
 import { getSocialAccounts } from '@/services/profileApi';
 import { createScheduledPost } from '@/services/scheduleApi';
-import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM } from '@/components/repurpose/modals/schedule-utils';
+import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM, PLATFORM_CHAR_LIMITS, getUnsupportedReason } from '@/components/repurpose/modals/schedule-utils';
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
 import { AITextPopup } from '@/components/AITextPopup';
@@ -462,11 +462,25 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                     )}
 
                                     {/* Footer */}
+                                    {(() => {
+                                        const tightestLimit = platforms.length > 0
+                                            ? Math.min(...platforms.map(p => PLATFORM_CHAR_LIMITS[p]))
+                                            : 280;
+                                        const charError = platforms
+                                            .map(p => getUnsupportedReason(p, 'short_post', createText.length))
+                                            .find(Boolean);
+                                        return (
                                     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                                         <div className="flex items-center gap-3">
-                                            <span className={`font-mono text-[10px] ${createText.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
-                                                {createText.length}/280
+                                            <span className={`font-mono text-[10px] ${createText.length > tightestLimit ? 'text-red-500' : 'text-gray-400'}`}>
+                                                {createText.length}/{tightestLimit.toLocaleString()}
                                             </span>
+                                            {charError && (
+                                                <span className="flex items-center gap-1 text-[10px] text-amber-600">
+                                                    <AlertTriangle size={10} />
+                                                    {charError}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <button
@@ -486,6 +500,8 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                             )}
                                         </div>
                                     </div>
+                                        );
+                                    })()}
 
                                     {/* CTA Reply */}
                                     {showCtaField && (
@@ -524,9 +540,12 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                     )}
 
                                     {/* Create & Schedule */}
+                                    {(() => {
+                                        const spError = platforms.map(p => getUnsupportedReason(p, 'short_post', createText.length, null, socialAccounts)).find(Boolean);
+                                        return (
                                     <div className="mt-4 flex justify-end">
                                         <button
-                                            disabled={!createText.trim() || isScheduling || platforms.length === 0}
+                                            disabled={!createText.trim() || isScheduling || platforms.length === 0 || !!spError}
                                             onClick={async () => {
                                                 if (platforms.length === 0) {
                                                     toast.error('Select at least one platform');
@@ -568,6 +587,8 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                             {isScheduling ? <Loader2 size={12} className="animate-spin" /> : 'Create & Schedule'}
                                         </button>
                                     </div>
+                                        );
+                                    })()}
 
                                     <ImagePickerModal
                                         isOpen={showCreateImagePicker}
@@ -637,9 +658,14 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                                     </div>
                                                 )}
                                                 {/* Per-post footer */}
+                                                {(() => {
+                                                    const tl = platforms.length > 0
+                                                        ? Math.min(...platforms.map(p => PLATFORM_CHAR_LIMITS[p]))
+                                                        : 280;
+                                                    return (
                                                 <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                                                    <span className={`font-mono text-[10px] ${post.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
-                                                        {post.length}/280
+                                                    <span className={`font-mono text-[10px] ${post.length > tl ? 'text-red-500' : 'text-gray-400'}`}>
+                                                        {post.length}/{tl.toLocaleString()}
                                                     </span>
                                                     <div className="flex items-center gap-1">
                                                         <button
@@ -670,6 +696,8 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                                         )}
                                                     </div>
                                                 </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                         );
@@ -687,9 +715,19 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                     </div>
 
                                     {/* Create & Schedule */}
+                                    {(() => {
+                                        const threadError = platforms.map(p => getUnsupportedReason(p, 'thread', undefined, threadPosts.filter(t => t.trim()), socialAccounts)).find(Boolean);
+                                        return (
+                                    <>
+                                    {threadError && (
+                                        <div className="flex items-center gap-1.5 text-[10px] text-amber-600 mt-2 pl-8">
+                                            <AlertTriangle size={10} className="shrink-0" />
+                                            {threadError}
+                                        </div>
+                                    )}
                                     <div className="mt-4 flex justify-end">
                                         <button
-                                            disabled={!threadPosts[0]?.trim() || threadPosts.filter(p => p.trim()).length < 2 || isScheduling || platforms.length === 0}
+                                            disabled={!threadPosts[0]?.trim() || threadPosts.filter(p => p.trim()).length < 2 || isScheduling || platforms.length === 0 || !!threadError}
                                             onClick={async () => {
                                                 if (platforms.length === 0) {
                                                     toast.error('Select at least one platform');
@@ -737,6 +775,9 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                             {isScheduling ? <Loader2 size={12} className="animate-spin" /> : 'Create & Schedule'}
                                         </button>
                                     </div>
+                                    </>
+                                        );
+                                    })()}
 
                                     <ImagePickerModal
                                         isOpen={threadImagePickerIdx !== null}
