@@ -19,6 +19,7 @@ import {
     ExternalLink,
     Loader2,
     ChevronDown,
+    ArrowUpDown,
 } from 'lucide-react';
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -500,6 +501,11 @@ function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: 
 
     return (
         <div className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all p-4">
+            {/* Published date */}
+            <p className="text-[10px] text-gray-400 mb-1.5">
+                {new Date(data.publishedAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </p>
+
             {/* Post content + external link */}
             <div className="flex items-start justify-between gap-2 mb-3">
                 <p className="text-sm text-gray-900 leading-snug line-clamp-2 whitespace-pre-line">
@@ -597,6 +603,7 @@ export default function AnalyticsPage() {
     const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
     const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [sortBy, setSortBy] = useState<'recent' | 'views' | 'likes' | 'engagement'>('recent');
 
     useEffect(() => {
         setIsLoading(true);
@@ -616,9 +623,23 @@ export default function AnalyticsPage() {
     }, []);
 
     // Filter out posts that don't have data for the selected platform
-    const visiblePosts = platformFilter === 'all'
+    const filtered = platformFilter === 'all'
         ? blogPosts
         : blogPosts.filter(p => p.platforms.some(pl => pl.platform === platformFilter));
+
+    // Sort
+    const visiblePosts = [...filtered].sort((a, b) => {
+        const aPlat = a.platforms[0];
+        const bPlat = b.platforms[0];
+        if (sortBy === 'recent') {
+            return new Date(bPlat.publishedAt).getTime() - new Date(aPlat.publishedAt).getTime();
+        }
+        const aMetrics = a.platforms.reduce((s, p) => ({ views: s.views + p.metrics.views, likes: s.likes + p.metrics.likes, eng: s.eng + (p.metrics.likes + p.metrics.comments + p.metrics.shares) / (p.metrics.views || 1) }), { views: 0, likes: 0, eng: 0 });
+        const bMetrics = b.platforms.reduce((s, p) => ({ views: s.views + p.metrics.views, likes: s.likes + p.metrics.likes, eng: s.eng + (p.metrics.likes + p.metrics.comments + p.metrics.shares) / (p.metrics.views || 1) }), { views: 0, likes: 0, eng: 0 });
+        if (sortBy === 'views') return bMetrics.views - aMetrics.views;
+        if (sortBy === 'likes') return bMetrics.likes - aMetrics.likes;
+        return bMetrics.eng - aMetrics.eng; // engagement
+    });
 
     // Aggregate totals from summary endpoint
     const totalViews  = summary?.totals.total_views ?? 0;
@@ -673,8 +694,9 @@ export default function AnalyticsPage() {
                 ))}
             </div>
 
-            {/* Platform filter */}
-            <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1 w-fit mb-5">
+            {/* Platform filter + sort */}
+            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1 w-fit">
                 <button
                     onClick={() => setPlatformFilter('all')}
                     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${platformFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
@@ -696,6 +718,22 @@ export default function AnalyticsPage() {
                         </button>
                     );
                 })}
+            </div>
+
+            {/* Sort */}
+            <div className="flex items-center gap-1.5">
+                <ArrowUpDown size={12} className="text-gray-400" />
+                <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="text-xs text-gray-600 bg-transparent border-none outline-none cursor-pointer font-medium"
+                >
+                    <option value="recent">Most recent</option>
+                    <option value="views">Most views</option>
+                    <option value="likes">Most likes</option>
+                    <option value="engagement">Highest engagement</option>
+                </select>
+            </div>
             </div>
 
             {/* Post cards grid */}
