@@ -68,7 +68,7 @@ interface PlatformData {
 type PostType = 'short' | 'thread' | 'visual';
 
 interface BlogPost {
-    id: number;
+    id: string;
     title: string;
     postType: PostType;
     platforms: PlatformData[];
@@ -119,7 +119,7 @@ function mapApiPostsToBlogs(apiPosts: AnalyticsPost[]): BlogPost[] {
             }
         } else {
             groups.set(groupKey, {
-                id: post.post_id || post.schedulable_id,
+                id: `${post.schedulable_type}-${post.schedulable_id}`,
                 title,
                 postType,
                 platforms: [platformData],
