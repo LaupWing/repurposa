@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "@wordpress/element";
-import { Calendar, Clock, Filter, Check } from "lucide-react";
+import { Calendar, Clock, Filter, Check, Loader2 } from "lucide-react";
 import type { Platform, PostType, WeeklySchedule, ScheduledPost } from "../types";
 import { PLATFORMS, POST_TYPES } from "../types";
 import { buildQueueTimeline, groupEntriesByDate } from "../helpers";
 import { ScheduledPostCard, EmptySlotCard } from "../components";
+import { stagger } from "@/components/onboarding/stagger";
 
 interface QueueTabProps {
     posts: ScheduledPost[];
@@ -61,29 +62,8 @@ export function QueueTab({
 
     if (isLoading) {
         return (
-            <div className="space-y-6 animate-pulse">
-                {Array.from({ length: 3 }).map((_, gi) => (
-                    <div key={gi}>
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="h-4 w-28 bg-gray-200 rounded" />
-                            <div className="h-3 w-20 bg-gray-100 rounded" />
-                            <div className="flex-1 border-t border-gray-100" />
-                        </div>
-                        <div className="space-y-2">
-                            {Array.from({ length: 2 }).map((_, ci) => (
-                                <div key={ci} className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                    <div className="h-4 w-14 bg-gray-200 rounded" />
-                                    <div className="h-5 w-5 bg-gray-200 rounded" />
-                                    <div className="flex-1 space-y-1.5">
-                                        <div className="h-4 w-3/4 bg-gray-200 rounded" />
-                                        <div className="h-3 w-1/2 bg-gray-100 rounded" />
-                                    </div>
-                                    <div className="h-6 w-16 bg-gray-100 rounded" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
+            <div className="flex items-center justify-center py-20">
+                <Loader2 size={24} className="animate-spin text-gray-400" />
             </div>
         );
     }
@@ -101,7 +81,7 @@ export function QueueTab({
         <div>
             {/* Filters */}
             {posts.length > 0 && (
-                <div className="flex items-center justify-between mb-5">
+                <div {...stagger(0, false)} className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
                         <button
                             onClick={() => setTypeFilter("all")}
@@ -180,7 +160,7 @@ export function QueueTab({
 
             {/* Timeline */}
             {timeline.length === 0 ? (
-                <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
+                <div {...stagger(1, false)} className="bg-white rounded-lg border border-gray-200 p-16 text-center">
                     <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-5">
                         <Calendar size={28} className="text-blue-600" />
                     </div>
@@ -198,11 +178,11 @@ export function QueueTab({
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {Array.from(timelineGroups.entries()).map(([dateKey, { label, entries }]) => {
+                    {Array.from(timelineGroups.entries()).map(([dateKey, { label, entries }], groupIndex) => {
                         const postCount = entries.filter((e) => e.type === "post").length;
                         const emptyCount = entries.filter((e) => e.type === "empty").length;
                         return (
-                            <div key={dateKey}>
+                            <div key={dateKey} {...stagger(groupIndex + 1, false)}>
                                 <div className="flex items-center gap-3 mb-3">
                                     <h3 className="text-sm font-semibold text-gray-900">{label}</h3>
                                     <span className="text-xs text-gray-400">
