@@ -27,6 +27,7 @@ import {
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getAnalyticsSummary, getAnalyticsPosts, getPostSnapshots, getDailyTotals } from '@/services/analyticsApi';
+import { stagger } from '@/components/onboarding/stagger';
 import type { DailyTotal } from '@/services/analyticsApi';
 import type { AnalyticsSummary, AnalyticsPost, AnalyticsSnapshot } from '@/services/analyticsApi';
 
@@ -690,10 +691,12 @@ export default function AnalyticsPage() {
 
             {!isLoading && <>
             {/* Overview chart */}
-            <OverviewChart />
+            <div {...stagger(0, false)}>
+                <OverviewChart />
+            </div>
 
             {/* Summary stats */}
-            <div className="grid grid-cols-4 gap-4 mb-6">
+            <div {...stagger(1, false)} className="grid grid-cols-4 gap-4 mb-6">
                 {[
                     { icon: <Eye size={13} />,               label: 'Total Views',     value: fmt(totalViews),  sub: 'Last 30 days' },
                     { icon: <Heart size={13} />,             label: 'Total Likes',     value: fmt(totalLikes),  sub: 'Across all platforms' },
@@ -712,7 +715,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Platform filter + sort */}
-            <div className="flex items-center justify-between mb-5">
+            <div {...stagger(2, false)} className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1 w-fit">
                 <button
                     onClick={() => setPlatformFilter('all')}
@@ -756,8 +759,10 @@ export default function AnalyticsPage() {
             {/* Post cards grid */}
             {visiblePosts.length > 0 ? (
                 <div className="grid grid-cols-2 gap-4">
-                    {visiblePosts.map(post => (
-                        <BlogPostCard key={post.id} post={post} forcePlatform={platformFilter} />
+                    {visiblePosts.map((post, i) => (
+                        <div key={post.id} {...stagger(i + 3, false)}>
+                            <BlogPostCard post={post} forcePlatform={platformFilter} />
+                        </div>
                     ))}
                 </div>
             ) : (
