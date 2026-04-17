@@ -10,6 +10,7 @@ interface QueueTabProps {
     posts: ScheduledPost[];
     weeklySchedule: WeeklySchedule | null;
     isLoading: boolean;
+    timezone?: string;
     onDeletePost: (id: number, allIds?: number[]) => void;
     onPostClick: (post: ScheduledPost) => void;
     onSlotClick: (date: Date, platforms: Platform[]) => void;
@@ -20,6 +21,7 @@ export function QueueTab({
     posts,
     weeklySchedule,
     isLoading,
+    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone,
     onDeletePost,
     onPostClick,
     onSlotClick,
@@ -74,7 +76,7 @@ export function QueueTab({
         return matchesPlatform && matchesType;
     });
 
-    const timeline = buildQueueTimeline(filteredPosts, weeklySchedule, weeksAhead);
+    const timeline = buildQueueTimeline(filteredPosts, weeklySchedule, weeksAhead, timezone);
     const timelineGroups = groupEntriesByDate(timeline);
 
     return (

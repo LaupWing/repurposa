@@ -28,7 +28,9 @@ import {
     getUpcomingSlots,
     getDefaultDate,
     getDefaultTime,
+    slotToDate,
 } from '../schedule-utils';
+import { TimezoneLabel } from '@/components/TimezoneLabel';
 import { type PlatformState, buildPlatformStates } from './platform-states';
 import SlotCard from './SlotCard';
 import StatusBars from './StatusBars';
@@ -62,6 +64,7 @@ export default function SchedulePostModal({
     onUnscheduled,
 }: SchedulePostModalProps) {
     const [selectedPlatforms, setSelectedPlatforms] = useState<SchedulePlatform[]>([]);
+    const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
     const [date, setDate] = useState(getDefaultDate);
     const [time, setTime] = useState(getDefaultTime);
     const [upcomingSlots, setUpcomingSlots] = useState<UpcomingSlot[]>([]);
@@ -166,7 +169,10 @@ export default function SchedulePostModal({
                 setExistingScheduled(scheduled);
 
                 if (scheduleData.schedule) {
-                    const slots = getUpcomingSlots(scheduleData.schedule, 60);
+                    const tz = scheduleData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+                    setTimezone(tz);
+                    setDate(getDefaultDate(tz));
+                    const slots = getUpcomingSlots(scheduleData.schedule, 60, tz);
                     setUpcomingSlots(slots);
                     const init = getInitialSelection(slots, accounts, scheduled);
                     setSelectedSlotIndex(init.slotIndex);
@@ -265,7 +271,7 @@ export default function SchedulePostModal({
 
         const scheduledAt = selectedSlotIndex !== null && !useCustom
             ? upcomingSlots[selectedSlotIndex].date.toISOString()
-            : new Date(`${date}T${time}`).toISOString();
+            : slotToDate(date, time, timezone).toISOString();
 
         setIsSubmitting(true);
         try {
@@ -484,7 +490,7 @@ export default function SchedulePostModal({
                                         type="date"
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
-                                        min={getDefaultDate()}
+                                        min={getDefaultDate(timezone)}
                                         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
                                     />
                                 </div>
@@ -503,6 +509,7 @@ export default function SchedulePostModal({
                                     />
                                 </div>
                             </div>
+                            <TimezoneLabel timezone={timezone} />
                         </div>
                     ) : (
                         <div>

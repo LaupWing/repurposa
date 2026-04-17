@@ -5,7 +5,8 @@ import { getBlogs } from '@/services/blogApi';
 import { getShortPosts, getThreads, getVisuals, createStandaloneShortPost, createStandaloneThread } from '@/services/repurposeApi';
 import { getSocialAccounts } from '@/services/profileApi';
 import { createScheduledPost } from '@/services/scheduleApi';
-import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM, PLATFORM_CHAR_LIMITS, getUnsupportedReason } from '@/components/repurpose/modals/schedule-utils';
+import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM, PLATFORM_CHAR_LIMITS, getUnsupportedReason, getDateInTz, getTimeInTz, slotToDate } from '@/components/repurpose/modals/schedule-utils';
+import { TimezoneLabel } from '@/components/TimezoneLabel';
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
 import { AITextPopup } from '@/components/AITextPopup';
@@ -94,12 +95,13 @@ interface SlotContentPickerProps {
     isOpen: boolean;
     slotDate: Date;
     slotPlatforms: SchedulePlatform[];
+    timezone?: string;
     onClose: () => void;
     onScheduled: () => void;
     initialDraftContent?: string;
 }
 
-export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onClose, onScheduled, initialDraftContent }: SlotContentPickerProps) {
+export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, onClose, onScheduled, initialDraftContent }: SlotContentPickerProps) {
     const [scheduledAt, setScheduledAt] = useState<Date>(slotDate);
     const [platforms, setPlatforms] = useState<SchedulePlatform[]>(slotPlatforms);
     const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
@@ -262,8 +264,8 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
 
     if (!isOpen) return null;
 
-    const dateValue = scheduledAt.toISOString().split('T')[0];
-    const timeValue = scheduledAt.toTimeString().slice(0, 5);
+    const dateValue = getDateInTz(scheduledAt, timezone);
+    const timeValue = getTimeInTz(scheduledAt, timezone);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -303,10 +305,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                         type="date"
                                         value={dateValue}
                                         onChange={(e) => {
-                                            const [y, m, d] = e.target.value.split('-').map(Number);
-                                            const next = new Date(scheduledAt);
-                                            next.setFullYear(y, m - 1, d);
-                                            setScheduledAt(next);
+                                            setScheduledAt(slotToDate(e.target.value, timeValue, timezone));
                                         }}
                                         className="text-xs border border-gray-200 rounded px-1.5 py-0.5"
                                     />
@@ -314,10 +313,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                         type="time"
                                         value={timeValue}
                                         onChange={(e) => {
-                                            const [h, min] = e.target.value.split(':').map(Number);
-                                            const next = new Date(scheduledAt);
-                                            next.setHours(h, min, 0, 0);
-                                            setScheduledAt(next);
+                                            setScheduledAt(slotToDate(dateValue, e.target.value, timezone));
                                         }}
                                         className="text-xs border border-gray-200 rounded px-1.5 py-0.5"
                                     />
@@ -329,17 +325,20 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, onC
                                     </button>
                                 </div>
                             ) : (
-                                <button
-                                    onClick={() => setIsEditingTime(true)}
-                                    className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 transition-colors"
-                                >
-                                    <span>
-                                        {scheduledAt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                        {' · '}
-                                        {scheduledAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                                    </span>
-                                    <Pencil size={10} className="text-gray-400" />
-                                </button>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <button
+                                        onClick={() => setIsEditingTime(true)}
+                                        className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                                    >
+                                        <span>
+                                            {scheduledAt.toLocaleDateString('en-US', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric' })}
+                                            {' · '}
+                                            {scheduledAt.toLocaleTimeString('en-US', { timeZone: timezone, hour: 'numeric', minute: '2-digit', hour12: true })}
+                                        </span>
+                                        <Pencil size={10} className="text-gray-400" />
+                                    </button>
+                                    <TimezoneLabel timezone={timezone} />
+                                </div>
                             )}
                         </div>
 

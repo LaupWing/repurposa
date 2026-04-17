@@ -35,6 +35,7 @@ export default function SchedulePage() {
     const [isLoadingPosts, setIsLoadingPosts] = useState(true);
     const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule | null>(null);
     const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
+    const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
     const [drafts, setDrafts] = useState<ApiShortPost[]>([]);
     const [isLoadingDrafts, setIsLoadingDrafts] = useState(false);
 
@@ -61,6 +62,9 @@ export default function SchedulePage() {
             .then((data) => {
                 if (data.schedule) {
                     setWeeklySchedule(mapScheduleFromApi(data.schedule));
+                }
+                if (data.timezone) {
+                    setTimezone(data.timezone);
                 }
             })
             .catch((error) => console.error("[SchedulePage] Failed to load publishing schedule:", error))
@@ -122,7 +126,7 @@ export default function SchedulePage() {
                     <button
                         onClick={() => {
                             if (weeklySchedule) {
-                                const slots = getUpcomingSlotsFromSchedule(weeklySchedule, 1);
+                                const slots = getUpcomingSlotsFromSchedule(weeklySchedule, 1, timezone);
                                 if (slots.length > 0) {
                                     setPickerSlotDate(slots[0].date);
                                     setPickerSlotPlatforms(slots[0].platforms as Platform[]);
@@ -177,6 +181,7 @@ export default function SchedulePage() {
             {/* Tab content */}
             {activeTab === "queue" && (
                 <QueueTab
+                    timezone={timezone}
                     posts={queuePosts}
                     weeklySchedule={weeklySchedule}
                     isLoading={isLoadingPosts}
@@ -198,7 +203,7 @@ export default function SchedulePage() {
                     onDraftsChange={setDrafts}
                     onDraftClick={(draft) => {
                         if (weeklySchedule) {
-                            const slots = getUpcomingSlotsFromSchedule(weeklySchedule, 1);
+                            const slots = getUpcomingSlotsFromSchedule(weeklySchedule, 1, timezone);
                             if (slots.length > 0) {
                                 setPickerSlotDate(slots[0].date);
                                 setPickerSlotPlatforms(slots[0].platforms as Platform[]);
@@ -232,6 +237,7 @@ export default function SchedulePage() {
                     slotDate={pickerSlotDate}
                     slotPlatforms={pickerSlotPlatforms as SchedulePlatform[]}
                     initialDraftContent={pickerDraftContent}
+                    timezone={timezone}
                     onClose={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); }}
                     onScheduled={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); refreshPosts(); }}
                 />
@@ -242,6 +248,7 @@ export default function SchedulePage() {
                     onClose={() => setDetailPost(null)}
                     onUpdated={() => { setDetailPost(null); refreshPosts(); }}
                     post={detailPost}
+                    timezone={timezone}
                 />
             )}
         </div>

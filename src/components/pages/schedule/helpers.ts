@@ -8,6 +8,7 @@ import type {
     QueueEntry,
 } from './types';
 import { API_TO_UI_PLATFORM, UI_TO_API_PLATFORM, DAY_KEYS } from './types';
+import { buildSlotDate, getDateInTz } from '@/components/repurpose/modals/schedule-utils';
 
 // ============================================
 // API → UI MAPPING
@@ -170,39 +171,39 @@ export function generateSlotId(): string {
 export function getUpcomingSlotsFromSchedule(
     schedule: WeeklySchedule,
     maxSlots: number,
+    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): UpcomingSlot[] {
     const now = new Date();
     const slots: UpcomingSlot[] = [];
+    const todayStr = getDateInTz(now, timezone);
+    const tomorrowDate = new Date(now);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = getDateInTz(tomorrowDate, timezone);
 
     for (let d = 0; d < 30 && slots.length < maxSlots; d++) {
-        const date = new Date(now);
-        date.setDate(date.getDate() + d);
-        const dayKey = DAY_KEYS[date.getDay()] as DayOfWeek;
+        const baseDate = new Date(now);
+        baseDate.setDate(baseDate.getDate() + d);
+        const dayKey = DAY_KEYS[new Date(getDateInTz(baseDate, timezone) + 'T12:00:00').getDay()] as DayOfWeek;
         const daySchedule = schedule[dayKey];
         if (!daySchedule?.enabled) continue;
 
         for (const slot of daySchedule.slots) {
             if (slots.length >= maxSlots) break;
-            const [hours, minutes] = slot.time.split(':').map(Number);
-            const slotDate = new Date(date);
-            slotDate.setHours(hours, minutes, 0, 0);
+            const slotDate = buildSlotDate(baseDate, slot.time, timezone);
 
             if (slotDate <= now) continue;
 
-            const today = new Date();
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-
+            const slotDateStr = getDateInTz(slotDate, timezone);
             let dateLabel: string;
-            if (slotDate.toDateString() === today.toDateString()) {
+            if (slotDateStr === todayStr) {
                 dateLabel = 'Today';
-            } else if (slotDate.toDateString() === tomorrow.toDateString()) {
+            } else if (slotDateStr === tomorrowStr) {
                 dateLabel = 'Tomorrow';
             } else {
-                dateLabel = slotDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+                dateLabel = slotDate.toLocaleDateString('en-US', { timeZone: timezone, weekday: 'long', month: 'short', day: 'numeric' });
             }
 
-            const timeLabel = slotDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            const timeLabel = slotDate.toLocaleTimeString('en-US', { timeZone: timezone, hour: 'numeric', minute: '2-digit', hour12: true });
 
             slots.push({
                 date: slotDate,
@@ -220,12 +221,13 @@ export function buildQueueTimeline(
     posts: ScheduledPost[],
     schedule: WeeklySchedule | null,
     weeksAhead = 2,
+    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): QueueEntry[] {
     const slotsCount = schedule ? Object.values(schedule).reduce(
         (sum, day) => sum + (day.enabled ? day.slots.length : 0), 0
     ) * weeksAhead : 0;
 
-    const upcomingSlots = schedule ? getUpcomingSlotsFromSchedule(schedule, Math.max(slotsCount, 14)) : [];
+    const upcomingSlots = schedule ? getUpcomingSlotsFromSchedule(schedule, Math.max(slotsCount, 14), timezone) : [];
 
     const entries: QueueEntry[] = [];
 

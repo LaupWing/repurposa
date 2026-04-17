@@ -3,7 +3,8 @@ import { X, Clock, Pencil, Check, Loader2, FileText, Repeat2 } from 'lucide-reac
 import { toast } from 'sonner';
 import { updateShortPost } from '@/services/repurposeApi';
 import { deleteScheduledPost, updateScheduledPost } from '@/services/scheduleApi';
-import { SCHEDULE_PLATFORMS } from '@/components/repurpose/modals/schedule-utils';
+import { SCHEDULE_PLATFORMS, getDateInTz, getTimeInTz, slotToDate } from '@/components/repurpose/modals/schedule-utils';
+import { TimezoneLabel } from '@/components/TimezoneLabel';
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { AITextPopup } from '@/components/AITextPopup';
 import AutoRepostModal from '@/components/repurpose/modals/SchedulePostModal/AutoRepostModal';
@@ -14,6 +15,7 @@ interface ScheduledPostDetailProps {
     isOpen: boolean;
     onClose: () => void;
     onUpdated: () => void;
+    timezone?: string;
     post: {
         id: number;
         ids: number[];
@@ -30,7 +32,7 @@ interface ScheduledPostDetailProps {
     };
 }
 
-export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post }: ScheduledPostDetailProps) {
+export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone }: ScheduledPostDetailProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(post.content);
     const [isSaving, setIsSaving] = useState(false);
@@ -49,8 +51,8 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post }
     if (!isOpen) return null;
 
     const isStandalone = !post.postId;
-    const dateValue = scheduledAt.toISOString().split('T')[0];
-    const timeValue = scheduledAt.toTimeString().slice(0, 5);
+    const dateValue = getDateInTz(scheduledAt, timezone);
+    const timeValue = getTimeInTz(scheduledAt, timezone);
 
     const handleSave = async () => {
         if (!post.schedulableId || !editText.trim()) return;
@@ -125,10 +127,7 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post }
                                         type="date"
                                         value={dateValue}
                                         onChange={(e) => {
-                                            const [y, m, d] = e.target.value.split('-').map(Number);
-                                            const next = new Date(scheduledAt);
-                                            next.setFullYear(y, m - 1, d);
-                                            setScheduledAt(next);
+                                            setScheduledAt(slotToDate(e.target.value, timeValue, timezone));
                                         }}
                                         className="text-xs border border-gray-200 rounded px-1.5 py-0.5"
                                     />
@@ -136,10 +135,7 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post }
                                         type="time"
                                         value={timeValue}
                                         onChange={(e) => {
-                                            const [h, min] = e.target.value.split(':').map(Number);
-                                            const next = new Date(scheduledAt);
-                                            next.setHours(h, min, 0, 0);
-                                            setScheduledAt(next);
+                                            setScheduledAt(slotToDate(dateValue, e.target.value, timezone));
                                         }}
                                         className="text-xs border border-gray-200 rounded px-1.5 py-0.5"
                                     />
@@ -151,17 +147,20 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post }
                                     </button>
                                 </div>
                             ) : (
-                                <button
-                                    onClick={() => setIsEditingTime(true)}
-                                    className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 transition-colors"
-                                >
-                                    <span>
-                                        {scheduledAt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                        {' · '}
-                                        {scheduledAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                                    </span>
-                                    <Pencil size={10} className="text-gray-400" />
-                                </button>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <button
+                                        onClick={() => setIsEditingTime(true)}
+                                        className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                                    >
+                                        <span>
+                                            {scheduledAt.toLocaleDateString('en-US', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric' })}
+                                            {' · '}
+                                            {scheduledAt.toLocaleTimeString('en-US', { timeZone: timezone, hour: 'numeric', minute: '2-digit', hour12: true })}
+                                        </span>
+                                        <Pencil size={10} className="text-gray-400" />
+                                    </button>
+                                    <TimezoneLabel timezone={timezone} />
+                                </div>
                             )}
                         </div>
 
