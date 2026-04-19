@@ -195,7 +195,7 @@ export default function SchedulePage() {
                     onGoToTimes={() => setActiveTab("times")}
                 />
             )}
-            {activeTab === "published" && <PublishedTab posts={publishedPosts} />}
+            {activeTab === "published" && <PublishedTab posts={publishedPosts} timezone={timezone} />}
             {activeTab === "drafts" && (
                 <DraftsTab
                     drafts={drafts}

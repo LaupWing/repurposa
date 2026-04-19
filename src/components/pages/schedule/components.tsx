@@ -102,10 +102,12 @@ export function ScheduledPostCard({
     post,
     onDelete,
     onClick,
+    timezone,
 }: {
     post: ScheduledPost;
     onDelete: (id: number, allIds?: number[]) => void;
     onClick?: () => void;
+    timezone?: string;
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -133,7 +135,7 @@ export function ScheduledPostCard({
             {/* Time column */}
             <div className="shrink-0 w-16 pt-0.5">
                 <span className="text-sm font-semibold text-gray-900">
-                    {formatTime(post.scheduledAt)}
+                    {formatTime(post.scheduledAt, timezone)}
                 </span>
             </div>
 
@@ -221,13 +223,13 @@ export function ScheduledPostCard({
     );
 }
 
-export function PublishedPostCard({ post }: { post: ScheduledPost }) {
+export function PublishedPostCard({ post, timezone }: { post: ScheduledPost; timezone?: string }) {
     return (
         <div className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200">
             {/* Time column */}
             <div className="shrink-0 w-16 pt-0.5">
                 <span className="text-sm font-semibold text-gray-900">
-                    {formatTime(post.scheduledAt)}
+                    {formatTime(post.scheduledAt, timezone)}
                 </span>
             </div>
 

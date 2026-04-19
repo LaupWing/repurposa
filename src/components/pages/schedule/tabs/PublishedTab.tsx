@@ -7,9 +7,10 @@ import { PublishedPostCard } from "../components";
 
 interface PublishedTabProps {
     posts: ScheduledPost[];
+    timezone?: string;
 }
 
-export function PublishedTab({ posts }: PublishedTabProps) {
+export function PublishedTab({ posts, timezone }: PublishedTabProps) {
     const [typeFilter, setTypeFilter] = useState<PostType | "all">("all");
     const [platformFilter, setPlatformFilter] = useState<Platform | "all">("all");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -31,7 +32,7 @@ export function PublishedTab({ posts }: PublishedTabProps) {
         const matchesType = typeFilter === "all" || post.postType === typeFilter;
         return matchesPlatform && matchesType;
     });
-    const grouped = groupPostsByDate(filteredPosts, 'desc');
+    const grouped = groupPostsByDate(filteredPosts, 'desc', timezone);
 
     return (
         <div>
@@ -121,7 +122,7 @@ export function PublishedTab({ posts }: PublishedTabProps) {
                         <div key={dateKey}>
                             <div className="flex items-center gap-3 mb-3">
                                 <h3 className="text-sm font-semibold text-gray-900">
-                                    {formatScheduleDate(dayPosts[0].scheduledAt)}
+                                    {formatScheduleDate(dayPosts[0].scheduledAt, timezone)}
                                 </h3>
                                 <span className="text-xs text-gray-400">
                                     {dayPosts.length} {dayPosts.length === 1 ? "post" : "posts"}
@@ -130,7 +131,7 @@ export function PublishedTab({ posts }: PublishedTabProps) {
                             </div>
                             <div className="space-y-2">
                                 {dayPosts.map((post) => (
-                                    <PublishedPostCard key={post.id} post={post} />
+                                    <PublishedPostCard key={post.id} post={post} timezone={timezone} />
                                 ))}
                             </div>
                         </div>

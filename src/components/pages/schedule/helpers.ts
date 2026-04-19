@@ -112,25 +112,31 @@ export function mapScheduleToApi(schedule: WeeklySchedule): Record<string, any> 
 // FORMATTING
 // ============================================
 
-export function formatScheduleDate(dateString: string): string {
+export function formatScheduleDate(dateString: string, timezone?: string): string {
     const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const dateStr = getDateInTz(date, tz);
+    const todayStr = getDateInTz(new Date(), tz);
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = getDateInTz(tomorrowDate, tz);
 
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+    if (dateStr === todayStr) return 'Today';
+    if (dateStr === tomorrowStr) return 'Tomorrow';
 
     return date.toLocaleDateString('en-US', {
+        timeZone: tz,
         weekday: 'long',
         month: 'short',
         day: 'numeric',
     });
 }
 
-export function formatTime(dateString: string): string {
+export function formatTime(dateString: string, timezone?: string): string {
     const date = new Date(dateString);
+    const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     return date.toLocaleTimeString('en-US', {
+        timeZone: tz,
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
@@ -144,6 +150,7 @@ export function formatTime(dateString: string): string {
 export function groupPostsByDate(
     posts: ScheduledPost[],
     order: 'asc' | 'desc' = 'asc',
+    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): Map<string, ScheduledPost[]> {
     const groups = new Map<string, ScheduledPost[]>();
     const dir = order === 'asc' ? 1 : -1;
@@ -154,7 +161,7 @@ export function groupPostsByDate(
     );
 
     for (const post of sorted) {
-        const dateKey = new Date(post.scheduledAt).toDateString();
+        const dateKey = getDateInTz(new Date(post.scheduledAt), timezone);
         if (!groups.has(dateKey)) {
             groups.set(dateKey, []);
         }
@@ -235,10 +242,10 @@ export function buildQueueTimeline(
         const d = new Date(post.scheduledAt);
         entries.push({
             type: 'post',
-            dateKey: d.toDateString(),
-            dateLabel: formatScheduleDate(post.scheduledAt),
+            dateKey: getDateInTz(d, timezone),
+            dateLabel: formatScheduleDate(post.scheduledAt, timezone),
             time: d,
-            timeLabel: formatTime(post.scheduledAt),
+            timeLabel: formatTime(post.scheduledAt, timezone),
             post,
         });
     }
@@ -253,7 +260,7 @@ export function buildQueueTimeline(
         if (!hasPost) {
             entries.push({
                 type: 'empty',
-                dateKey: slot.date.toDateString(),
+                dateKey: getDateInTz(slot.date, timezone),
                 dateLabel: slot.dateLabel,
                 time: slot.date,
                 timeLabel: slot.timeLabel,

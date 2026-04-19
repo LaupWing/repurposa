@@ -202,6 +202,7 @@ export function QueueTab({
                                                 post={entry.post}
                                                 onDelete={onDeletePost}
                                                 onClick={() => onPostClick(entry.post!)}
+                                                timezone={timezone}
                                             />
                                         ) : (
                                             <EmptySlotCard
