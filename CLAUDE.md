@@ -8,9 +8,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run start    # Development mode with hot reload
 npm run build    # Production build
 npm run lint:js  # Run ESLint
+npm run zip      # Build production zip for release (see Versioning below)
 ```
 
 The build outputs to `build/` directory (`index.js`, `index.css`, `index.asset.php`).
+
+## Versioning & Releases
+
+**IMPORTANT: Always bump the version before committing a release.**
+
+The version lives in two places — keep them in sync:
+1. `repurposa.php` — `* Version: x.x.x` in the plugin header
+2. `package.json` — `"version": "x.x.x"` (the zip script syncs this automatically)
+
+### Shipping a new version
+
+1. Bump the version in `repurposa.php`
+2. Run `npm run zip` — this builds assets, installs prod composer deps, and outputs `dist/repurposa-{version}.zip`
+3. Commit and push
+4. Create a GitHub release tagged `v{version}` and attach the zip as a release asset
+
+WordPress sites with the plugin installed will then see the update notification automatically via the built-in GitHub update checker.
+
+### GitHub token
+The repo is public so no token is needed. If the repo ever goes private, add this to `wp-config.php` on each site:
+```php
+define( 'REPURPOSA_GITHUB_TOKEN', 'your_token_here' );
+```
 
 ## Architecture Overview
 
