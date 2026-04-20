@@ -13,6 +13,21 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Auto-updater — checks GitHub releases for new versions.
+require_once REPURPOSA_PLUGIN_DIR . 'vendor/autoload.php';
+
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$repurposa_updater = PucFactory::buildUpdateChecker(
+    'https://github.com/LaupWing/wordpress-blog-repurpose-plugin/',
+    __FILE__,
+    'repurposa'
+);
+$repurposa_updater->setAuthentication( defined( 'SNEL_SEO_GITHUB_TOKEN' ) ? constant( 'SNEL_SEO_GITHUB_TOKEN' ) : '' );
+/** @var \YahnisElsts\PluginUpdateChecker\v5p5\Vcs\GitHubApi $api */
+$api = $repurposa_updater->getVcsApi();
+$api->enableReleaseAssets();
+
 // Define plugin constants
 define('REPURPOSA_VERSION', '1.0.0');
 define('REPURPOSA_PLUGIN_DIR', plugin_dir_path(__FILE__));
