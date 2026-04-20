@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Repurposa
  * Description: Create blog posts with AI and repurpose them into social media content.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Loc Nguyen
  * License: GPL v2 or later
  * Text Domain: repurposa
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Auto-updater — checks GitHub releases for new versions.
-require_once REPURPOSA_PLUGIN_DIR . 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
@@ -29,7 +29,7 @@ $api = $repurposa_updater->getVcsApi();
 $api->enableReleaseAssets();
 
 // Define plugin constants
-define('REPURPOSA_VERSION', '1.0.0');
+define('REPURPOSA_VERSION', '1.0.1');
 define('REPURPOSA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('REPURPOSA_PLUGIN_URL', plugin_dir_url(__FILE__));
 
