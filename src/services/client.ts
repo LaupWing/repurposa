@@ -10,11 +10,16 @@ declare global {
         repurposaConfig: {
             apiUrl: string;
             token: string;
+            snelstackLang: string | null;
         };
     }
 }
 
-export const getConfig = () => window.repurposaConfig || { apiUrl: 'https://ai-blog-tool.test', token: '' };
+export const getConfig = () => window.repurposaConfig || {
+    apiUrl: 'https://ai-blog-tool.test',
+    token: '',
+    snelstackLang: null,
+};
 
 export async function apiRequest<T>(
     endpoint: string,

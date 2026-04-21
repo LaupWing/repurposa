@@ -141,10 +141,16 @@ function repurposa_add_admin_menu() {
             $assets['version']
         );
 
-        // Pass config to React (Sanctum token + Laravel API URL)
+        // Snelstack theme detection — null if not active
+        $snelstack_lang = function_exists('snel_get_lang')
+            ? apply_filters('snel_seo_current_language', 'en')
+            : null;
+
+        // Pass config to React (Sanctum token + Laravel API URL + Snelstack lang)
         wp_localize_script('repurposa-admin', 'repurposaConfig', [
-            'apiUrl' => defined('REPURPOSA_API_URL') ? REPURPOSA_API_URL : 'https://ai-blog-tool.test',
-            'token' => get_option('repurposa_auth_token', ''),
+            'apiUrl'        => defined('REPURPOSA_API_URL') ? REPURPOSA_API_URL : 'https://ai-blog-tool.test',
+            'token'         => get_option('repurposa_auth_token', ''),
+            'snelstackLang' => $snelstack_lang,
         ]);
 
         // Enqueue WordPress media library
