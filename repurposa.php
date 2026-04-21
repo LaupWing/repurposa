@@ -253,6 +253,35 @@ function repurposa_register_rest_routes() {
             },
         ],
     ]);
+
+    // Return all published WP posts for syncing into Laravel
+    register_rest_route('repurposa/v1', '/wp-posts', [
+        [
+            'methods' => 'GET',
+            'callback' => function () {
+                $posts = get_posts([
+                    'post_type'      => 'post',
+                    'post_status'    => 'publish',
+                    'posts_per_page' => -1,
+                ]);
+
+                return array_map(function ($post) {
+                    return [
+                        'id'        => $post->ID,
+                        'title'     => $post->post_title,
+                        'content'   => $post->post_content,
+                        'excerpt'   => $post->post_excerpt,
+                        'url'       => get_permalink($post->ID),
+                        'thumbnail' => get_the_post_thumbnail_url($post->ID, 'full') ?: null,
+                        'date'      => $post->post_date,
+                    ];
+                }, $posts);
+            },
+            'permission_callback' => function () {
+                return current_user_can('manage_options');
+            },
+        ],
+    ]);
 }
 
 /**

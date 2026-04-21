@@ -6,9 +6,10 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
-import { FileText, Search, Filter, Plus, Trash2, Pencil, Check, AlertTriangle, Loader2 } from 'lucide-react';
+import { FileText, Search, Filter, Plus, Trash2, Pencil, Check, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { getBlogs, deleteBlog } from '@/services/blogApi';
+import apiFetch from '@wordpress/api-fetch';
+import { getBlogs, deleteBlog, createEmptyBlog, updateBlog } from '@/services/blogApi';
 import { usePostPolling } from '@/hooks/usePostPolling';
 import type { BlogPost } from '@/types';
 import { stagger } from '@/components/onboarding/stagger';
@@ -280,6 +281,7 @@ function FilterDropdown({
 export default function BlogsPage() {
     const [posts, setPosts] = useState<BlogPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -338,6 +340,53 @@ export default function BlogsPage() {
         window.location.href = 'admin.php?page=repurposa';
     };
 
+    const handleSync = async () => {
+        setIsSyncing(true);
+        try {
+            // Fetch all published WP posts + existing Laravel posts in parallel
+            const [wpPosts, laravelPosts] = await Promise.all([
+                apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null }[]>({
+                    path: '/repurposa/v1/wp-posts',
+                }),
+                getBlogs(),
+            ]);
+
+            // Build set of WP post IDs already in Laravel
+            const syncedIds = new Set(laravelPosts.map(p => p.published_post_id).filter(Boolean));
+
+            const toImport = wpPosts.filter(p => !syncedIds.has(p.id));
+
+            if (toImport.length === 0) {
+                toast.success('Everything is already synced');
+                return;
+            }
+
+            // Import one by one: create then set published_post_id + url
+            for (const wp of toImport) {
+                const created = await createEmptyBlog();
+                await updateBlog(created.id, {
+                    title: wp.title,
+                    content: wp.content,
+                    thumbnail: wp.thumbnail ?? undefined,
+                    status: 'published',
+                    published_post_id: wp.id,
+                    published_post_url: wp.url,
+                });
+            }
+
+            // Refresh the list
+            const updated = await getBlogs();
+            setPosts(updated);
+
+            toast.success(`Synced ${toImport.length} post${toImport.length > 1 ? 's' : ''} from WordPress`);
+        } catch (error) {
+            console.error('Sync failed:', error);
+            toast.error('Sync failed');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     return (
         <div className="p-6">
             {/* Header */}
@@ -373,14 +422,26 @@ export default function BlogsPage() {
                     )}
                 </div>
 
-                {/* New Blog Button */}
-                <button
-                    onClick={handleCreateNew}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                    <Plus size={16} />
-                    New Blog
-                </button>
+                <div className="flex items-center gap-2">
+                    {/* Sync Button */}
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                        {isSyncing ? 'Syncing...' : 'Sync WP Posts'}
+                    </button>
+
+                    {/* New Blog Button */}
+                    <button
+                        onClick={handleCreateNew}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <Plus size={16} />
+                        New Blog
+                    </button>
+                </div>
             </div>
 
             {/* Content */}
