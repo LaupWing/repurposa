@@ -60,17 +60,34 @@ Is Snelstack active?
 ## Laravel Changes
 
 ### Migration
-Add `language` column to `posts` table:
+Add `language` column to `posts` table — store it at creation time so Phase 3/4 know the post's language even if the user later changes their profile setting:
 ```php
 $table->string('language', 10)->default('en');
 ```
 
 ### API
-Every generate/repurpose call receives `language` param. Laravel selects prompt folder based on it (`resources/prompts/en/` or `resources/prompts/nl/`). Already supported by `Prompts::get()`.
+Every generate/repurpose call receives `language` param from the plugin (read from `profile.content_lang`). Laravel selects prompt folder based on it (`resources/prompts/en/` or `resources/prompts/nl/`). Already supported by `Prompts::get()`.
 
 ### Translation endpoint (new)
-`POST /api/translate` — takes `content` + `target_lang`, returns translated content via AI.
+`POST /api/translate` — takes `content` + `target_lang`, returns translated content via AI (Gemini, reuse existing AI service).
 Used by both publish flow and sync flow when lang mismatch detected.
+Translation stays in Laravel — keep all AI in one place.
+
+---
+
+## UX Indicators (to design later)
+
+Users need to know when translation happened. Two scenarios:
+
+**Publish flow (Repurposa → WP)**
+- Badge or notice on the publish confirmation: "Content will be auto-translated from EN → NL before publishing to your Snelstack site."
+- After publish: show on blog card/detail that it was translated on publish.
+
+**Sync flow (WP → Repurposa)**
+- Badge on imported blog card: "Synced from WordPress · Translated NL → EN"
+- Lets the user know the content they see in Repurposa is a translated version of the original WP post.
+
+Keep it subtle — a small badge/label is enough. Not a modal, not blocking.
 
 ---
 
