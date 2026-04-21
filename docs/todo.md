@@ -2,33 +2,43 @@
 
 ## 🔴 High Priority
 
-### Language System — Phase 1: Detection + Config
+### Language System
 See [LANGUAGE.md](./LANGUAGE.md) for full design.
 
-- [ ] PHP detection in `repurposa.php` (`isSnelstack`, `siteDefault`, `current`)
-- [ ] Pass via `wp_localize_script` into `repurposaConfig.language`
-- [ ] Language selector in SettingsPage (nl/en, saved to `repurposa_language` WP option)
-- [ ] Laravel migration: add `language` to `posts` table
-- [ ] Update `PostApiController` store/update to accept `language`
+**Phase 1 — Detection + Config ✅ DONE**
+- [x] PHP detection in `repurposa.php` (`snelstackLang` via `wp_localize_script`)
+- [x] `SnelstackBanner` component in SettingsPage
+- [x] Language selector in SettingsPage (`content_lang` saved to Laravel user profile)
+
+**Phase 2 — Generation with Language**
+- [ ] Laravel migration: add `language` column to `posts` table (store at creation, not from profile — profile can change)
+- [ ] Send `content_lang` from profile to Laravel on every generate/repurpose call
+- [ ] Laravel stores it on the post + uses it to select correct prompt folder (`resources/prompts/en/` or `nl/`)
+- [ ] Show language badge on blog cards in BlogsPage
+
+**Phase 3 — Publish Flow (Snelstack)**
+- [ ] On WP publish: check `snelstackLang` vs post `language` mismatch
+- [ ] If mismatch: call `POST /api/translate` (Gemini in Laravel) before publishing to WP
+- [ ] Laravel `translate` endpoint: `{ content, target_lang }` → translated content
+- [ ] UX: notice on publish confirmation "will be auto-translated EN → NL"
+- [ ] UX: badge on blog card/detail after publish showing it was translated
+
+**Phase 4 — Sync Flow**
+- [ ] On WP → Repurposa sync: detect incoming post language
+- [ ] If Snelstack + unsupported lang → translate to en before import
+- [ ] If non-Snelstack → use `get_locale()`, fallback to en
+- [ ] UX: badge on synced blog card "Synced from WordPress · Translated NL → EN"
 
 ## Active
 
 ### Delete Blog Confirmation Modal
-- [ ] Replace browser `confirm()` in SettingsPanel.tsx with a proper modal
+- [ ] Replace browser `confirm()` in BlogsPage with a proper modal
 
 ### Instagram / Social Publish Settings
 - [ ] `like_count_disabled` + `comments_disabled` on Instagram publish
 - [ ] Threads `reply_control` (everyone/followers/mentioned)
 - [ ] Twitter `reply_settings`
 - [ ] UI toggles in SchedulePostModal
-
-### Language Detection (needs design doc first — spar before building)
-- [ ] Detect WordPress site language via theme filter hooks
-- [ ] Pass language to React via `wp_localize_script`
-- [ ] Send language to Laravel on all AI generation requests
-- [ ] Save language on Laravel post model
-- [ ] Show language badge on blog cards
-- [ ] Short posts inherit blog language
 
 ## Platform Approvals Needed
 - [ ] LinkedIn Community Management API — screencast of OAuth + publish flow
@@ -37,17 +47,18 @@ See [LANGUAGE.md](./LANGUAGE.md) for full design.
 - [ ] Threads — API access for production
 
 ## Nice to Have (Later)
-- [ ] Analytics frontend (wire to API)
 - [ ] Webhook/SSE instead of polling for blog generation
 - [ ] Video tab
 - [ ] Version history modal (connect to real PostVersion data)
 - [ ] Swipe files / content library
-- [ ] Custom prompts for AI generation
+- [ ] Custom prompts per user
 - [ ] Queue pattern for `generate-outline` / `generate-topics`
 
 ## Completed
-- Auto-repost backend (migrations, models, routes, ProcessRepostJob, Twitter + Threads repost methods)
-- Auto-repost frontend (SchedulePostModal, AutoRepostModal, ScheduledPostDetail)
-- TipTap AI bubble menu (improve/rewrite/shorter/longer/fix → refine-text API)
-- Regenerate blog (RegenerateModal + POST /posts/{post}/regenerate)
+- Language Phase 1 (Snelstack detection, banner, content_lang selector)
+- Auto-repost backend + frontend
+- TipTap AI bubble menu
+- Regenerate blog modal
 - WP posts sync (REST endpoint + frontend import logic)
+- Analytics page (overview chart + per-post growth)
+- SnelstackBanner extracted as reusable component
