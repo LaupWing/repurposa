@@ -1,5 +1,16 @@
 # TODO
 
+## 🔴 High Priority
+
+### Language System — Phase 1: Detection + Config
+See [LANGUAGE.md](./LANGUAGE.md) for full design.
+
+- [ ] PHP detection in `repurposa.php` (`isSnelstack`, `siteDefault`, `current`)
+- [ ] Pass via `wp_localize_script` into `repurposaConfig.language`
+- [ ] Language selector in SettingsPage (nl/en, saved to `repurposa_language` WP option)
+- [ ] Laravel migration: add `language` to `posts` table
+- [ ] Update `PostApiController` store/update to accept `language`
+
 ## Active
 
 ### Delete Blog Confirmation Modal
