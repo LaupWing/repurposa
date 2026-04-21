@@ -8,8 +8,8 @@
 import { useState, useRef } from "@wordpress/element";
 import { toast } from "sonner";
 import Avatar from "boring-avatars";
-import { AlertTriangle, Check, ExternalLink, Save, Loader2, Pencil, Zap } from "lucide-react";
-import { getConfig } from "@/services/client";
+import { AlertTriangle, Check, ExternalLink, Save, Loader2, Pencil } from "lucide-react";
+import SnelstackBanner from "@/components/SnelstackBanner";
 import { TimezonePicker } from "@/components/TimezonePicker";
 import { useProfileStore } from "@/store/profileStore";
 import type { ProfileData } from "@/store/profileStore";
@@ -147,25 +147,10 @@ export default function SettingsPage() {
     );
   }
 
-  const { snelstackLang } = getConfig();
-
   return (
     <div className="max-w-3xl mx-auto mt-6 pb-12 space-y-6">
 
-      {/* Snelstack Detection Banner */}
-      {snelstackLang !== null ? (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-white" style={{ background: 'linear-gradient(135deg, #3b82f6, #7c3aed)' }}>
-          <Zap size={16} className="shrink-0" />
-          <span>
-            <strong>Snelstack detected</strong> — site default language is <strong>{snelstackLang.toUpperCase()}</strong>. Full language flow enabled.
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500">
-          <Zap size={16} className="shrink-0" />
-          <span>No Snelstack theme detected — content published as-is.</span>
-        </div>
-      )}
+      <SnelstackBanner contentLang={profile?.content_lang ?? 'en'} />
 
       {/* Account Settings Card */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
