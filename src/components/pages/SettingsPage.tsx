@@ -154,10 +154,10 @@ export default function SettingsPage() {
 
       {/* Snelstack Detection Banner */}
       {snelstackLang !== null ? (
-        <div className="flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
-          <Zap size={16} className="text-green-600 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-white" style={{ background: 'linear-gradient(135deg, #3b82f6, #7c3aed)' }}>
+          <Zap size={16} className="shrink-0" />
           <span>
-            <strong>Snelstack theme detected</strong> — site default language is <strong>{snelstackLang.toUpperCase()}</strong>. Full language flow enabled.
+            <strong>Snelstack detected</strong> — site default language is <strong>{snelstackLang.toUpperCase()}</strong>. Full language flow enabled.
           </span>
         </div>
       ) : (
