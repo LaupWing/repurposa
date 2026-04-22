@@ -19,6 +19,8 @@ import ImagePickerModal from '@/components/ImagePickerModal';
 import { updateBlog, getVersions, createVersion, restoreVersion, refineText } from '@/services/blogApi';
 import type { BlogPost, PostVersion } from '@/types';
 import { PublishModal } from './PublishModal';
+import SnelstackBanner from '@/components/SnelstackBanner';
+import { useProfileStore } from '@/store/profileStore';
 
 export function BlogEditor({
     post,
@@ -35,6 +37,7 @@ export function BlogEditor({
 }) {
     const [title, setTitle] = useState(post.title);
     const [content, setContent] = useState(post.content);
+    const { profile } = useProfileStore();
     const [thumbnail, setThumbnail] = useState(post.thumbnail || '');
     const [savedTitle, setSavedTitle] = useState(post.title);
     const [savedContent, setSavedContent] = useState(post.content);
@@ -364,6 +367,7 @@ export function BlogEditor({
                             >
                                 View Post
                             </a>
+                            <SnelstackBanner compact contentLang={profile?.content_lang ?? 'en'} />
                             <button
                                 onClick={() => setIsPublishModalOpen(true)}
                                 disabled={isPublishing}
@@ -377,6 +381,7 @@ export function BlogEditor({
                             <span className="text-xs px-2 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-600">
                                 Draft
                             </span>
+                            <SnelstackBanner compact contentLang={profile?.content_lang ?? 'en'} />
                             <button
                                 onClick={() => setIsPublishModalOpen(true)}
                                 disabled={isPublishing}
