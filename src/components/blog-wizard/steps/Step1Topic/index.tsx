@@ -98,6 +98,7 @@ export default function Step1Topic({
             // Server auto-saves generated_topics to wizard
             const response = await generateTopics(searchTerm, {
                 target_audience: targetAudience || profile?.target_audience,
+                language: profile?.content_lang,
             });
             onGeneratedTopicsChange(response.suggestions);
         } catch (error) {
