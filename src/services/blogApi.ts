@@ -18,39 +18,36 @@ import type {
 
 export async function generateTopics(
     roughIdea: string,
-    options?: { target_audience?: string; language?: string }
+    options?: { target_audience?: string }
 ): Promise<GenerateTopicsResponse> {
     return apiRequest<GenerateTopicsResponse>('/posts/generate-topics', {
         rough_idea: roughIdea,
         target_audience: options?.target_audience,
-        language: options?.language,
     });
 }
 
 export async function generateOutline(
     topic: string,
     roughOutline?: string[],
-    options?: { target_audience?: string; language?: string }
+    options?: { target_audience?: string }
 ): Promise<GenerateOutlineResponse> {
     return apiRequest<GenerateOutlineResponse>('/posts/generate-outline', {
         topic,
         rough_outline: roughOutline || [],
         target_audience: options?.target_audience,
-        language: options?.language,
     });
 }
 
 export async function generateBlog(
     topic: string,
     outline: OutlineSection[],
-    options?: { target_audience?: string; mode?: BlogGenerationMode; language?: string }
+    options?: { target_audience?: string; mode?: BlogGenerationMode }
 ): Promise<GenerateBlogResponse> {
     return apiRequest<GenerateBlogResponse>('/posts/generate', {
         topic,
         outline,
         target_audience: options?.target_audience,
         mode: options?.mode || 'quick',
-        language: options?.language,
     });
 }
 
@@ -61,7 +58,6 @@ export async function regenerateBlog(
         outline: OutlineSection[];
         target_audience?: string;
         mode?: BlogGenerationMode;
-        language?: string;
     }
 ): Promise<GenerateBlogResponse> {
     return apiRequest<GenerateBlogResponse>(`/posts/${postId}/regenerate`, {
@@ -69,7 +65,6 @@ export async function regenerateBlog(
         outline: options.outline,
         target_audience: options.target_audience,
         mode: options.mode || 'quick',
-        language: options.language,
     });
 }
 
