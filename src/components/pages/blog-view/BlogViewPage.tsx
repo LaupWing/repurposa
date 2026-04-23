@@ -41,6 +41,7 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
     const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false);
     const [editorKey, setEditorKey] = useState(0);
     const [highlightVisualId, setHighlightVisualId] = useState<number | null>(null);
+    const [publishingOverlay, setPublishingOverlay] = useState<'translating' | 'publishing' | null>(null);
 
     // Fetch blog from API
     useEffect(() => {
@@ -136,7 +137,18 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
     return (
         <div className="h-[calc(100vh-100px)] flex flex-col overflow-hidden p-4">
             {/* Card container - tabs and content connected */}
-            <div className="flex-1 min-h-0 flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="relative flex-1 min-h-0 flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                {publishingOverlay && (
+                    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+                        <GeneratingOverlay
+                            title={publishingOverlay === 'translating' ? 'Translating for Snelstack...' : 'Publishing to WordPress...'}
+                            descriptions={publishingOverlay === 'translating'
+                                ? ['Translating your blog content', 'Preserving formatting and structure', 'Almost done...']
+                                : ['Creating your WordPress post', 'Setting featured image', 'Almost there...']
+                            }
+                        />
+                    </div>
+                )}
                 {/* Header with Back + Tabs */}
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50">
                     {/* Back button */}
@@ -267,6 +279,7 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                                 setPost(prev => prev ? { ...prev, title, content } : prev);
                             }}
                             onRegenerate={() => setIsRegenerateModalOpen(true)}
+                            onPublishingStateChange={setPublishingOverlay}
                         />
                     )}
 

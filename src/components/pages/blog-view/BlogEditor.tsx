@@ -21,6 +21,7 @@ import type { BlogPost, PostVersion } from '@/types';
 import { PublishModal } from './PublishModal';
 import SnelstackBanner from '@/components/SnelstackBanner';
 import { useProfileStore } from '@/store/profileStore';
+import { apiRequest, getConfig } from '@/services/client';
 
 export function BlogEditor({
     post,
@@ -28,12 +29,14 @@ export function BlogEditor({
     onPublished,
     onRegenerate,
     onSaved,
+    onPublishingStateChange,
 }: {
     post: BlogPost;
     isGenerating: boolean;
     onPublished: (postId: number, postUrl: string) => void;
     onRegenerate: () => void;
     onSaved?: (title: string, content: string) => void;
+    onPublishingStateChange?: (state: 'translating' | 'publishing' | null) => void;
 }) {
     const [title, setTitle] = useState(post.title);
     const [content, setContent] = useState(post.content);
@@ -187,7 +190,28 @@ export function BlogEditor({
             setSavedContent(content);
             setSavedThumbnail(thumbnail);
 
+            const { snelstackLang } = getConfig();
+            const contentLang = profile?.content_lang ?? 'en';
+            let publishContent = content;
+
+            if (snelstackLang) {
+                if (snelstackLang !== contentLang) {
+                    // Translate to site default lang, store original in contentTranslations
+                    onPublishingStateChange?.('translating');
+                    const translated = await apiRequest<{ content: string }>('/translate', {
+                        content,
+                        target_lang: snelstackLang,
+                    });
+                    // Inner block = translated (site default lang), contentTranslations = original
+                    const translations = JSON.stringify({ [contentLang]: [content] });
+                    publishContent = `<!-- wp:snel/content-section {"contentTranslations":${translations}} -->\n<!-- wp:html -->\n${translated.content}\n<!-- /wp:html -->\n<!-- /wp:snel/content-section -->`;
+                } else {
+                    publishContent = `<!-- wp:snel/content-section -->\n<!-- wp:html -->\n${content}\n<!-- /wp:html -->\n<!-- /wp:snel/content-section -->`;
+                }
+            }
+
             // Create/update real WordPress post
+            onPublishingStateChange?.('publishing');
             const response = await apiFetch<{
                 success: boolean;
                 post_id: number;
@@ -196,7 +220,7 @@ export function BlogEditor({
             }>({
                 path: `/repurposa/v1/posts/${post.id}/publish`,
                 method: 'POST',
-                data: { title, content, thumbnail },
+                data: { title, content: publishContent, thumbnail },
             });
 
             // Update status on Laravel
@@ -216,6 +240,7 @@ export function BlogEditor({
                 description: error instanceof Error ? error.message : 'Please try again.',
             });
         } finally {
+            onPublishingStateChange?.(null);
             setIsPublishing(false);
             setIsPublishModalOpen(false);
         }

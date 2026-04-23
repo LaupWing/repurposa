@@ -300,7 +300,7 @@ function repurposa_publish_blog(WP_REST_Request $request) {
     $data = $request->get_json_params();
 
     $title = sanitize_text_field($data['title'] ?? '');
-    $content = wp_kses_post($data['content'] ?? '');
+    $content = wp_unslash($data['content'] ?? '');
     $thumbnail = esc_url_raw($data['thumbnail'] ?? '');
 
     if (empty($title) && empty($content)) {
