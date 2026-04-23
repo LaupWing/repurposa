@@ -13,6 +13,8 @@ import { getBlogs, deleteBlog, createEmptyBlog, updateBlog } from '@/services/bl
 import { usePostPolling } from '@/hooks/usePostPolling';
 import type { BlogPost } from '@/types';
 import { stagger } from '@/components/onboarding/stagger';
+import { useProfileStore } from '@/store/profileStore';
+import { apiRequest } from '@/services/client';
 
 // ============================================
 // TYPES
@@ -282,6 +284,7 @@ export default function BlogsPage() {
     const [posts, setPosts] = useState<BlogPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
+    const profile = useProfileStore(s => s.profile);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -343,9 +346,11 @@ export default function BlogsPage() {
     const handleSync = async () => {
         setIsSyncing(true);
         try {
+            const contentLang = profile?.content_lang ?? 'en';
+
             // Fetch all published WP posts + existing Laravel posts in parallel
             const [wpPosts, laravelPosts] = await Promise.all([
-                apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null }[]>({
+                apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null; lang: string }[]>({
                     path: '/repurposa/v1/wp-posts',
                 }),
                 getBlogs(),
@@ -361,22 +366,29 @@ export default function BlogsPage() {
                 return;
             }
 
-            // Import one by one: create then set published_post_id + url
+            // Import one by one — add each to state immediately so the UI updates as we go
             for (const wp of toImport) {
+                let content = wp.content;
+
+                if (wp.lang !== contentLang) {
+                    const translated = await apiRequest<{ content: string }>('/translate', {
+                        content: wp.content,
+                        target_lang: contentLang,
+                    });
+                    content = translated.content;
+                }
+
                 const created = await createEmptyBlog();
-                await updateBlog(created.id, {
+                const imported = await updateBlog(created.id, {
                     title: wp.title,
-                    content: wp.content,
+                    content,
                     thumbnail: wp.thumbnail ?? undefined,
                     status: 'published',
                     published_post_id: wp.id,
                     published_post_url: wp.url,
                 });
+                setPosts(prev => [imported, ...prev]);
             }
-
-            // Refresh the list
-            const updated = await getBlogs();
-            setPosts(updated);
 
             toast.success(`Synced ${toImport.length} post${toImport.length > 1 ? 's' : ''} from WordPress`);
         } catch (error) {

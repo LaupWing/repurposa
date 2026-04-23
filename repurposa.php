@@ -271,15 +271,26 @@ function repurposa_register_rest_routes() {
                     'posts_per_page' => -1,
                 ]);
 
-                return array_map(function ($post) {
+                // Detect site default language for the lang field
+                $site_lang = 'en';
+                if (function_exists('snel_get_default_lang')) {
+                    $site_lang = snel_get_default_lang();
+                } else {
+                    $locale = get_locale(); // e.g. "nl_NL", "en_US"
+                    $lang_prefix = strtolower(substr($locale, 0, 2));
+                    $site_lang = in_array($lang_prefix, ['en', 'nl']) ? $lang_prefix : 'en';
+                }
+
+                return array_map(function ($post) use ($site_lang) {
                     return [
                         'id'        => $post->ID,
                         'title'     => $post->post_title,
-                        'content'   => $post->post_content,
+                        'content'   => repurposa_extract_post_content($post->post_content, get_permalink($post->ID)),
                         'excerpt'   => $post->post_excerpt,
                         'url'       => get_permalink($post->ID),
                         'thumbnail' => get_the_post_thumbnail_url($post->ID, 'full') ?: null,
                         'date'      => $post->post_date,
+                        'lang'      => $site_lang,
                     ];
                 }, $posts);
             },
@@ -288,6 +299,40 @@ function repurposa_register_rest_routes() {
             },
         ],
     ]);
+}
+
+/**
+ * Fetch the rendered frontend page and extract the prose content div.
+ * Falls back to stripping block comment markers if the request fails.
+ */
+function repurposa_extract_post_content($post_content, $permalink) {
+    $response = wp_remote_get($permalink, ['timeout' => 15]);
+
+    if (is_wp_error($response)) {
+        return preg_replace('/<!--\s*\/?wp:[^>]*-->\n?/m', '', $post_content);
+    }
+
+    $html = wp_remote_retrieve_body($response);
+
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadHTML('<?xml encoding="utf-8" ?>' . $html);
+    libxml_clear_errors();
+
+    $xpath = new DOMXPath($dom);
+    $nodes = $xpath->query('//*[contains(@class, "prose")]');
+
+    if ($nodes->length === 0) {
+        return preg_replace('/<!--\s*\/?wp:[^>]*-->\n?/m', '', $post_content);
+    }
+
+    $prose = $nodes->item(0);
+    $inner = '';
+    foreach ($prose->childNodes as $child) {
+        $inner .= $dom->saveHTML($child);
+    }
+
+    return trim($inner);
 }
 
 /**
