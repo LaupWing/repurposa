@@ -182,6 +182,7 @@ export function BlogEditor({
     };
 
     const handlePublish = async (publishNow: boolean) => {
+        setIsPublishModalOpen(false);
         setIsPublishing(true);
         try {
             // Save latest content to Laravel first
@@ -204,9 +205,9 @@ export function BlogEditor({
                     });
                     // Inner block = translated (site default lang), contentTranslations = original
                     const translations = JSON.stringify({ [contentLang]: [content] });
-                    publishContent = `<!-- wp:snel/content-section {"contentTranslations":${translations}} -->\n<!-- wp:html -->\n${translated.content}\n<!-- /wp:html -->\n<!-- /wp:snel/content-section -->`;
+                    publishContent = `<!-- wp:snel/content-section {"contentTranslations":${translations}} -->\n<!-- wp:freeform -->\n${translated.content}\n<!-- /wp:freeform -->\n<!-- /wp:snel/content-section -->`;
                 } else {
-                    publishContent = `<!-- wp:snel/content-section -->\n<!-- wp:html -->\n${content}\n<!-- /wp:html -->\n<!-- /wp:snel/content-section -->`;
+                    publishContent = `<!-- wp:snel/content-section -->\n<!-- wp:freeform -->\n${content}\n<!-- /wp:freeform -->\n<!-- /wp:snel/content-section -->`;
                 }
             }
 
@@ -242,7 +243,6 @@ export function BlogEditor({
         } finally {
             onPublishingStateChange?.(null);
             setIsPublishing(false);
-            setIsPublishModalOpen(false);
         }
     };
 
