@@ -65,6 +65,10 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
         brand_voice: 'conversational',
         content_lang: 'en',
     });
+    const [timezone, setTimezone] = useState(() => {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return Intl.supportedValuesOf('timeZone').includes(tz) ? tz : 'UTC';
+    });
     const [sending, setSending] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -119,19 +123,16 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     };
 
     const handleComplete = async () => {
-        console.log('[onboarding] handleComplete fired');
         setSending(true);
         setErrors({});
 
         const payload = {
             brand_voice: formData.brand_voice,
             content_lang: formData.content_lang,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            timezone,
             onboarding_completed: true,
         };
         const { apiUrl, token } = getConfig();
-        console.log('[onboarding] apiUrl:', apiUrl, '| token:', token ? token.slice(0, 10) + '...' : 'EMPTY');
-        console.log('[onboarding] payload:', payload);
         try {
             const response = await fetch(`${apiUrl}/api/profile`, {
                 method: 'PUT',
@@ -143,11 +144,8 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                 body: JSON.stringify(payload),
             });
 
-            console.log('[onboarding] response status:', response.status);
-
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
-                console.log('[onboarding] error response:', data);
                 const errs: Record<string, string> = {};
                 if (data.errors) {
                     for (const [key, val] of Object.entries(data.errors)) {
@@ -159,13 +157,10 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                 return;
             }
 
-            console.log('[onboarding] success, refreshing profile...');
             try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
             await refreshProfile();
-            console.log('[onboarding] profile refreshed, calling onComplete');
             onComplete();
-        } catch (err) {
-            console.error('[onboarding] caught error:', err);
+        } catch {
             setSending(false);
             setErrors({ general: 'Something went wrong. Please try again.' });
         }
@@ -197,8 +192,10 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                         leaving={leaving}
                         brandVoice={formData.brand_voice}
                         contentLang={formData.content_lang}
+                        timezone={timezone}
                         setBrandVoice={(voice) => setFormData({ ...formData, brand_voice: voice })}
                         setContentLang={(lang) => setFormData({ ...formData, content_lang: lang })}
+                        setTimezone={setTimezone}
                         errors={errors}
                         sending={sending}
                         onComplete={handleComplete}

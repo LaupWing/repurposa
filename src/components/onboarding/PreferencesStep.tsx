@@ -1,5 +1,6 @@
 import { Loader2, MessageCircle, Shield, Flame } from 'lucide-react';
 import { stagger } from './stagger';
+import { TimezonePicker } from '@/components/TimezonePicker';
 
 const LANGUAGES = [
     { value: 'en', label: 'English' },
@@ -10,14 +11,16 @@ interface PreferencesStepProps {
     leaving: boolean;
     brandVoice: string;
     contentLang: string;
+    timezone: string;
     setBrandVoice: (voice: string) => void;
     setContentLang: (lang: string) => void;
+    setTimezone: (tz: string) => void;
     errors: Record<string, string>;
     sending: boolean;
     onComplete: () => void;
 }
 
-export default function PreferencesStep({ leaving, brandVoice, contentLang, setBrandVoice, setContentLang, errors, sending, onComplete }: PreferencesStepProps) {
+export default function PreferencesStep({ leaving, brandVoice, contentLang, timezone, setBrandVoice, setContentLang, setTimezone, errors, sending, onComplete }: PreferencesStepProps) {
     return (
         <div className="flex flex-col items-center gap-6 w-full">
             <div {...stagger(0, leaving)} className="space-y-2 text-center">
@@ -69,10 +72,15 @@ export default function PreferencesStep({ leaving, brandVoice, contentLang, setB
                     </select>
                 </div>
 
+                <div {...stagger(3, leaving)} className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-500">Timezone</label>
+                    <TimezonePicker value={timezone} onChange={setTimezone} />
+                </div>
+
                 {errors.general && <p className="text-sm text-red-600 text-center">{errors.general}</p>}
 
                 <button
-                    {...stagger(3, leaving)}
+                    {...stagger(4, leaving)}
                     onClick={onComplete}
                     disabled={sending}
                     className="w-full h-10 bg-blue-600 text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
