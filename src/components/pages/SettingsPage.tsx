@@ -8,7 +8,8 @@
 import { useState, useRef } from "@wordpress/element";
 import { toast } from "sonner";
 import Avatar from "boring-avatars";
-import { AlertTriangle, Check, ExternalLink, Save, Loader2, Pencil } from "lucide-react";
+import { AlertTriangle, Check, ExternalLink, Save, Loader2, Pencil, LogOut } from "lucide-react";
+import apiFetch from "@wordpress/api-fetch";
 import SnelstackBanner from "@/components/SnelstackBanner";
 import { TimezonePicker } from "@/components/TimezonePicker";
 import { useProfileStore } from "@/store/profileStore";
@@ -16,6 +17,7 @@ import type { ProfileData } from "@/store/profileStore";
 import { disconnectSocialAccount, uploadAvatar, updateUser } from "@/services/profileApi";
 import { useSocialPopup } from "@/hooks/useSocialPopup";
 import { CONNECT_PLATFORMS } from "@/constants/platforms";
+import { apiRequest } from "@/services/client";
 
 const BRAND_VOICES = ["conversational", "professional", "bold"] as const;
 
@@ -35,6 +37,7 @@ export default function SettingsPage() {
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [savingUser, setSavingUser] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAvatarSelect = (file: File) => {
@@ -71,6 +74,21 @@ export default function SettingsPage() {
     } finally {
       setSavingUser(false);
     }
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await apiRequest('/auth/logout', undefined, 'POST');
+    } catch {
+      // ignore — clear local token regardless
+    }
+    try {
+      await apiFetch({ path: '/repurposa/v1/auth/token', method: 'DELETE' });
+    } catch {
+      // ignore
+    }
+    window.location.reload();
   };
 
   // Sync context profile to local state for editing
@@ -478,6 +496,22 @@ export default function SettingsPage() {
             We never post without your permission.
           </p>
         </div>
+      </div>
+
+      {/* Logout */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-red-600 border border-red-200 bg-white hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {isLoggingOut ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <LogOut size={16} />
+          )}
+          {isLoggingOut ? 'Logging out...' : 'Log out'}
+        </button>
       </div>
     </div>
   );
