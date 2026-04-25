@@ -11,6 +11,7 @@
 import { useState, useEffect } from '@wordpress/element';
 import { useProfileStore } from '@/store/profileStore';
 import { useSocialPopup } from '@/hooks/useSocialPopup';
+import { canonicalTimezone } from '@/components/TimezonePicker';
 import WelcomeStep from './WelcomeStep';
 import ProfileStep from './ProfileStep';
 import EmailStep from './EmailStep';
@@ -65,10 +66,9 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
         brand_voice: 'conversational',
         content_lang: 'en',
     });
-    const [timezone, setTimezone] = useState(() => {
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        return Intl.supportedValuesOf('timeZone').includes(tz) ? tz : 'UTC';
-    });
+    const [timezone, setTimezone] = useState(() =>
+        canonicalTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone),
+    );
     const [sending, setSending] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
