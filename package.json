@@ -6,7 +6,6 @@
     "build": "wp-scripts build",
     "start": "wp-scripts start",
     "lint:js": "wp-scripts lint-js",
-    "zip": "node scripts/zip.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },
