@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Repurposa
  * Description: Create blog posts with AI and repurpose them into social media content.
- * Version: 1.0.10
+ * Version: 1.0.11
  * Author: Loc Nguyen
  * License: GPL v2 or later
  * Text Domain: repurposa

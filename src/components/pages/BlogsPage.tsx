@@ -350,7 +350,7 @@ export default function BlogsPage() {
 
             // Fetch all published WP posts + existing Laravel posts in parallel
             const [wpPosts, laravelPosts] = await Promise.all([
-                apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null; lang: string }[]>({
+                apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null; lang: string; date: string }[]>({
                     path: '/repurposa/v1/wp-posts',
                 }),
                 getBlogs(),
@@ -386,6 +386,7 @@ export default function BlogsPage() {
                     status: 'published',
                     published_post_id: wp.id,
                     published_post_url: wp.url,
+                    published_at: wp.date,
                 });
                 setPosts(prev => [imported, ...prev]);
             }

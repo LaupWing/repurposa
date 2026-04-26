@@ -140,7 +140,7 @@ export async function getBlog(id: number): Promise<BlogPost> {
 
 export async function updateBlog(
     id: number,
-    data: { title?: string; content?: string; thumbnail?: string; status?: BlogPost['status']; published_post_id?: number; published_post_url?: string }
+    data: { title?: string; content?: string; thumbnail?: string; status?: BlogPost['status']; published_post_id?: number; published_post_url?: string; published_at?: string }
 ): Promise<BlogPost> {
     return apiRequest<BlogPost>(`/posts/${id}`, data as Record<string, unknown>, 'PUT');
 }
