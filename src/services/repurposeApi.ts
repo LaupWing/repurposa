@@ -63,6 +63,11 @@ export async function deleteShortPost(shortPostId: number): Promise<void> {
     await apiRequest<void>(`/repurpose/short-posts/${shortPostId}`, {}, 'DELETE');
 }
 
+export async function getStandaloneThreads(): Promise<ThreadItem[]> {
+    const response = await apiRequest<{ threads: ThreadItem[] }>('/repurpose/threads/standalone', {}, 'GET');
+    return response.threads;
+}
+
 export async function createStandaloneThread(data: {
     hook: string;
     posts: { content: string }[];
@@ -96,6 +101,10 @@ export async function updateThread(threadId: number, data: {
     posts?: { content: string; media: unknown }[];
 }): Promise<ThreadItem> {
     return apiRequest<ThreadItem>(`/repurpose/threads/${threadId}`, data as Record<string, unknown>, 'PATCH');
+}
+
+export async function deleteThread(threadId: number): Promise<void> {
+    await apiRequest<void>(`/repurpose/threads/${threadId}`, {}, 'DELETE');
 }
 
 // ============================================

@@ -14,8 +14,8 @@ import {
     getScheduledPosts,
     deleteScheduledPost,
 } from "@/services/scheduleApi";
-import type { ShortPost as ApiShortPost } from "@/types";
-import { getStandaloneShortPosts } from "@/services/repurposeApi";
+import type { ShortPost as ApiShortPost, ThreadItem } from "@/types";
+import { getStandaloneShortPosts, getStandaloneThreads } from "@/services/repurposeApi";
 import type { Platform, TabType, WeeklySchedule, ScheduledPost } from "./types";
 import { API_TO_UI_PLATFORM } from "./types";
 import { mapApiPost, groupScheduledPosts, mapScheduleFromApi, getUpcomingSlotsFromSchedule } from "./helpers";
@@ -37,6 +37,7 @@ export default function SchedulePage() {
     const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
     const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
     const [drafts, setDrafts] = useState<ApiShortPost[]>([]);
+    const [threadDrafts, setThreadDrafts] = useState<ThreadItem[]>([]);
     const [isLoadingDrafts, setIsLoadingDrafts] = useState(false);
 
     // SlotContentPicker state
@@ -76,8 +77,11 @@ export default function SchedulePage() {
             .finally(() => setIsLoadingPosts(false));
 
         setIsLoadingDrafts(true);
-        getStandaloneShortPosts()
-            .then(setDrafts)
+        Promise.all([getStandaloneShortPosts(), getStandaloneThreads()])
+            .then(([shortPosts, threads]) => {
+                setDrafts(shortPosts);
+                setThreadDrafts(threads);
+            })
             .catch(() => {})
             .finally(() => setIsLoadingDrafts(false));
     }, []);
@@ -106,7 +110,7 @@ export default function SchedulePage() {
     const tabs: { id: TabType; label: string; icon: typeof Calendar; badge?: string | number }[] = [
         { id: "queue", label: "Queue", icon: Calendar, badge: queuePosts.length > 0 ? queuePosts.length : undefined },
         { id: "published", label: "Published", icon: CheckCircle },
-        { id: "drafts", label: "Drafts", icon: FileText, badge: drafts.length > 0 ? drafts.length : undefined },
+        { id: "drafts", label: "Drafts", icon: FileText, badge: (drafts.length + threadDrafts.length) > 0 ? drafts.length + threadDrafts.length : undefined },
         { id: "times", label: "Publishing Times", icon: Clock, badge: totalSlots > 0 ? `${totalSlots}/wk` : undefined },
     ];
 
@@ -199,8 +203,10 @@ export default function SchedulePage() {
             {activeTab === "drafts" && (
                 <DraftsTab
                     drafts={drafts}
+                    threadDrafts={threadDrafts}
                     isLoading={isLoadingDrafts}
                     onDraftsChange={setDrafts}
+                    onThreadDraftsChange={setThreadDrafts}
                     onDraftClick={(draft) => {
                         if (weeklySchedule) {
                             const slots = getUpcomingSlotsFromSchedule(weeklySchedule, 1, timezone);
