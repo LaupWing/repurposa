@@ -280,6 +280,7 @@ export default function BlogViewPage({ postId, onBack }: BlogViewPageProps) {
                             }}
                             onRegenerate={() => setIsRegenerateModalOpen(true)}
                             onPublishingStateChange={setPublishingOverlay}
+                            onSynced={(updates) => setPost(prev => prev ? { ...prev, ...updates } : prev)}
                         />
                     )}
 

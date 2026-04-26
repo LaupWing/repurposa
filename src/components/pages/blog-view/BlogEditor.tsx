@@ -29,6 +29,7 @@ export function BlogEditor({
     onPublished,
     onRegenerate,
     onSaved,
+    onSynced,
     onPublishingStateChange,
 }: {
     post: BlogPost;
@@ -36,6 +37,7 @@ export function BlogEditor({
     onPublished: (postId: number, postUrl: string) => void;
     onRegenerate: () => void;
     onSaved?: (title: string, content: string) => void;
+    onSynced?: (updates: Partial<BlogPost>) => void;
     onPublishingStateChange?: (state: 'translating' | 'publishing' | null) => void;
 }) {
     const [title, setTitle] = useState(post.title);
@@ -49,6 +51,7 @@ export function BlogEditor({
     const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
     const isDirty = title !== savedTitle || content !== savedContent || thumbnail !== savedThumbnail;
 
     // Version history state
@@ -178,6 +181,35 @@ export function BlogEditor({
             toast.error('Failed to save');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleSync = async () => {
+        if (!post.published_post_id) return;
+        setIsSyncing(true);
+        try {
+            const wp = await apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null; date: string }>({
+                path: `/repurposa/v1/wp-posts/${post.published_post_id}`,
+            });
+            const updated = await updateBlog(post.id, {
+                title: wp.title,
+                content: wp.content,
+                thumbnail: wp.thumbnail ?? undefined,
+                published_post_url: wp.url,
+                published_at: wp.date,
+            });
+            setTitle(updated.title);
+            setContent(updated.content);
+            setThumbnail(updated.thumbnail || '');
+            setSavedTitle(updated.title);
+            setSavedContent(updated.content);
+            setSavedThumbnail(updated.thumbnail || '');
+            onSynced?.(updated);
+            toast.success('Synced from WordPress');
+        } catch {
+            toast.error('Failed to sync');
+        } finally {
+            setIsSyncing(false);
         }
     };
 
@@ -392,6 +424,14 @@ export function BlogEditor({
                             >
                                 View Post
                             </a>
+                            <button
+                                onClick={handleSync}
+                                disabled={isSyncing}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                                title="Sync from WordPress"
+                            >
+                                <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                            </button>
                             <SnelstackBanner compact contentLang={profile?.content_lang ?? 'en'} />
                             <button
                                 onClick={() => setIsPublishModalOpen(true)}
