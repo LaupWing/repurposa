@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Repurposa
  * Description: Create blog posts with AI and repurpose them into social media content.
- * Version: 1.0.12
+ * Version: 1.0.13
  * Author: Loc Nguyen
  * License: GPL v2 or later
  * Text Domain: repurposa
@@ -293,6 +293,42 @@ function repurposa_register_rest_routes() {
                         'lang'      => $site_lang,
                     ];
                 }, $posts);
+            },
+            'permission_callback' => function () {
+                return current_user_can('manage_options');
+            },
+        ],
+    ]);
+
+    register_rest_route('repurposa/v1', '/wp-posts/(?P<id>\d+)', [
+        [
+            'methods' => 'GET',
+            'callback' => function ($request) {
+                $post = get_post((int) $request['id']);
+
+                if (!$post || $post->post_status !== 'publish') {
+                    return new WP_Error('not_found', 'Post not found', ['status' => 404]);
+                }
+
+                $site_lang = 'en';
+                if (function_exists('snel_get_default_lang')) {
+                    $site_lang = snel_get_default_lang();
+                } else {
+                    $locale = get_locale();
+                    $lang_prefix = strtolower(substr($locale, 0, 2));
+                    $site_lang = in_array($lang_prefix, ['en', 'nl']) ? $lang_prefix : 'en';
+                }
+
+                return [
+                    'id'        => $post->ID,
+                    'title'     => $post->post_title,
+                    'content'   => repurposa_extract_post_content($post->post_content, get_permalink($post->ID)),
+                    'excerpt'   => $post->post_excerpt,
+                    'url'       => get_permalink($post->ID),
+                    'thumbnail' => get_the_post_thumbnail_url($post->ID, 'full') ?: null,
+                    'date'      => $post->post_date,
+                    'lang'      => $site_lang,
+                ];
             },
             'permission_callback' => function () {
                 return current_user_can('manage_options');

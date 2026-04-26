@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
-import { FileText, Search, Filter, Plus, Trash2, Pencil, Check, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
+import { FileText, Search, Filter, Plus, Pencil, Check, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import apiFetch from '@wordpress/api-fetch';
 import { getBlogs, deleteBlog, createEmptyBlog, updateBlog } from '@/services/blogApi';
@@ -77,7 +77,7 @@ function StatusDot({ status }: { status: BlogPost['status'] }) {
     );
 }
 
-function PostCard({ post, onEdit, onDelete, onStatusUpdate }: { post: BlogPost; onEdit: (id: number) => void; onDelete: (id: number) => void; onStatusUpdate: (postId: number, updates: Partial<BlogPost>) => void }) {
+function PostCard({ post, onEdit, onDelete, onSync, onStatusUpdate }: { post: BlogPost; onEdit: (id: number) => void; onDelete: (id: number) => void; onSync: (post: BlogPost) => void; onStatusUpdate: (postId: number, updates: Partial<BlogPost>) => void }) {
     // Poll when this card's post is generating
     usePostPolling(post.id, post.status, (status) => {
         if (status.status === 'draft') {
@@ -187,12 +187,15 @@ function PostCard({ post, onEdit, onDelete, onStatusUpdate }: { post: BlogPost; 
                             {(() => { const d = post.published_at ?? post.created_at; return d ? `${formatDate(d)} at ${formatTime(d)}` : '—'; })()}
                         </span>
                     </div>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onDelete(post.id); }}
-                        className="p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 rounded-full transition-all"
-                    >
-                        <Trash2 size={14} />
-                    </button>
+                    {post.published_post_id && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onSync(post); }}
+                            className="p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-all"
+                            title="Sync from WordPress"
+                        >
+                            <RefreshCw size={14} />
+                        </button>
+                    )}
                 </div>
 
                 {/* Title */}
@@ -337,6 +340,26 @@ export default function BlogsPage() {
 
     const handleStatusUpdate = (postId: number, updates: Partial<BlogPost>) => {
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, ...updates } : p));
+    };
+
+    const handleSyncPost = async (post: BlogPost) => {
+        if (!post.published_post_id) return;
+        try {
+            const wp = await apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null; lang: string; date: string }>({
+                path: `/repurposa/v1/wp-posts/${post.published_post_id}`,
+            });
+            const updated = await updateBlog(post.id, {
+                title: wp.title,
+                content: wp.content,
+                thumbnail: wp.thumbnail ?? undefined,
+                published_post_url: wp.url,
+                published_at: wp.date,
+            });
+            setPosts(prev => prev.map(p => p.id === post.id ? { ...p, ...updated } : p));
+            toast.success('Post synced from WordPress');
+        } catch {
+            toast.error('Failed to sync post');
+        }
     };
 
     const handleCreateNew = () => {
@@ -488,6 +511,7 @@ export default function BlogsPage() {
                                     post={post}
                                     onEdit={handleEdit}
                                     onDelete={handleDelete}
+                                    onSync={handleSyncPost}
                                     onStatusUpdate={handleStatusUpdate}
                                 />
                             </div>
