@@ -184,7 +184,7 @@ function PostCard({ post, onEdit, onDelete, onStatusUpdate }: { post: BlogPost; 
                     <div className="flex items-center gap-2">
                         <StatusDot status={post.status} />
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                            {post.created_at ? `${formatDate(post.created_at)} at ${formatTime(post.created_at)}` : '—'}
+                            {(() => { const d = post.published_at ?? post.created_at; return d ? `${formatDate(d)} at ${formatTime(d)}` : '—'; })()}
                         </span>
                     </div>
                     <button

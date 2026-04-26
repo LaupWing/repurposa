@@ -67,6 +67,7 @@ export interface BlogPost {
     status: 'generating' | 'draft' | 'published' | 'out-of-sync' | 'failed';
     published_post_id?: number | null;
     published_post_url?: string | null;
+    published_at?: string | null;
     topic?: string;
     outline?: OutlineSection[];
     short_posts?: ShortPost[];
