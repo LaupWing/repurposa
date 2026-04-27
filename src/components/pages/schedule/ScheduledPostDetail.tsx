@@ -37,7 +37,7 @@ interface ScheduledPostDetailProps {
 
 export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone }: ScheduledPostDetailProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const [editType, setEditType] = useState<'short_post' | 'thread'>(post.postType === 'thread' ? 'thread' : 'short_post');
+    const editType = post.postType === 'thread' ? 'thread' : 'short_post';
     // Short post edit state
     const [editText, setEditText] = useState(post.content);
     const [editImages, setEditImages] = useState<string[]>([]);
@@ -98,7 +98,6 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
             setIsFetchingPost(false);
         }
         setEditText(post.content);
-        setEditType(post.postType === 'thread' ? 'thread' : 'short_post');
         setIsEditing(true);
     };
 
@@ -291,24 +290,34 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
                         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                             {/* Type pills */}
                             <div className="flex items-center gap-1.5 mb-4">
-                                <button
-                                    onClick={() => setEditType('short_post')}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                                        editType === 'short_post' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <FileText size={11} />
-                                    Short Post
-                                </button>
-                                <button
-                                    onClick={() => setEditType('thread')}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                                        editType === 'thread' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <MessageSquare size={11} />
-                                    Thread
-                                </button>
+                                {([
+                                    { id: 'short_post', label: 'Short Post', icon: <FileText size={11} /> },
+                                    { id: 'thread', label: 'Thread', icon: <MessageSquare size={11} /> },
+                                ] as const).map(({ id, label, icon }) => {
+                                    const isActive = editType === id;
+                                    const isLocked = !isActive;
+                                    return (
+                                        <div key={id} className="relative group">
+                                            <button
+                                                onClick={() => { /* locked — no-op */ }}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                                    isActive
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-white border border-gray-200 text-gray-300 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                {icon}
+                                                {label}
+                                            </button>
+                                            {isLocked && (
+                                                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[180px] rounded-lg bg-gray-900 px-2.5 py-1.5 text-[11px] text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 text-center leading-tight">
+                                                    Can't switch type after creation
+                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                                 <button
                                     disabled
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-gray-100 text-gray-300 cursor-not-allowed"
