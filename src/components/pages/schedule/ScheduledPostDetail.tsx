@@ -138,7 +138,7 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
         <>
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden flex flex-col">
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col max-h-[85vh]">
                 {/* Header */}
                 <div className="px-5 py-4 border-b border-gray-200 shrink-0">
                     <div className="flex items-center justify-between mb-3">
@@ -244,7 +244,7 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
                 )}
 
                 {/* Body — content preview / editor */}
-                <div className="px-5 py-5">
+                <div className="px-5 py-5 flex-1 overflow-y-auto">
                     {/* Source label */}
                     <div className="flex items-center gap-2 mb-3">
                         <FileText size={12} className="text-gray-400" />
