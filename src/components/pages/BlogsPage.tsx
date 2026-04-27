@@ -108,11 +108,13 @@ function PostCard({
     onEdit,
     onSync,
     onStatusUpdate,
+    isSyncing,
 }: {
     post: BlogPost;
     onEdit: (id: number) => void;
     onSync: (post: BlogPost) => void;
     onStatusUpdate: (postId: number, updates: Partial<BlogPost>) => void;
+    isSyncing?: boolean;
 }) {
     // Poll when this card's post is generating
     usePostPolling(post.id, post.status, (status) => {
@@ -152,6 +154,13 @@ function PostCard({
             onClick={handleCardClick}
             className="group relative flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all cursor-pointer"
         >
+            {/* Syncing overlay */}
+            {isSyncing && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-xl gap-2">
+                    <Loader2 size={20} className="animate-spin text-blue-500" />
+                    <span className="text-xs font-medium text-gray-500">Syncing...</span>
+                </div>
+            )}
             {/* Thumbnail */}
             {post.status === "generating" ? (
                 <div className="h-32 bg-gray-50 flex items-center justify-center">
@@ -268,12 +277,13 @@ function PostCard({
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onSync(post);
+                                if (!isSyncing) onSync(post);
                             }}
-                            className="p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-all"
+                            disabled={isSyncing}
+                            className="p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-all disabled:opacity-50"
                             title="Sync from WordPress"
                         >
-                            <RefreshCw size={14} />
+                            <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
                         </button>
                     )}
                 </div>
@@ -379,6 +389,7 @@ export default function BlogsPage() {
     const [posts, setPosts] = useState<BlogPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [syncingPostId, setSyncingPostId] = useState<number | null>(null);
     const profile = useProfileStore((s) => s.profile);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -428,6 +439,7 @@ export default function BlogsPage() {
 
     const handleSyncPost = async (post: BlogPost) => {
         if (!post.published_post_id) return;
+        setSyncingPostId(post.id);
         try {
             const wp = await apiFetch<{
                 id: number;
@@ -441,9 +453,6 @@ export default function BlogsPage() {
             }>({
                 path: `/repurposa/v1/wp-posts/${post.published_post_id}`,
             });
-            console.log('[Sync] WP response:', wp);
-            console.log('[Sync] thumbnail before:', post.thumbnail);
-            console.log('[Sync] thumbnail from WP:', wp.thumbnail);
             await updateBlog(post.id, {
                 title: wp.title,
                 content: wp.content,
@@ -459,8 +468,6 @@ export default function BlogsPage() {
                               title: wp.title,
                               content: wp.content,
                               thumbnail: wp.thumbnail ?? p.thumbnail,
-                              // DEBUG: log after state update
-                              ...(console.log('[Sync] setting card thumbnail to:', wp.thumbnail ?? p.thumbnail), {}),
                               published_post_url: wp.url,
                               published_at: wp.date,
                           }
@@ -470,6 +477,8 @@ export default function BlogsPage() {
             toast.success("Post synced from WordPress");
         } catch {
             toast.error("Failed to sync post");
+        } finally {
+            setSyncingPostId(null);
         }
     };
 
@@ -657,6 +666,7 @@ export default function BlogsPage() {
                                     onEdit={handleEdit}
                                     onSync={handleSyncPost}
                                     onStatusUpdate={handleStatusUpdate}
+                                    isSyncing={syncingPostId === post.id}
                                 />
                             </div>
                         ))}

@@ -191,9 +191,6 @@ export function BlogEditor({
             const wp = await apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null; date: string }>({
                 path: `/repurposa/v1/wp-posts/${post.published_post_id}`,
             });
-            console.log('[Sync] WP response:', wp);
-            console.log('[Sync] thumbnail before:', thumbnail);
-            console.log('[Sync] thumbnail from WP:', wp.thumbnail);
             await updateBlog(post.id, {
                 title: wp.title,
                 content: wp.content,
@@ -204,7 +201,6 @@ export function BlogEditor({
             setTitle(wp.title);
             setContent(wp.content);
             setThumbnail(wp.thumbnail || '');
-            console.log('[Sync] thumbnail after setState:', wp.thumbnail || '');
             setSavedTitle(wp.title);
             setSavedContent(wp.content);
             setSavedThumbnail(wp.thumbnail || '');
