@@ -191,20 +191,20 @@ export function BlogEditor({
             const wp = await apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null; date: string }>({
                 path: `/repurposa/v1/wp-posts/${post.published_post_id}`,
             });
-            const updated = await updateBlog(post.id, {
+            await updateBlog(post.id, {
                 title: wp.title,
                 content: wp.content,
                 thumbnail: wp.thumbnail ?? undefined,
                 published_post_url: wp.url,
                 published_at: wp.date,
             });
-            setTitle(updated.title);
-            setContent(updated.content);
-            setThumbnail(updated.thumbnail || '');
-            setSavedTitle(updated.title);
-            setSavedContent(updated.content);
-            setSavedThumbnail(updated.thumbnail || '');
-            onSynced?.(updated);
+            setTitle(wp.title);
+            setContent(wp.content);
+            setThumbnail(wp.thumbnail || '');
+            setSavedTitle(wp.title);
+            setSavedContent(wp.content);
+            setSavedThumbnail(wp.thumbnail || '');
+            onSynced?.({ title: wp.title, content: wp.content, thumbnail: wp.thumbnail ?? undefined, published_post_url: wp.url, published_at: wp.date });
             toast.success('Synced from WordPress');
         } catch {
             toast.error('Failed to sync');

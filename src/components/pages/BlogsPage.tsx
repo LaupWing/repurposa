@@ -5,22 +5,36 @@
  * Features: search, filter by status, grid of cards.
  */
 
-import { useState, useEffect } from '@wordpress/element';
-import { FileText, Search, Filter, Plus, Pencil, Check, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
-import apiFetch from '@wordpress/api-fetch';
-import { getBlogs, deleteBlog, createEmptyBlog, updateBlog } from '@/services/blogApi';
-import { usePostPolling } from '@/hooks/usePostPolling';
-import type { BlogPost } from '@/types';
-import { stagger } from '@/components/onboarding/stagger';
-import { useProfileStore } from '@/store/profileStore';
-import { apiRequest } from '@/services/client';
+import { useState, useEffect } from "@wordpress/element";
+import {
+    FileText,
+    Search,
+    Filter,
+    Plus,
+    Pencil,
+    Check,
+    AlertTriangle,
+    Loader2,
+    RefreshCw,
+} from "lucide-react";
+import { toast } from "sonner";
+import apiFetch from "@wordpress/api-fetch";
+import {
+    getBlogs,
+    createEmptyBlog,
+    updateBlog,
+} from "@/services/blogApi";
+import { usePostPolling } from "@/hooks/usePostPolling";
+import type { BlogPost } from "@/types";
+import { stagger } from "@/components/onboarding/stagger";
+import { useProfileStore } from "@/store/profileStore";
+import { apiRequest } from "@/services/client";
 
 // ============================================
 // TYPES
 // ============================================
 
-type StatusFilter = 'all' | 'draft' | 'published' | 'out-of-sync';
+type StatusFilter = "all" | "draft" | "published" | "out-of-sync";
 
 // ============================================
 // HELPERS
@@ -28,41 +42,51 @@ type StatusFilter = 'all' | 'draft' | 'published' | 'out-of-sync';
 
 function formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatTime(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    });
 }
 
-function truncateContent(content: string | null, maxLength: number = 100): string {
-    if (!content) return 'No content yet...';
+function truncateContent(
+    content: string | null,
+    maxLength: number = 100,
+): string {
+    if (!content) return "No content yet...";
     // Strip HTML tags
-    const textContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const textContent = content
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
     if (textContent.length <= maxLength) return textContent;
-    return textContent.substring(0, maxLength).trim() + '...';
+    return textContent.substring(0, maxLength).trim() + "...";
 }
 
 // ============================================
 // SUB-COMPONENTS
 // ============================================
 
-function StatusDot({ status }: { status: BlogPost['status'] }) {
+function StatusDot({ status }: { status: BlogPost["status"] }) {
     const colors = {
-        generating: 'bg-blue-500',
-        published: 'bg-green-500',
-        'out-of-sync': 'bg-yellow-500',
-        draft: 'bg-orange-500',
-        failed: 'bg-red-500',
+        generating: "bg-blue-500",
+        published: "bg-green-500",
+        "out-of-sync": "bg-yellow-500",
+        draft: "bg-orange-500",
+        failed: "bg-red-500",
     };
 
     const glowColors = {
-        generating: 'bg-blue-400',
-        published: 'bg-green-400',
-        'out-of-sync': 'bg-yellow-400',
-        draft: 'bg-orange-400',
-        failed: 'bg-red-400',
+        generating: "bg-blue-400",
+        published: "bg-green-400",
+        "out-of-sync": "bg-yellow-400",
+        draft: "bg-orange-400",
+        failed: "bg-red-400",
     };
 
     return (
@@ -72,38 +96,51 @@ function StatusDot({ status }: { status: BlogPost['status'] }) {
                 className={`absolute inline-flex h-full w-full rounded-full animate-status-ping ${glowColors[status]}`}
             />
             {/* Solid dot */}
-            <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${colors[status]}`} />
+            <span
+                className={`relative inline-flex h-2.5 w-2.5 rounded-full ${colors[status]}`}
+            />
         </span>
     );
 }
 
-function PostCard({ post, onEdit, onDelete, onSync, onStatusUpdate }: { post: BlogPost; onEdit: (id: number) => void; onDelete: (id: number) => void; onSync: (post: BlogPost) => void; onStatusUpdate: (postId: number, updates: Partial<BlogPost>) => void }) {
+function PostCard({
+    post,
+    onEdit,
+    onSync,
+    onStatusUpdate,
+}: {
+    post: BlogPost;
+    onEdit: (id: number) => void;
+    onSync: (post: BlogPost) => void;
+    onStatusUpdate: (postId: number, updates: Partial<BlogPost>) => void;
+}) {
     // Poll when this card's post is generating
     usePostPolling(post.id, post.status, (status) => {
-        if (status.status === 'draft') {
+        if (status.status === "draft") {
             onStatusUpdate(post.id, {
-                status: 'draft',
-                title: status.title || '',
-                content: status.content || '',
+                status: "draft",
+                title: status.title || "",
+                content: status.content || "",
                 seo_description: status.seo_description,
             });
-            toast.success('Blog generated!', {
-                description: status.title || 'Your blog post is ready to edit.',
+            toast.success("Blog generated!", {
+                description: status.title || "Your blog post is ready to edit.",
             });
-        } else if (status.status === 'failed') {
-            onStatusUpdate(post.id, { status: 'failed' });
-            toast.error('Generation failed', {
-                description: 'Something went wrong. Click the post to try again.',
+        } else if (status.status === "failed") {
+            onStatusUpdate(post.id, { status: "failed" });
+            toast.error("Generation failed", {
+                description:
+                    "Something went wrong. Click the post to try again.",
             });
         }
     });
 
     const statusColors = {
-        generating: 'text-blue-600',
-        published: 'text-green-600',
-        'out-of-sync': 'text-yellow-600',
-        draft: 'text-orange-600',
-        failed: 'text-red-600',
+        generating: "text-blue-600",
+        published: "text-green-600",
+        "out-of-sync": "text-yellow-600",
+        draft: "text-orange-600",
+        failed: "text-red-600",
     };
 
     const handleCardClick = () => {
@@ -116,13 +153,24 @@ function PostCard({ post, onEdit, onDelete, onSync, onStatusUpdate }: { post: Bl
             className="group relative flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all cursor-pointer"
         >
             {/* Thumbnail */}
-            {post.status === 'generating' ? (
+            {post.status === "generating" ? (
                 <div className="h-32 bg-gray-50 flex items-center justify-center">
                     <div className="relative h-14 w-14">
                         {/* Spinning gradient ring using SVG for crisp rendering */}
-                        <svg className="absolute inset-0 h-14 w-14 animate-spin" viewBox="0 0 56 56" fill="none">
+                        <svg
+                            className="absolute inset-0 h-14 w-14 animate-spin"
+                            viewBox="0 0 56 56"
+                            fill="none"
+                        >
                             <defs>
-                                <linearGradient id="cardRingGradient" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+                                <linearGradient
+                                    id="cardRingGradient"
+                                    x1="0"
+                                    y1="0"
+                                    x2="56"
+                                    y2="56"
+                                    gradientUnits="userSpaceOnUse"
+                                >
                                     <stop offset="0%" stopColor="#06b6d4" />
                                     <stop offset="25%" stopColor="#3b82f6" />
                                     <stop offset="50%" stopColor="#8b5cf6" />
@@ -130,13 +178,37 @@ function PostCard({ post, onEdit, onDelete, onSync, onStatusUpdate }: { post: Bl
                                     <stop offset="100%" stopColor="#f43f5e" />
                                 </linearGradient>
                             </defs>
-                            <circle cx="28" cy="28" r="24" stroke="#e5e7eb" strokeWidth="2.5" />
-                            <circle cx="28" cy="28" r="24" stroke="url(#cardRingGradient)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="100 51" />
+                            <circle
+                                cx="28"
+                                cy="28"
+                                r="24"
+                                stroke="#e5e7eb"
+                                strokeWidth="2.5"
+                            />
+                            <circle
+                                cx="28"
+                                cy="28"
+                                r="24"
+                                stroke="url(#cardRingGradient)"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeDasharray="100 51"
+                            />
                         </svg>
                         {/* Center sparkle icon */}
-                        <svg className="absolute inset-0 m-auto h-5 w-5 animate-pulse" viewBox="0 0 24 24" fill="none">
+                        <svg
+                            className="absolute inset-0 m-auto h-5 w-5 animate-pulse"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                        >
                             <defs>
-                                <linearGradient id="cardSparkles" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <linearGradient
+                                    id="cardSparkles"
+                                    x1="0%"
+                                    y1="0%"
+                                    x2="100%"
+                                    y2="100%"
+                                >
                                     <stop offset="0%" stopColor="#06b6d4" />
                                     <stop offset="33%" stopColor="#3b82f6" />
                                     <stop offset="66%" stopColor="#8b5cf6" />
@@ -160,7 +232,7 @@ function PostCard({ post, onEdit, onDelete, onSync, onStatusUpdate }: { post: Bl
                         </svg>
                     </div>
                 </div>
-            ) : post.status === 'failed' ? (
+            ) : post.status === "failed" ? (
                 <div className="h-32 bg-gray-50 flex items-center justify-center">
                     <AlertTriangle size={32} className="text-red-400" />
                 </div>
@@ -184,12 +256,20 @@ function PostCard({ post, onEdit, onDelete, onSync, onStatusUpdate }: { post: Bl
                     <div className="flex items-center gap-2">
                         <StatusDot status={post.status} />
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                            {(() => { const d = post.published_at ?? post.created_at; return d ? `${formatDate(d)} at ${formatTime(d)}` : '—'; })()}
+                            {(() => {
+                                const d = post.published_at ?? post.created_at;
+                                return d
+                                    ? `${formatDate(d)} at ${formatTime(d)}`
+                                    : "—";
+                            })()}
                         </span>
                     </div>
                     {post.published_post_id && (
                         <button
-                            onClick={(e) => { e.stopPropagation(); onSync(post); }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSync(post);
+                            }}
                             className="p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-all"
                             title="Sync from WordPress"
                         >
@@ -200,7 +280,7 @@ function PostCard({ post, onEdit, onDelete, onSync, onStatusUpdate }: { post: Bl
 
                 {/* Title */}
                 <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 leading-snug">
-                    {post.title || 'Untitled'}
+                    {post.title || "Untitled"}
                 </h3>
 
                 {/* Content Preview */}
@@ -210,11 +290,18 @@ function PostCard({ post, onEdit, onDelete, onSync, onStatusUpdate }: { post: Bl
 
                 {/* Footer: Status + Edit */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <span className={`text-xs font-medium capitalize ${statusColors[post.status]}`}>
+                    <span
+                        className={`text-xs font-medium capitalize ${
+                            statusColors[post.status]
+                        }`}
+                    >
                         {post.status}
                     </span>
                     <button
-                        onClick={(e) => { e.stopPropagation(); onEdit(post.id); }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(post.id);
+                        }}
                         className="p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-all"
                     >
                         <Pencil size={14} />
@@ -237,10 +324,10 @@ function FilterDropdown({
     onToggle: () => void;
 }) {
     const options: { value: StatusFilter; label: string }[] = [
-        { value: 'all', label: 'All' },
-        { value: 'draft', label: 'Draft' },
-        { value: 'published', label: 'Published' },
-        { value: 'out-of-sync', label: 'Out of Sync' },
+        { value: "all", label: "All" },
+        { value: "draft", label: "Draft" },
+        { value: "published", label: "Published" },
+        { value: "out-of-sync", label: "Out of Sync" },
     ];
 
     return (
@@ -248,13 +335,15 @@ function FilterDropdown({
             <button
                 onClick={onToggle}
                 className={`flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
-                    value !== 'all'
-                        ? 'border-blue-500 text-blue-600 bg-blue-50'
-                        : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                    value !== "all"
+                        ? "border-blue-500 text-blue-600 bg-blue-50"
+                        : "border-gray-300 text-gray-600 hover:bg-gray-50"
                 }`}
             >
                 <Filter size={14} />
-                {value === 'all' ? 'Filter' : options.find(o => o.value === value)?.label}
+                {value === "all"
+                    ? "Filter"
+                    : options.find((o) => o.value === value)?.label}
             </button>
 
             {isOpen && (
@@ -262,11 +351,14 @@ function FilterDropdown({
                     {options.map((option) => (
                         <button
                             key={option.value}
-                            onClick={() => { onChange(option.value); onToggle(); }}
+                            onClick={() => {
+                                onChange(option.value);
+                                onToggle();
+                            }}
                             className={`flex items-center justify-between w-full px-3 py-2 text-sm transition-colors ${
                                 value === option.value
-                                    ? 'bg-blue-50 text-blue-600'
-                                    : 'text-gray-600 hover:bg-gray-50'
+                                    ? "bg-blue-50 text-blue-600"
+                                    : "text-gray-600 hover:bg-gray-50"
                             }`}
                         >
                             {option.label}
@@ -287,9 +379,9 @@ export default function BlogsPage() {
     const [posts, setPosts] = useState<BlogPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
-    const profile = useProfileStore(s => s.profile);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+    const profile = useProfileStore((s) => s.profile);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     // Fetch blogs from API
@@ -299,8 +391,8 @@ export default function BlogsPage() {
                 const blogs = await getBlogs();
                 setPosts(blogs);
             } catch (error) {
-                console.error('Failed to fetch blogs:', error);
-                toast.error('Failed to load blogs');
+                console.error("Failed to fetch blogs:", error);
+                toast.error("Failed to load blogs");
             } finally {
                 setIsLoading(false);
             }
@@ -312,11 +404,12 @@ export default function BlogsPage() {
     // Filter posts
     const filteredPosts = posts.filter((post) => {
         const matchesSearch =
-            searchQuery === '' ||
+            searchQuery === "" ||
             post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             post.content?.toLowerCase().includes(searchQuery.toLowerCase());
 
-        const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
+        const matchesStatus =
+            statusFilter === "all" || post.status === statusFilter;
 
         return matchesSearch && matchesStatus;
     });
@@ -325,67 +418,93 @@ export default function BlogsPage() {
         window.location.href = `admin.php?page=repurposa-blogs&post_id=${id}`;
     };
 
-    const handleDelete = async (id: number) => {
-        if (!confirm('Are you sure you want to delete this blog?')) return;
 
-        try {
-            await deleteBlog(id);
-            setPosts(posts.filter(p => p.id !== id));
-            toast.success('Blog deleted');
-        } catch (error) {
-            console.error('Failed to delete blog:', error);
-            toast.error('Failed to delete blog');
-        }
-    };
 
     const handleStatusUpdate = (postId: number, updates: Partial<BlogPost>) => {
-        setPosts(prev => prev.map(p => p.id === postId ? { ...p, ...updates } : p));
+        setPosts((prev) =>
+            prev.map((p) => (p.id === postId ? { ...p, ...updates } : p)),
+        );
     };
 
     const handleSyncPost = async (post: BlogPost) => {
         if (!post.published_post_id) return;
         try {
-            const wp = await apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null; lang: string; date: string }>({
+            const wp = await apiFetch<{
+                id: number;
+                title: string;
+                content: string;
+                excerpt: string;
+                url: string;
+                thumbnail: string | null;
+                lang: string;
+                date: string;
+            }>({
                 path: `/repurposa/v1/wp-posts/${post.published_post_id}`,
             });
-            const updated = await updateBlog(post.id, {
+            await updateBlog(post.id, {
                 title: wp.title,
                 content: wp.content,
                 thumbnail: wp.thumbnail ?? undefined,
                 published_post_url: wp.url,
                 published_at: wp.date,
             });
-            setPosts(prev => prev.map(p => p.id === post.id ? { ...p, ...updated } : p));
-            toast.success('Post synced from WordPress');
+            setPosts((prev) =>
+                prev.map((p) =>
+                    p.id === post.id
+                        ? {
+                              ...p,
+                              title: wp.title,
+                              content: wp.content,
+                              thumbnail: wp.thumbnail ?? p.thumbnail,
+                              published_post_url: wp.url,
+                              published_at: wp.date,
+                          }
+                        : p,
+                ),
+            );
+            toast.success("Post synced from WordPress");
         } catch {
-            toast.error('Failed to sync post');
+            toast.error("Failed to sync post");
         }
     };
 
     const handleCreateNew = () => {
-        window.location.href = 'admin.php?page=repurposa';
+        window.location.href = "admin.php?page=repurposa";
     };
 
     const handleSync = async () => {
         setIsSyncing(true);
         try {
-            const contentLang = profile?.content_lang ?? 'en';
+            const contentLang = profile?.content_lang ?? "en";
 
             // Fetch all published WP posts + existing Laravel posts in parallel
             const [wpPosts, laravelPosts] = await Promise.all([
-                apiFetch<{ id: number; title: string; content: string; excerpt: string; url: string; thumbnail: string | null; lang: string; date: string }[]>({
-                    path: '/repurposa/v1/wp-posts',
+                apiFetch<
+                    {
+                        id: number;
+                        title: string;
+                        content: string;
+                        excerpt: string;
+                        url: string;
+                        thumbnail: string | null;
+                        lang: string;
+                        date: string;
+                    }[]
+                >({
+                    path: "/repurposa/v1/wp-posts",
                 }),
                 getBlogs(),
             ]);
 
             // Build set of WP post IDs already in Laravel
-            const syncedIds = new Set(laravelPosts.map(p => p.published_post_id).filter(Boolean));
+            const syncedIds = new Set(
+                laravelPosts.map((p) => p.published_post_id).filter(Boolean),
+            );
 
-            const toImport = wpPosts.filter(p => !syncedIds.has(p.id));
+            const toImport = wpPosts.filter((p) => !syncedIds.has(p.id));
 
             if (toImport.length === 0) {
-                toast.success('Everything is already synced');
+                toast.success("Everything is already synced");
                 return;
             }
 
@@ -394,10 +513,13 @@ export default function BlogsPage() {
                 let content = wp.content;
 
                 if (wp.lang !== contentLang) {
-                    const translated = await apiRequest<{ content: string }>('/translate', {
-                        content: wp.content,
-                        target_lang: contentLang,
-                    });
+                    const translated = await apiRequest<{ content: string }>(
+                        "/translate",
+                        {
+                            content: wp.content,
+                            target_lang: contentLang,
+                        },
+                    );
                     content = translated.content;
                 }
 
@@ -406,18 +528,22 @@ export default function BlogsPage() {
                     title: wp.title,
                     content,
                     thumbnail: wp.thumbnail ?? undefined,
-                    status: 'published',
+                    status: "published",
                     published_post_id: wp.id,
                     published_post_url: wp.url,
                     published_at: wp.date,
                 });
-                setPosts(prev => [imported, ...prev]);
+                setPosts((prev) => [imported, ...prev]);
             }
 
-            toast.success(`Synced ${toImport.length} post${toImport.length > 1 ? 's' : ''} from WordPress`);
+            toast.success(
+                `Synced ${toImport.length} post${
+                    toImport.length > 1 ? "s" : ""
+                } from WordPress`,
+            );
         } catch (error) {
-            console.error('Sync failed:', error);
-            toast.error('Sync failed');
+            console.error("Sync failed:", error);
+            toast.error("Sync failed");
         } finally {
             setIsSyncing(false);
         }
@@ -429,7 +555,8 @@ export default function BlogsPage() {
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                     <h1 className="text-xl font-bold text-gray-900">
-                        All <em className="font-serif font-normal italic">Blogs</em>
+                        All{" "}
+                        <em className="font-serif font-normal italic">Blogs</em>
                     </h1>
 
                     {/* Only show search/filter when loading or when there are posts */}
@@ -441,10 +568,15 @@ export default function BlogsPage() {
                                     type="text"
                                     placeholder="Search blogs..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) =>
+                                        setSearchQuery(e.target.value)
+                                    }
                                     className="w-56 h-8 pl-3 pr-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 />
-                                <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <Search
+                                    size={16}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                />
                             </div>
 
                             {/* Filter */}
@@ -465,8 +597,11 @@ export default function BlogsPage() {
                         disabled={isSyncing}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                        {isSyncing ? 'Syncing...' : 'Sync WP Posts'}
+                        <RefreshCw
+                            size={16}
+                            className={isSyncing ? "animate-spin" : ""}
+                        />
+                        {isSyncing ? "Syncing..." : "Sync WP Posts"}
                     </button>
 
                     {/* New Blog Button */}
@@ -495,14 +630,19 @@ export default function BlogsPage() {
                         No blogs yet
                     </h3>
                     <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                        Create your first AI-powered blog post. It only takes a few minutes to go from idea to draft.
+                        Create your first AI-powered blog post. It only takes a
+                        few minutes to go from idea to draft.
                     </p>
                 </div>
             ) : filteredPosts.length > 0 ? (
                 <>
                     {/* Post Count */}
-                    <p {...stagger(0, false)} className="text-sm text-gray-500 mb-4">
-                        {filteredPosts.length} blog {filteredPosts.length === 1 ? 'post' : 'posts'}
+                    <p
+                        {...stagger(0, false)}
+                        className="text-sm text-gray-500 mb-4"
+                    >
+                        {filteredPosts.length} blog{" "}
+                        {filteredPosts.length === 1 ? "post" : "posts"}
                     </p>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {filteredPosts.map((post, i) => (
@@ -510,7 +650,6 @@ export default function BlogsPage() {
                                 <PostCard
                                     post={post}
                                     onEdit={handleEdit}
-                                    onDelete={handleDelete}
                                     onSync={handleSyncPost}
                                     onStatusUpdate={handleStatusUpdate}
                                 />
@@ -524,12 +663,17 @@ export default function BlogsPage() {
                     <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Search size={24} className="text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No matching blogs</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        No matching blogs
+                    </h3>
                     <p className="text-sm text-gray-500 mb-4">
                         Try adjusting your search or filter
                     </p>
                     <button
-                        onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+                        onClick={() => {
+                            setSearchQuery("");
+                            setStatusFilter("all");
+                        }}
                         className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         Clear filters
