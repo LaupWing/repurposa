@@ -1,12 +1,14 @@
 import { useState, useRef } from '@wordpress/element';
-import { X, Clock, Pencil, Check, Loader2, FileText, Repeat2 } from 'lucide-react';
+import { X, Clock, Pencil, Check, Loader2, FileText, Repeat2, ImagePlus, Share2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateShortPost } from '@/services/repurposeApi';
+import { getShortPost, updateShortPost } from '@/services/repurposeApi';
 import { deleteScheduledPost, updateScheduledPost } from '@/services/scheduleApi';
-import { SCHEDULE_PLATFORMS, getDateInTz, getTimeInTz, slotToDate } from '@/components/repurpose/modals/schedule-utils';
+import { SCHEDULE_PLATFORMS, PLATFORM_CHAR_LIMITS, getUnsupportedReason, getDateInTz, getTimeInTz, slotToDate } from '@/components/repurpose/modals/schedule-utils';
 import { TimezoneLabel } from '@/components/TimezoneLabel';
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { AITextPopup } from '@/components/AITextPopup';
+import ImagePickerModal from '@/components/ImagePickerModal';
+import { ImageGrid } from '@/components/repurpose/cards/ImageGrid';
 import AutoRepostModal from '@/components/repurpose/modals/SchedulePostModal/AutoRepostModal';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { useExistingRepost } from '@/hooks/useAutoRepost';
@@ -36,12 +38,18 @@ interface ScheduledPostDetailProps {
 export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone }: ScheduledPostDetailProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(post.content);
+    const [editImages, setEditImages] = useState<string[]>([]);
+    const [editCta, setEditCta] = useState('');
+    const [showCtaField, setShowCtaField] = useState(false);
+    const [showEditImagePicker, setShowEditImagePicker] = useState(false);
+    const [isFetchingPost, setIsFetchingPost] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isUnscheduling, setIsUnscheduling] = useState(false);
     const [showUnscheduleConfirm, setShowUnscheduleConfirm] = useState(false);
     const [isEditingTime, setIsEditingTime] = useState(false);
     const [scheduledAt, setScheduledAt] = useState(() => new Date(post.scheduledAt));
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const ctaRef = useRef<HTMLTextAreaElement>(null);
     const repost = useExistingRepost({
         scheduledPostIds: post.ids,
         postPlatforms: post.platforms,
@@ -56,11 +64,34 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
     const dateValue = getDateInTz(scheduledAt, timezone);
     const timeValue = getTimeInTz(scheduledAt, timezone);
 
+    const handleStartEdit = async () => {
+        if (!post.schedulableId) return;
+        setIsFetchingPost(true);
+        try {
+            const data = await getShortPost(post.schedulableId);
+            setEditImages(data.media?.map(m => m.url) ?? []);
+            setEditCta(data.cta_content?.content ?? '');
+            setShowCtaField(!!data.cta_content?.content);
+        } catch {
+            // proceed with empty media/cta if fetch fails
+        } finally {
+            setIsFetchingPost(false);
+        }
+        setEditText(post.content);
+        setIsEditing(true);
+    };
+
     const handleSave = async () => {
         if (!post.schedulableId || !editText.trim()) return;
         setIsSaving(true);
         try {
-            await updateShortPost(post.schedulableId, { content: editText.trim() });
+            await updateShortPost(post.schedulableId, {
+                content: editText.trim(),
+                media: editImages.length > 0 ? editImages : [],
+                cta_content: showCtaField && editCta.trim()
+                    ? { content: editCta.trim(), media: null }
+                    : null,
+            });
             toast.success('Post updated');
             setIsEditing(false);
             onUpdated();
@@ -223,39 +254,140 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
                     </div>
 
                     {isEditing ? (
-                        <div className="relative">
-                            <textarea
-                                ref={textareaRef}
-                                value={editText}
-                                onChange={(e) => setEditText(e.target.value)}
-                                rows={8}
-                                className="w-full text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100"
-                            />
-                            <AITextPopup
-                                textareaRef={textareaRef}
-                                value={editText}
-                                onChange={setEditText}
-                            />
-                            <div className="flex items-center justify-between mt-2">
-                                <span className={`text-[11px] ${editText.length > 280 ? 'text-amber-500' : 'text-gray-300'}`}>
-                                    {editText.length} chars
-                                </span>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => { setIsEditing(false); setEditText(post.content); }}
-                                        className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSave}
-                                        disabled={isSaving || !editText.trim()}
-                                        className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {isSaving ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
-                                    </button>
-                                </div>
+                        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                            {/* Text */}
+                            <div className="mb-3">
+                                <AITextPopup textareaRef={textareaRef} value={editText} onChange={setEditText} />
+                                <textarea
+                                    ref={textareaRef}
+                                    value={editText}
+                                    onChange={(e) => setEditText(e.target.value)}
+                                    rows={6}
+                                    className="w-full rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                    style={{ fieldSizing: 'content', minHeight: '120px' } as React.CSSProperties}
+                                />
                             </div>
+
+                            {/* Images */}
+                            {editImages.length > 0 && (
+                                <ImageGrid
+                                    media={editImages}
+                                    onRemove={(i) => setEditImages(prev => prev.filter((_, idx) => idx !== i))}
+                                    onReorder={(from, to) => {
+                                        setEditImages(prev => {
+                                            const updated = [...prev];
+                                            const [moved] = updated.splice(from, 1);
+                                            updated.splice(to, 0, moved);
+                                            return updated;
+                                        });
+                                    }}
+                                    onAddClick={() => setShowEditImagePicker(true)}
+                                />
+                            )}
+
+                            {/* Footer bar */}
+                            {(() => {
+                                const tightestLimit = post.platforms.length > 0
+                                    ? Math.min(...post.platforms.map(p => PLATFORM_CHAR_LIMITS[p]))
+                                    : 280;
+                                const charError = post.platforms
+                                    .map(p => getUnsupportedReason(p, 'short_post', editText.length))
+                                    .find(Boolean);
+                                return (
+                                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                                    <div className="flex items-center gap-3">
+                                        <span className={`font-mono text-[10px] ${editText.length > tightestLimit ? 'text-red-500' : 'text-gray-400'}`}>
+                                            {editText.length}/{tightestLimit.toLocaleString()}
+                                        </span>
+                                        {charError && (
+                                            <span className="flex items-center gap-1 text-[10px] text-amber-600">
+                                                <AlertTriangle size={10} />
+                                                {charError}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => setShowEditImagePicker(true)}
+                                            disabled={editImages.length >= 4}
+                                            className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <ImagePlus size={14} />
+                                        </button>
+                                        {!showCtaField && (
+                                            <button
+                                                onClick={() => setShowCtaField(true)}
+                                                className="h-7 flex items-center gap-1 px-2 rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors text-xs"
+                                            >
+                                                <Share2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                );
+                            })()}
+
+                            {/* CTA reply */}
+                            {showCtaField && (
+                                <div className="relative ml-6 mt-3">
+                                    <div className="absolute top-0 left-4 h-4 w-0.5 bg-gray-200" style={{ top: '-12px' }} />
+                                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                                                <Share2 size={12} className="text-gray-400" />
+                                                Reply · CTA
+                                            </div>
+                                            <button
+                                                onClick={() => { setShowCtaField(false); setEditCta(''); }}
+                                                className="p-0.5 text-gray-300 hover:text-red-400 transition-colors"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            ref={ctaRef}
+                                            value={editCta}
+                                            onChange={(e) => setEditCta(e.target.value)}
+                                            placeholder="Read more here..."
+                                            rows={2}
+                                            autoFocus
+                                            className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                            style={{ fieldSizing: 'content' } as React.CSSProperties}
+                                        />
+                                        <div className="mt-2">
+                                            <span className={`font-mono text-[10px] ${editCta.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+                                                {editCta.length}/280
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Save/cancel */}
+                            <div className="flex items-center justify-end gap-2 mt-4">
+                                <button
+                                    onClick={() => { setIsEditing(false); setEditText(post.content); setEditImages([]); setEditCta(''); setShowCtaField(false); }}
+                                    className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={isSaving || !editText.trim()}
+                                    className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {isSaving ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
+                                </button>
+                            </div>
+
+                            <ImagePickerModal
+                                isOpen={showEditImagePicker}
+                                onClose={() => setShowEditImagePicker(false)}
+                                onSelect={(url) => {
+                                    setEditImages(prev => [...prev, url]);
+                                    setShowEditImagePicker(false);
+                                }}
+                            />
                         </div>
                     ) : (
                         <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
@@ -279,10 +411,11 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
                     {!isEditing && (
                         isStandalone ? (
                             <button
-                                onClick={() => setIsEditing(true)}
-                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                                onClick={handleStartEdit}
+                                disabled={isFetchingPost}
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-60"
                             >
-                                <Pencil size={12} />
+                                {isFetchingPost ? <Loader2 size={12} className="animate-spin" /> : <Pencil size={12} />}
                                 Edit
                             </button>
                         ) : (

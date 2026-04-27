@@ -38,6 +38,10 @@ export async function getShortPosts(postId: number): Promise<ShortPost[]> {
     return response.data;
 }
 
+export async function getShortPost(shortPostId: number): Promise<ShortPost> {
+    return apiRequest<ShortPost>(`/repurpose/short-posts/${shortPostId}`, {}, 'GET');
+}
+
 export async function updateShortPost(shortPostId: number, data: {
     content?: string;
     media?: string[];

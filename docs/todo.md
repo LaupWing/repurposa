@@ -1,31 +1,5 @@
 # TODO
 
-## 🔴 High Priority
-
-### Language System
-See [LANGUAGE.md](./LANGUAGE.md) for full design.
-
-**Phase 1 — Detection + Config ✅ DONE**
-- [x] PHP detection in `repurposa.php` (`snelstackLang` via `wp_localize_script`)
-- [x] `SnelstackBanner` component in SettingsPage
-- [x] Language selector in SettingsPage (`content_lang` saved to Laravel user profile)
-
-**Phase 2 — Generation with Language**
-- [x] Send `content_lang` from profile to Laravel on every generate/repurpose call (`AiController` reads `profile->content_lang`)
-- [ ] Laravel migration: add `language` column to `posts` table (store at creation, not from profile)
-- [ ] Show language badge on blog cards in BlogsPage
-
-**Phase 3 — Publish Flow (Snelstack)**
-- [x] On WP publish: check `snelstackLang` vs `content_lang` mismatch → auto-translates via `POST /api/translate`
-- [x] Laravel `translate` endpoint: `{ content, target_lang }` → translated content
-- [ ] UX: notice on publish confirmation "will be auto-translated EN → NL"
-- [ ] UX: badge on blog card/detail after publish showing it was translated
-
-**Phase 4 — Sync Flow**
-- [x] On WP → Repurposa sync: detects `wp.lang` vs `content_lang` mismatch → translates before import
-- [x] Non-Snelstack: uses `get_locale()`, fallback to en
-- [ ] UX: badge on synced blog card "Synced from WordPress · Translated NL → EN"
-
 ## 🔴 Bug
 
 ### WP Sync — Thumbnail Not Updating
@@ -63,7 +37,7 @@ See [LANGUAGE.md](./LANGUAGE.md) for full design.
 - [ ] Queue pattern for `generate-outline` / `generate-topics`
 
 ## Completed
-- Language Phase 1 (Snelstack detection, banner, content_lang selector)
+- Language system (Phases 1–4): detection, content_lang selector, generation, Snelstack publish translation, WP sync translation — using `content_lang` from profile, no per-post language column needed
 - Auto-repost backend + frontend
 - TipTap AI bubble menu
 - Regenerate blog modal
