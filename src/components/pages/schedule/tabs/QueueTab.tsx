@@ -31,8 +31,9 @@ export function QueueTab({
     const [platformFilter, setPlatformFilter] = useState<Platform | "all">("all");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [weeksAhead, setWeeksAhead] = useState(2);
+    const MAX_WEEKS = 52;
     const filterRef = useRef<HTMLDivElement>(null);
-    const loadMoreRef = useRef<HTMLDivElement>(null);
+    const loadMoreAnchorRef = useRef<HTMLDivElement>(null);
 
     // Close filter dropdown on outside click
     useEffect(() => {
@@ -45,22 +46,6 @@ export function QueueTab({
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [isFilterOpen]);
-
-    // Infinite scroll
-    useEffect(() => {
-        const el = loadMoreRef.current;
-        if (!el) return;
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setWeeksAhead((prev) => Math.min(prev + 2, 12));
-                }
-            },
-            { rootMargin: "200px" },
-        );
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, []);
 
     if (isLoading) {
         return (
@@ -220,7 +205,22 @@ export function QueueTab({
                 </div>
             )}
 
-            {weeksAhead < 12 && <div ref={loadMoreRef} className="h-px" />}
+            <div ref={loadMoreAnchorRef} />
+            {weeksAhead < MAX_WEEKS && (
+                <div className="flex justify-center mt-6">
+                    <button
+                        onClick={() => {
+                            setWeeksAhead((prev) => Math.min(prev + 2, MAX_WEEKS));
+                            setTimeout(() => {
+                                loadMoreAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }, 150);
+                        }}
+                        className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                        Load more
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

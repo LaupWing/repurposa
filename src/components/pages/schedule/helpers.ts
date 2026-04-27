@@ -179,6 +179,7 @@ export function getUpcomingSlotsFromSchedule(
     schedule: WeeklySchedule,
     maxSlots: number,
     timezone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+    daysAhead = 30,
 ): UpcomingSlot[] {
     const now = new Date();
     const slots: UpcomingSlot[] = [];
@@ -187,7 +188,7 @@ export function getUpcomingSlotsFromSchedule(
     tomorrowDate.setDate(tomorrowDate.getDate() + 1);
     const tomorrowStr = getDateInTz(tomorrowDate, timezone);
 
-    for (let d = 0; d < 30 && slots.length < maxSlots; d++) {
+    for (let d = 0; d < daysAhead && slots.length < maxSlots; d++) {
         const baseDate = new Date(now);
         baseDate.setDate(baseDate.getDate() + d);
         const dayKey = DAY_KEYS[new Date(getDateInTz(baseDate, timezone) + 'T12:00:00').getDay()] as DayOfWeek;
@@ -234,7 +235,7 @@ export function buildQueueTimeline(
         (sum, day) => sum + (day.enabled ? day.slots.length : 0), 0
     ) * weeksAhead : 0;
 
-    const upcomingSlots = schedule ? getUpcomingSlotsFromSchedule(schedule, Math.max(slotsCount, 14), timezone) : [];
+    const upcomingSlots = schedule ? getUpcomingSlotsFromSchedule(schedule, Math.max(slotsCount, 14), timezone, weeksAhead * 7) : [];
 
     const entries: QueueEntry[] = [];
 
