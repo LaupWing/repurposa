@@ -119,6 +119,7 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
     const [originalText, setOriginalText] = useState('');
     const [refinedText, setRefinedText] = useState('');
     const [refineInput, setRefineInput] = useState('');
+    const [revealedCount, setRevealedCount] = useState(0);
     const [showCustom, setShowCustom] = useState(false);
     const [customInstruction, setCustomInstruction] = useState('');
     const customInputRef = useRef<HTMLInputElement>(null);
@@ -131,6 +132,7 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
         setOriginalText('');
         setRefinedText('');
         setRefineInput('');
+        setRevealedCount(0);
         setShowCustom(false);
         setCustomInstruction('');
     }, []);
@@ -276,11 +278,32 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [status, handleReject, handleReplace, handleInsert]);
 
-    if (!hasSelection) return null;
+    const diffWordsRef = useRef<DiffWord[]>([]);
+    if (status === 'preview' && diffWordsRef.current.length === 0 && refinedText) {
+        diffWordsRef.current = computeWordDiff(originalText, refinedText);
+    }
+    if (status === 'idle' || status === 'loading') {
+        diffWordsRef.current = [];
+    }
+    const diffWords = diffWordsRef.current;
 
-    const diffWords = status === 'preview'
-        ? computeWordDiff(originalText, refinedText)
-        : [];
+    // Kick off word-by-word reveal when diff is ready
+    useEffect(() => {
+        if (status !== 'preview') return;
+        setRevealedCount(0);
+        if (diffWords.length === 0) return;
+        let i = 0;
+        const tick = () => {
+            i++;
+            setRevealedCount(i);
+            if (i < diffWords.length) {
+                setTimeout(tick, 50);
+            }
+        };
+        setTimeout(tick, 18);
+    }, [status, diffWords.length]);
+
+    if (!hasSelection) return null;
 
     return (
         <div
@@ -339,93 +362,82 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
                 </div>
             )}
 
-            {/* Loading */}
-            {status === 'loading' && (
-                <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg shadow-lg">
-                    <Loader2 size={14} className="animate-spin text-blue-600" />
-                    <span className="text-sm text-gray-700">
-                        {ACTION_LABELS[action] || 'Processing'}...
-                    </span>
-                </div>
-            )}
-
-            {/* Diff preview */}
-            {status === 'preview' && (
+            {/* Loading + diff preview (same card) */}
+            {(status === 'loading' || status === 'preview') && (
                 <div className="bg-white border border-gray-200 rounded-xl shadow-xl max-w-lg">
-                    {/* Inline diff */}
-                    <div className="px-4 py-3 max-h-60 overflow-y-auto">
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                            {diffWords.map((word, i) => {
-                                const isNewline = word.text === '\n';
-                                const prevIsNewline = i > 0 && diffWords[i - 1].text === '\n';
-                                const sep = i === 0 || isNewline || prevIsNewline ? '' : ' ';
+                    {/* Content area: spinner or diff */}
+                    <div className="px-4 py-3 min-h-[60px] max-h-60 overflow-y-auto flex items-center">
+                        {status === 'loading' ? (
+                            <div className="flex items-center gap-2 text-sm text-gray-500 w-full justify-center py-2">
+                                <Loader2 size={14} className="animate-spin text-blue-600 shrink-0" />
+                                {ACTION_LABELS[action] || 'Processing'}...
+                            </div>
+                        ) : (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap w-full">
+                                {diffWords.slice(0, revealedCount).map((word, i) => {
+                                    const isNewline = word.text === '\n';
+                                    const prevIsNewline = i > 0 && diffWords[i - 1].text === '\n';
+                                    const sep = i === 0 || isNewline || prevIsNewline ? '' : ' ';
 
-                                if (isNewline) {
-                                    if (word.type === 'removed') {
-                                        return <span key={i} className="bg-red-100 text-red-700">{'↵\n'}</span>;
+                                    if (isNewline) {
+                                        if (word.type === 'removed') return <span key={i} className="bg-red-100 text-red-700">{'↵\n'}</span>;
+                                        if (word.type === 'added') return <span key={i} className="bg-green-100 text-green-700">{'↵\n'}</span>;
+                                        return <br key={i} />;
                                     }
-                                    if (word.type === 'added') {
-                                        return <span key={i} className="bg-green-100 text-green-700">{'↵\n'}</span>;
-                                    }
-                                    return <br key={i} />;
-                                }
-
-                                if (word.type === 'equal') {
-                                    return <span key={i}>{sep}{word.text}</span>;
-                                }
-                                if (word.type === 'removed') {
-                                    return (
-                                        <span key={i} className="bg-red-100 text-red-700 line-through decoration-red-400/70">
-                                            {sep}{word.text}
-                                        </span>
-                                    );
-                                }
-                                return (
-                                    <span key={i} className="bg-green-100 text-green-700">
-                                        {sep}{word.text}
-                                    </span>
-                                );
-                            })}
-                        </p>
+                                    if (word.type === 'equal') return <span key={i}>{sep}{word.text}</span>;
+                                    if (word.type === 'removed') return <span key={i} className="bg-red-100 text-red-700 line-through decoration-red-400/70">{sep}{word.text}</span>;
+                                    return <span key={i} className="bg-green-100 text-green-700">{sep}{word.text}</span>;
+                                })}
+                                {revealedCount < diffWords.length && (
+                                    <span className="inline-block w-0.5 h-3.5 bg-blue-500 animate-pulse ml-0.5 align-middle" />
+                                )}
+                            </p>
+                        )}
                     </div>
 
                     {/* Char count */}
-                    <div className="flex justify-end px-4 pb-2">
-                        <span className="text-xs tabular-nums">
-                            <span className="text-gray-400">{originalText.length}</span>
-                            <span className="text-gray-300 mx-1">&rarr;</span>
-                            <span className={refinedText.length > originalText.length ? 'text-green-600' : refinedText.length < originalText.length ? 'text-red-500' : 'text-gray-400'}>
-                                {refinedText.length}
+                    {status === 'preview' && (
+                        <div className="flex justify-end px-4 pb-2">
+                            <span className="text-xs tabular-nums">
+                                <span className="text-gray-400">{originalText.length}</span>
+                                <span className="text-gray-300 mx-1">&rarr;</span>
+                                <span className={refinedText.length > originalText.length ? 'text-green-600' : refinedText.length < originalText.length ? 'text-red-500' : 'text-gray-400'}>
+                                    {refinedText.length}
+                                </span>
                             </span>
-                        </span>
-                    </div>
+                        </div>
+                    )}
 
                     {/* Action bar */}
                     <div className="flex items-center gap-1.5 px-4 py-2.5 border-t border-gray-100">
                         <button
                             onClick={handleReplace}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                            disabled={status === 'loading' || revealedCount < diffWords.length}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40"
                         >
                             Replace
                             <kbd className="ml-0.5 text-[10px] text-blue-200 font-normal">{isMac ? '⌘' : 'Ctrl'}↵</kbd>
                         </button>
                         <button
                             onClick={handleInsert}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                            disabled={status === 'loading' || revealedCount < diffWords.length}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-40"
                         >
                             Insert
                             <kbd className="ml-0.5 text-[10px] text-gray-400 font-normal">⇧↵</kbd>
                         </button>
                         <button
                             onClick={handleRetry}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                            disabled={status === 'loading'}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-40"
                         >
                             <RefreshCw size={12} />
                             Retry
                         </button>
                         <button
                             onClick={handleCopy}
-                            className="flex items-center justify-center h-7 w-7 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors ml-auto"
+                            disabled={status === 'loading' || revealedCount < diffWords.length}
+                            className="flex items-center justify-center h-7 w-7 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors ml-auto disabled:opacity-40"
                             title="Copy to clipboard"
                         >
                             <Copy size={14} />
@@ -448,11 +460,12 @@ export function AITextPopup({ textareaRef, value, onChange }: AITextPopupProps) 
                                     if (e.key === 'Escape') handleReject();
                                 }}
                                 placeholder="Refine this response..."
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-3 pr-8 py-2 text-xs text-gray-700 placeholder:text-gray-400 focus:border-blue-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-300 transition-colors"
+                                disabled={status === 'loading'}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-3 pr-8 py-2 text-xs text-gray-700 placeholder:text-gray-400 focus:border-blue-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-300 transition-colors disabled:opacity-40"
                             />
                             <button
                                 onClick={() => handleRefine(refineInput)}
-                                disabled={!refineInput.trim()}
+                                disabled={!refineInput.trim() || status === 'loading'}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 disabled:opacity-30 transition-colors"
                                 title="Send"
                             >
