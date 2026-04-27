@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from '@wordpress/element';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import {
     Calendar,
     Plus,
@@ -446,6 +447,8 @@ export function DayRow({
     onUpdate: (schedule: DaySchedule) => void;
     connectedPlatforms?: Platform[];
 }) {
+    const [slotToRemove, setSlotToRemove] = useState<string | null>(null);
+
     const addSlot = () => {
         onUpdate({
             ...schedule,
@@ -536,7 +539,7 @@ export function DayRow({
                             onPlatformsChange={(platforms) =>
                                 updateSlotPlatforms(slot.id, platforms)
                             }
-                            onRemove={() => removeSlot(slot.id)}
+                            onRemove={() => setSlotToRemove(slot.id)}
                             connectedPlatforms={connectedPlatforms}
                         />
                     ))}
@@ -550,6 +553,16 @@ export function DayRow({
                     </p>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={!!slotToRemove}
+                title="Remove Time Slot"
+                description={`Remove the ${slotToRemove ? (schedule.slots.find(s => s.id === slotToRemove)?.time ?? '') : ''} slot on ${day.label}? Any posts already scheduled to this slot won't be affected.`}
+                confirmLabel="Remove"
+                variant="danger"
+                onConfirm={() => { removeSlot(slotToRemove!); setSlotToRemove(null); }}
+                onCancel={() => setSlotToRemove(null)}
+            />
         </div>
     );
 }
