@@ -1,12 +1,5 @@
 # TODO
 
-## 🔴 Bug
-
-### WP Sync — Thumbnail Not Updating
-- [ ] After syncing a post from WordPress, the thumbnail doesn't update on the card or in the editor
-- State updates directly from `wp.thumbnail` (not backend response) — still not reflecting
-- Investigate: log `wp.thumbnail` to confirm new URL is returned; check if browser is caching old image at same URL; try cache-busting `?t=timestamp` on thumbnail src after sync
-
 ## Active
 
 ### Thread Draft Click-to-Schedule
@@ -35,6 +28,9 @@
 - [ ] Swipe files / content library
 - [ ] Custom prompts per user
 - [ ] Queue pattern for `generate-outline` / `generate-topics`
+
+## Nice to Have (Later)
+- [ ] Optimistic updates — apply edits to UI immediately, revert on API error (ScheduledPostDetail save, short post edits, thread edits)
 
 ## Completed
 - Language system (Phases 1–4): detection, content_lang selector, generation, Snelstack publish translation, WP sync translation — using `content_lang` from profile, no per-post language column needed
