@@ -2,6 +2,19 @@
 
 ## Active
 
+### Visuals — Expand Format Options
+- [ ] Standalone visuals (not tied to a blog post)
+- [ ] More layout presets — quote card, stat card, list card
+- [ ] Text position options — top, bottom, center, overlay
+- [ ] AI-generated background image instead of gradient (endpoint already exists: `POST /image/generate`)
+
+### Swipe File
+- [ ] Add more thread swipe examples in production DB
+
+### QA / Testing
+- [ ] End-to-end test: visuals generate → preview → schedule → publish
+- [ ] End-to-end test: threads generate → preview → schedule → publish
+
 ### Thread Draft Click-to-Schedule
 - [ ] Clicking a thread draft in DraftsTab should open SlotContentPicker with thread content pre-filled (short posts already do this)
 
