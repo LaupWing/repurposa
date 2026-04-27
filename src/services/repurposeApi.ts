@@ -100,6 +100,10 @@ export async function generateThreads(
     });
 }
 
+export async function getThread(threadId: number): Promise<ThreadItem> {
+    return apiRequest<ThreadItem>(`/repurpose/threads/${threadId}`, {}, 'GET');
+}
+
 export async function updateThread(threadId: number, data: {
     hook?: string;
     posts?: { content: string; media: unknown }[];

@@ -1,7 +1,7 @@
 import { useState, useRef } from '@wordpress/element';
-import { X, Clock, Pencil, Check, Loader2, FileText, Repeat2, ImagePlus, Share2, AlertTriangle } from 'lucide-react';
+import { X, Clock, Pencil, Check, Loader2, FileText, Repeat2, ImagePlus, Share2, AlertTriangle, MessageSquare, Image, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { getShortPost, updateShortPost } from '@/services/repurposeApi';
+import { getShortPost, updateShortPost, getThread, updateThread } from '@/services/repurposeApi';
 import { deleteScheduledPost, updateScheduledPost } from '@/services/scheduleApi';
 import { SCHEDULE_PLATFORMS, PLATFORM_CHAR_LIMITS, getUnsupportedReason, getDateInTz, getTimeInTz, slotToDate } from '@/components/repurpose/modals/schedule-utils';
 import { TimezoneLabel } from '@/components/TimezoneLabel';
@@ -37,11 +37,18 @@ interface ScheduledPostDetailProps {
 
 export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone }: ScheduledPostDetailProps) {
     const [isEditing, setIsEditing] = useState(false);
+    const [editType, setEditType] = useState<'short_post' | 'thread'>(post.postType === 'thread' ? 'thread' : 'short_post');
+    // Short post edit state
     const [editText, setEditText] = useState(post.content);
     const [editImages, setEditImages] = useState<string[]>([]);
     const [editCta, setEditCta] = useState('');
     const [showCtaField, setShowCtaField] = useState(false);
     const [showEditImagePicker, setShowEditImagePicker] = useState(false);
+    // Thread edit state
+    const [editThreadPosts, setEditThreadPosts] = useState<string[]>(['']);
+    const [editThreadPostImages, setEditThreadPostImages] = useState<Record<number, string[]>>({});
+    const [threadImagePickerIdx, setThreadImagePickerIdx] = useState<number | null>(null);
+    const editThreadPostRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
     const [isFetchingPost, setIsFetchingPost] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isUnscheduling, setIsUnscheduling] = useState(false);
@@ -68,30 +75,57 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
         if (!post.schedulableId) return;
         setIsFetchingPost(true);
         try {
-            const data = await getShortPost(post.schedulableId);
-            setEditImages(data.media?.map(m => m.url) ?? []);
-            setEditCta(data.cta_content?.content ?? '');
-            setShowCtaField(!!data.cta_content?.content);
+            if (post.postType === 'thread') {
+                const data = await getThread(post.schedulableId);
+                setEditThreadPosts([data.hook, ...data.posts.map(p => p.content)]);
+                const imgs: Record<number, string[]> = {};
+                [data.hook, ...data.posts.map(p => p.content)].forEach((_, i) => {
+                    const src = i === 0 ? null : data.posts[i - 1]?.media;
+                    if (src && Array.isArray(src) && src.length > 0) {
+                        imgs[i] = (src as { url: string }[]).map(m => m.url);
+                    }
+                });
+                setEditThreadPostImages(imgs);
+            } else {
+                const data = await getShortPost(post.schedulableId);
+                setEditImages(data.media?.map(m => m.url) ?? []);
+                setEditCta(data.cta_content?.content ?? '');
+                setShowCtaField(!!data.cta_content?.content);
+            }
         } catch {
-            // proceed with empty media/cta if fetch fails
+            // proceed with empty state if fetch fails
         } finally {
             setIsFetchingPost(false);
         }
         setEditText(post.content);
+        setEditType(post.postType === 'thread' ? 'thread' : 'short_post');
         setIsEditing(true);
     };
 
     const handleSave = async () => {
-        if (!post.schedulableId || !editText.trim()) return;
+        if (!post.schedulableId) return;
         setIsSaving(true);
         try {
-            await updateShortPost(post.schedulableId, {
-                content: editText.trim(),
-                media: editImages.length > 0 ? editImages : [],
-                cta_content: showCtaField && editCta.trim()
-                    ? { content: editCta.trim(), media: null }
-                    : null,
-            });
+            if (editType === 'thread') {
+                const filled = editThreadPosts.filter(p => p.trim());
+                if (filled.length < 2) { toast.error('A thread needs at least 2 posts'); setIsSaving(false); return; }
+                await updateThread(post.schedulableId, {
+                    hook: filled[0],
+                    posts: filled.slice(1).map((content, i) => ({
+                        content,
+                        media: editThreadPostImages[i + 1] ?? [],
+                    })),
+                });
+            } else {
+                if (!editText.trim()) { setIsSaving(false); return; }
+                await updateShortPost(post.schedulableId, {
+                    content: editText.trim(),
+                    media: editImages.length > 0 ? editImages : [],
+                    cta_content: showCtaField && editCta.trim()
+                        ? { content: editCta.trim(), media: null }
+                        : null,
+                });
+            }
             toast.success('Post updated');
             setIsEditing(false);
             onUpdated();
@@ -255,6 +289,153 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
 
                     {isEditing ? (
                         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                            {/* Type pills */}
+                            <div className="flex items-center gap-1.5 mb-4">
+                                <button
+                                    onClick={() => setEditType('short_post')}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                        editType === 'short_post' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <FileText size={11} />
+                                    Short Post
+                                </button>
+                                <button
+                                    onClick={() => setEditType('thread')}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                        editType === 'thread' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <MessageSquare size={11} />
+                                    Thread
+                                </button>
+                                <button
+                                    disabled
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-gray-100 text-gray-300 cursor-not-allowed"
+                                    title="Coming soon"
+                                >
+                                    <Image size={11} />
+                                    Visual
+                                    <span className="text-[9px] text-gray-300 ml-0.5">soon</span>
+                                </button>
+                            </div>
+
+                            {editType === 'thread' ? (
+                                /* ===== THREAD COMPOSER ===== */
+                                <div>
+                                    {editThreadPosts.map((threadPost, idx) => {
+                                        const postImages = editThreadPostImages[idx] || [];
+                                        const isLast = idx === editThreadPosts.length - 1;
+                                        const tl = post.platforms.length > 0
+                                            ? Math.min(...post.platforms.map(p => PLATFORM_CHAR_LIMITS[p]))
+                                            : 280;
+                                        return (
+                                        <div key={idx} className="relative pb-4 pl-8 last:pb-0">
+                                            {!isLast && (
+                                                <div className="absolute top-6 left-2.75 h-[calc(100%-12px)] w-0.5 bg-gray-200" />
+                                            )}
+                                            <div className="absolute top-0 left-0 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-[10px] font-medium text-gray-500">
+                                                {idx + 1}
+                                            </div>
+                                            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                                <AITextPopup textareaRef={{ current: editThreadPostRefs.current[idx] }} value={threadPost} onChange={(val) => {
+                                                    const updated = [...editThreadPosts];
+                                                    updated[idx] = val;
+                                                    setEditThreadPosts(updated);
+                                                }} />
+                                                <textarea
+                                                    ref={el => { editThreadPostRefs.current[idx] = el; }}
+                                                    value={threadPost}
+                                                    onChange={(e) => {
+                                                        const updated = [...editThreadPosts];
+                                                        updated[idx] = e.target.value;
+                                                        setEditThreadPosts(updated);
+                                                    }}
+                                                    placeholder={idx === 0 ? 'Hook — grab attention...' : `Post ${idx + 1}...`}
+                                                    rows={3}
+                                                    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm leading-relaxed text-gray-800 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                                    style={{ fieldSizing: 'content', minHeight: '80px' } as React.CSSProperties}
+                                                />
+                                                {postImages.length > 0 && (
+                                                    <div className="mt-2">
+                                                        <ImageGrid
+                                                            media={postImages}
+                                                            onRemove={(i) => setEditThreadPostImages(prev => ({
+                                                                ...prev,
+                                                                [idx]: (prev[idx] || []).filter((_, imgIdx) => imgIdx !== i),
+                                                            }))}
+                                                            onReorder={(from, to) => setEditThreadPostImages(prev => {
+                                                                const imgs = [...(prev[idx] || [])];
+                                                                const [moved] = imgs.splice(from, 1);
+                                                                imgs.splice(to, 0, moved);
+                                                                return { ...prev, [idx]: imgs };
+                                                            })}
+                                                            onAddClick={() => setThreadImagePickerIdx(idx)}
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                                                    <span className={`font-mono text-[10px] ${threadPost.length > tl ? 'text-red-500' : 'text-gray-400'}`}>
+                                                        {threadPost.length}/{tl.toLocaleString()}
+                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={() => setThreadImagePickerIdx(idx)}
+                                                            disabled={postImages.length >= 4}
+                                                            className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        >
+                                                            <ImagePlus size={14} />
+                                                        </button>
+                                                        {editThreadPosts.length > 1 && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditThreadPosts(prev => prev.filter((_, i) => i !== idx));
+                                                                    setEditThreadPostImages(prev => {
+                                                                        const updated: Record<number, string[]> = {};
+                                                                        Object.entries(prev).forEach(([key, val]) => {
+                                                                            const k = Number(key);
+                                                                            if (k < idx) updated[k] = val;
+                                                                            else if (k > idx) updated[k - 1] = val;
+                                                                        });
+                                                                        return updated;
+                                                                    });
+                                                                }}
+                                                                className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        );
+                                    })}
+                                    <div className="pl-8 pt-1 mb-4">
+                                        <button
+                                            onClick={() => setEditThreadPosts(prev => [...prev, ''])}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <Plus size={12} />
+                                            Add post
+                                        </button>
+                                    </div>
+                                    <ImagePickerModal
+                                        isOpen={threadImagePickerIdx !== null}
+                                        onClose={() => setThreadImagePickerIdx(null)}
+                                        onSelect={(url) => {
+                                            const idx = threadImagePickerIdx!;
+                                            setEditThreadPostImages(prev => ({
+                                                ...prev,
+                                                [idx]: [...(prev[idx] || []), url],
+                                            }));
+                                            setThreadImagePickerIdx(null);
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                            /* ===== SHORT POST COMPOSER ===== */
+                            <div>
                             {/* Text */}
                             <div className="mb-3">
                                 <AITextPopup textareaRef={textareaRef} value={editText} onChange={setEditText} />
@@ -363,23 +544,6 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
                                 </div>
                             )}
 
-                            {/* Save/cancel */}
-                            <div className="flex items-center justify-end gap-2 mt-4">
-                                <button
-                                    onClick={() => { setIsEditing(false); setEditText(post.content); setEditImages([]); setEditCta(''); setShowCtaField(false); }}
-                                    className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={isSaving || !editText.trim()}
-                                    className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
-                                >
-                                    {isSaving ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
-                                </button>
-                            </div>
-
                             <ImagePickerModal
                                 isOpen={showEditImagePicker}
                                 onClose={() => setShowEditImagePicker(false)}
@@ -388,6 +552,25 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
                                     setShowEditImagePicker(false);
                                 }}
                             />
+                            </div>
+                            )} {/* end short_post / thread conditional */}
+
+                            {/* Save/cancel */}
+                            <div className="flex items-center justify-end gap-2 mt-4">
+                                <button
+                                    onClick={() => { setIsEditing(false); setEditText(post.content); setEditImages([]); setEditCta(''); setShowCtaField(false); setEditThreadPosts(['']); setEditThreadPostImages({}); }}
+                                    className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                    className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {isSaving ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
