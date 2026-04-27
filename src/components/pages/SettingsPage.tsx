@@ -11,6 +11,7 @@ import Avatar from "boring-avatars";
 import { AlertTriangle, Check, ExternalLink, Save, Loader2, Pencil, LogOut } from "lucide-react";
 import apiFetch from "@wordpress/api-fetch";
 import SnelstackBanner from "@/components/SnelstackBanner";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { TimezonePicker } from "@/components/TimezonePicker";
 import { useProfileStore } from "@/store/profileStore";
 import type { ProfileData } from "@/store/profileStore";
@@ -31,6 +32,7 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState<string | null>(null);
+  const [platformToDisconnect, setPlatformToDisconnect] = useState<string | null>(null);
   const [userName, setUserName] = useState(user?.name ?? '');
   const [userEmail, setUserEmail] = useState(user?.email ?? '');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar ?? null);
@@ -143,7 +145,10 @@ export default function SettingsPage() {
     openPopup(`${apiUrl}/social/${platformId}/connect?origin=${encodeURIComponent(origin)}`, platformId);
   };
 
-  const handleDisconnect = async (platformId: string) => {
+  const handleDisconnect = async () => {
+    if (!platformToDisconnect) return;
+    const platformId = platformToDisconnect;
+    setPlatformToDisconnect(null);
     setDisconnectingPlatform(platformId);
     try {
       await disconnectSocialAccount(platformId);
@@ -463,7 +468,7 @@ export default function SettingsPage() {
 
               {platform.connected ? (
                 <button
-                  onClick={() => handleDisconnect(platform.id)}
+                  onClick={() => setPlatformToDisconnect(platform.id)}
                   disabled={disconnectingPlatform === platform.id}
                   className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                 >
@@ -497,6 +502,17 @@ export default function SettingsPage() {
           </p>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!platformToDisconnect}
+        title="Disconnect Account"
+        description={`Are you sure you want to disconnect ${platformToDisconnect ? mergedPlatforms.find(p => p.id === platformToDisconnect)?.name ?? platformToDisconnect : ''}? This will remove it from all your schedule slots.`}
+        confirmLabel="Disconnect"
+        variant="danger"
+        isLoading={!!disconnectingPlatform}
+        onConfirm={handleDisconnect}
+        onCancel={() => setPlatformToDisconnect(null)}
+      />
 
       {/* Logout */}
       <div className="flex justify-end">
