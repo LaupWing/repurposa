@@ -11,28 +11,36 @@ See [LANGUAGE.md](./LANGUAGE.md) for full design.
 - [x] Language selector in SettingsPage (`content_lang` saved to Laravel user profile)
 
 **Phase 2 — Generation with Language**
-- [ ] Laravel migration: add `language` column to `posts` table (store at creation, not from profile — profile can change)
-- [ ] Send `content_lang` from profile to Laravel on every generate/repurpose call
-- [ ] Laravel stores it on the post + uses it to select correct prompt folder (`resources/prompts/en/` or `nl/`)
+- [x] Send `content_lang` from profile to Laravel on every generate/repurpose call (`AiController` reads `profile->content_lang`)
+- [ ] Laravel migration: add `language` column to `posts` table (store at creation, not from profile)
 - [ ] Show language badge on blog cards in BlogsPage
 
 **Phase 3 — Publish Flow (Snelstack)**
-- [ ] On WP publish: check `snelstackLang` vs post `language` mismatch
-- [ ] If mismatch: call `POST /api/translate` (Gemini in Laravel) before publishing to WP
-- [ ] Laravel `translate` endpoint: `{ content, target_lang }` → translated content
+- [x] On WP publish: check `snelstackLang` vs `content_lang` mismatch → auto-translates via `POST /api/translate`
+- [x] Laravel `translate` endpoint: `{ content, target_lang }` → translated content
 - [ ] UX: notice on publish confirmation "will be auto-translated EN → NL"
 - [ ] UX: badge on blog card/detail after publish showing it was translated
 
 **Phase 4 — Sync Flow**
-- [ ] On WP → Repurposa sync: detect incoming post language
-- [ ] If Snelstack + unsupported lang → translate to en before import
-- [ ] If non-Snelstack → use `get_locale()`, fallback to en
+- [x] On WP → Repurposa sync: detects `wp.lang` vs `content_lang` mismatch → translates before import
+- [x] Non-Snelstack: uses `get_locale()`, fallback to en
 - [ ] UX: badge on synced blog card "Synced from WordPress · Translated NL → EN"
+
+## 🔴 Bug
+
+### WP Sync — Thumbnail Not Updating
+- [ ] After syncing a post from WordPress, the thumbnail doesn't update on the card or in the editor
+- State updates directly from `wp.thumbnail` (not backend response) — still not reflecting
+- Investigate: log `wp.thumbnail` to confirm new URL is returned; check if browser is caching old image at same URL; try cache-busting `?t=timestamp` on thumbnail src after sync
 
 ## Active
 
-### Delete Blog Confirmation Modal
-- [ ] Replace browser `confirm()` in BlogsPage with a proper modal
+### Thread Draft Click-to-Schedule
+- [ ] Clicking a thread draft in DraftsTab should open SlotContentPicker with thread content pre-filled (short posts already do this)
+
+### Published Posts Pagination
+- [ ] Add `?limit=20&page=1` (or cursor) to `GET /scheduled-posts` on backend
+- [ ] Frontend: paginate published tab with "load more" on scroll
 
 ### Instagram / Social Publish Settings
 - [ ] `like_count_disabled` + `comments_disabled` on Instagram publish
@@ -62,3 +70,8 @@ See [LANGUAGE.md](./LANGUAGE.md) for full design.
 - WP posts sync (REST endpoint + frontend import logic)
 - Analytics page (overview chart + per-post growth)
 - SnelstackBanner extracted as reusable component
+- Standalone thread backend + frontend (GET/POST endpoints, DraftsTab, Form Requests)
+- `published_at` field on posts — synced from WordPress `post_date`, used for sorting + display
+- Per-post sync button on BlogsPage cards + BlogEditor (replaces delete on synced posts)
+- `scopeOrderByPublishedDate` on Post model (`COALESCE(published_at, created_at) DESC`)
+- Disconnect social account cleans up schedule slots
