@@ -328,14 +328,14 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <button
                                         onClick={() => setIsEditingTime(true)}
-                                        className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors border border-transparent hover:border-blue-200"
                                     >
                                         <span>
                                             {scheduledAt.toLocaleDateString('en-US', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric' })}
                                             {' · '}
                                             {scheduledAt.toLocaleTimeString('en-US', { timeZone: timezone, hour: 'numeric', minute: '2-digit', hour12: true })}
                                         </span>
-                                        <Pencil size={10} className="text-gray-400" />
+                                        <Pencil size={10} className="text-gray-400 shrink-0" />
                                     </button>
                                     <TimezoneLabel timezone={timezone} />
                                 </div>
