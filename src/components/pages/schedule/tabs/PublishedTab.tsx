@@ -1,20 +1,37 @@
 import { useState, useRef, useEffect } from "@wordpress/element";
-import { CheckCircle, Filter, Check } from "lucide-react";
+import { CheckCircle, Filter, Check, Loader2 } from "lucide-react";
 import type { Platform, PostType, ScheduledPost } from "../types";
 import { PLATFORMS, POST_TYPES } from "../types";
-import { formatScheduleDate, groupPostsByDate } from "../helpers";
+import { formatScheduleDate, groupPostsByDate, mapApiPost, groupScheduledPosts } from "../helpers";
 import { PublishedPostCard } from "../components";
+import { getPublishedPosts } from "@/services/scheduleApi";
+import type { ScheduledPost as ApiScheduledPost } from "@/types";
 
 interface PublishedTabProps {
-    posts: ScheduledPost[];
     timezone?: string;
 }
 
-export function PublishedTab({ posts, timezone }: PublishedTabProps) {
+export function PublishedTab({ timezone }: PublishedTabProps) {
     const [typeFilter, setTypeFilter] = useState<PostType | "all">("all");
     const [platformFilter, setPlatformFilter] = useState<Platform | "all">("all");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [rawRows, setRawRows] = useState<ApiScheduledPost[]>([]);
+    const [posts, setPosts] = useState<ScheduledPost[]>([]);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const filterRef = useRef<HTMLDivElement>(null);
+    const loadMoreAnchorRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        getPublishedPosts()
+            .then((res) => {
+                setRawRows(res.data);
+                setPosts(groupScheduledPosts(res.data.map(mapApiPost)));
+                setNextCursor(res.next_cursor);
+            })
+            .finally(() => setIsLoading(false));
+    }, []);
 
     useEffect(() => {
         if (!isFilterOpen) return;
@@ -27,6 +44,31 @@ export function PublishedTab({ posts, timezone }: PublishedTabProps) {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [isFilterOpen]);
 
+    const handleLoadMore = async () => {
+        if (!nextCursor || isLoadingMore) return;
+        setIsLoadingMore(true);
+        try {
+            const res = await getPublishedPosts(nextCursor);
+            const allRows = [...rawRows, ...res.data];
+            setRawRows(allRows);
+            setPosts(groupScheduledPosts(allRows.map(mapApiPost)));
+            setNextCursor(res.next_cursor);
+            setTimeout(() => {
+                loadMoreAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 150);
+        } finally {
+            setIsLoadingMore(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-20">
+                <Loader2 size={24} className="animate-spin text-gray-400" />
+            </div>
+        );
+    }
+
     const filteredPosts = posts.filter((post) => {
         const matchesPlatform = platformFilter === "all" || post.platforms.includes(platformFilter as Platform);
         const matchesType = typeFilter === "all" || post.postType === typeFilter;
@@ -36,16 +78,13 @@ export function PublishedTab({ posts, timezone }: PublishedTabProps) {
 
     return (
         <div>
-            {/* Filters */}
             {posts.length > 0 && (
                 <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
                         <button
                             onClick={() => setTypeFilter("all")}
                             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                typeFilter === "all"
-                                    ? "bg-white text-gray-900 shadow-sm"
-                                    : "text-gray-500 hover:text-gray-700"
+                                typeFilter === "all" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
                             }`}
                         >
                             All
@@ -55,9 +94,7 @@ export function PublishedTab({ posts, timezone }: PublishedTabProps) {
                                 key={t.id}
                                 onClick={() => setTypeFilter(t.id)}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                    typeFilter === t.id
-                                        ? "bg-white text-gray-900 shadow-sm"
-                                        : "text-gray-500 hover:text-gray-700"
+                                    typeFilter === t.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
                                 }`}
                             >
                                 {t.icon}
@@ -70,15 +107,11 @@ export function PublishedTab({ posts, timezone }: PublishedTabProps) {
                         <button
                             onClick={() => setIsFilterOpen(!isFilterOpen)}
                             className={`flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
-                                platformFilter !== "all"
-                                    ? "border-blue-500 text-blue-600 bg-blue-50"
-                                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                                platformFilter !== "all" ? "border-blue-500 text-blue-600 bg-blue-50" : "border-gray-300 text-gray-600 hover:bg-gray-50"
                             }`}
                         >
                             <Filter size={14} />
-                            {platformFilter === "all"
-                                ? "Filter"
-                                : PLATFORMS.find((p) => p.id === platformFilter)?.name}
+                            {platformFilter === "all" ? "Filter" : PLATFORMS.find((p) => p.id === platformFilter)?.name}
                         </button>
 
                         {isFilterOpen && (
@@ -115,7 +148,6 @@ export function PublishedTab({ posts, timezone }: PublishedTabProps) {
                 </div>
             )}
 
-            {/* Posts grouped by day */}
             {filteredPosts.length > 0 ? (
                 <div className="space-y-6">
                     {Array.from(grouped.entries()).map(([dateKey, dayPosts]) => (
@@ -160,6 +192,20 @@ export function PublishedTab({ posts, timezone }: PublishedTabProps) {
                     <p className="text-sm text-gray-500 max-w-sm mx-auto">
                         Posts that have been successfully published to your social accounts will appear here.
                     </p>
+                </div>
+            )}
+
+            <div ref={loadMoreAnchorRef} />
+            {nextCursor && (
+                <div className="flex justify-center mt-6">
+                    <button
+                        onClick={handleLoadMore}
+                        disabled={isLoadingMore}
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                        {isLoadingMore && <Loader2 size={14} className="animate-spin" />}
+                        Load more
+                    </button>
                 </div>
             )}
         </div>

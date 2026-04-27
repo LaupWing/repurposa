@@ -37,6 +37,12 @@ export async function updateScheduledPost(
     return apiRequest<ScheduledPost>(`/scheduled-posts/${id}`, data as Record<string, unknown>, 'PUT');
 }
 
+export async function getPublishedPosts(cursor?: string): Promise<{ data: ScheduledPost[]; next_cursor: string | null }> {
+    const params = new URLSearchParams({ status: 'published' });
+    if (cursor) params.set('cursor', cursor);
+    return apiRequest<{ data: ScheduledPost[]; next_cursor: string | null }>(`/scheduled-posts?${params}`, {}, 'GET');
+}
+
 export async function deleteScheduledPost(id: number): Promise<void> {
     await apiRequest<void>(`/scheduled-posts/${id}`, {}, 'DELETE');
 }

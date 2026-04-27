@@ -100,7 +100,6 @@ export default function SchedulePage() {
 
     // Derived data
     const queuePosts = posts.filter((post) => post.status !== "published");
-    const publishedPosts = posts.filter((post) => post.status === "published");
     const totalSlots = weeklySchedule
         ? Object.values(weeklySchedule).reduce(
               (sum, day) => sum + (day.enabled ? day.slots.length : 0),
@@ -200,7 +199,7 @@ export default function SchedulePage() {
                     onGoToTimes={() => setActiveTab("times")}
                 />
             )}
-            {activeTab === "published" && <PublishedTab posts={publishedPosts} timezone={timezone} />}
+            {activeTab === "published" && <PublishedTab timezone={timezone} />}
             {activeTab === "drafts" && (
                 <DraftsTab
                     drafts={drafts}
