@@ -441,6 +441,9 @@ export default function BlogsPage() {
             }>({
                 path: `/repurposa/v1/wp-posts/${post.published_post_id}`,
             });
+            console.log('[Sync] WP response:', wp);
+            console.log('[Sync] thumbnail before:', post.thumbnail);
+            console.log('[Sync] thumbnail from WP:', wp.thumbnail);
             await updateBlog(post.id, {
                 title: wp.title,
                 content: wp.content,
@@ -456,6 +459,8 @@ export default function BlogsPage() {
                               title: wp.title,
                               content: wp.content,
                               thumbnail: wp.thumbnail ?? p.thumbnail,
+                              // DEBUG: log after state update
+                              ...(console.log('[Sync] setting card thumbnail to:', wp.thumbnail ?? p.thumbnail), {}),
                               published_post_url: wp.url,
                               published_at: wp.date,
                           }
