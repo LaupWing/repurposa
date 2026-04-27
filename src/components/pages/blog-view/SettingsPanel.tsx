@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Trash2, Loader2 } from 'lucide-react';
 import { deleteBlog } from '@/services/blogApi';
 import type { BlogPost } from '@/types';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export function SettingsPanel({
     post,
@@ -12,11 +13,11 @@ export function SettingsPanel({
     onDeleted: () => void;
 }) {
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
     const handleDelete = async () => {
-        if (!confirm('Are you sure you want to delete this blog? This action cannot be undone.')) return;
-
         setIsDeleting(true);
+        setIsConfirmOpen(false);
         try {
             await deleteBlog(post.id);
             toast.success('Blog deleted');
@@ -113,7 +114,7 @@ export function SettingsPanel({
                         Permanently delete this blog and all associated data. This action cannot be undone.
                     </p>
                     <button
-                        onClick={handleDelete}
+                        onClick={() => setIsConfirmOpen(true)}
                         disabled={isDeleting}
                         className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
                     >
@@ -126,6 +127,17 @@ export function SettingsPanel({
                     </button>
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={isConfirmOpen}
+                title="Delete Blog"
+                description="This will permanently delete this blog and all associated data. This action cannot be undone."
+                confirmLabel="Delete"
+                variant="danger"
+                isLoading={isDeleting}
+                onConfirm={handleDelete}
+                onCancel={() => setIsConfirmOpen(false)}
+            />
         </div>
     );
 }
