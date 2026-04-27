@@ -12,9 +12,10 @@ interface DraftsTabProps {
     onDraftsChange: (updater: (prev: ApiShortPost[]) => ApiShortPost[]) => void;
     onThreadDraftsChange: (updater: (prev: ThreadItem[]) => ThreadItem[]) => void;
     onDraftClick: (draft: ApiShortPost) => void;
+    onThreadDraftClick: (thread: ThreadItem) => void;
 }
 
-export function DraftsTab({ drafts, threadDrafts, isLoading, onDraftsChange, onThreadDraftsChange, onDraftClick }: DraftsTabProps) {
+export function DraftsTab({ drafts, threadDrafts, isLoading, onDraftsChange, onThreadDraftsChange, onDraftClick, onThreadDraftClick }: DraftsTabProps) {
     const [draftToDelete, setDraftToDelete] = useState<{ type: 'short' | 'thread'; id: number } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -113,7 +114,8 @@ export function DraftsTab({ drafts, threadDrafts, isLoading, onDraftsChange, onT
                 return (
                     <div
                         key={`th-${thread.id}`}
-                        className="group flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                        onClick={() => onThreadDraftClick(thread)}
+                        className="group flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
                     >
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">

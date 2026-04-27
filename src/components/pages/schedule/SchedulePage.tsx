@@ -45,6 +45,7 @@ export default function SchedulePage() {
     const [pickerSlotDate, setPickerSlotDate] = useState<Date | null>(null);
     const [pickerSlotPlatforms, setPickerSlotPlatforms] = useState<Platform[]>([]);
     const [pickerDraftContent, setPickerDraftContent] = useState<string | undefined>(undefined);
+    const [pickerThreadDraft, setPickerThreadDraft] = useState<{ hook: string; posts: string[] } | undefined>(undefined);
     const [detailPost, setDetailPost] = useState<ScheduledPost | null>(null);
 
     const connectedPlatforms: Platform[] = socialConnections
@@ -208,22 +209,36 @@ export default function SchedulePage() {
                     onDraftsChange={setDrafts}
                     onThreadDraftsChange={setThreadDrafts}
                     onDraftClick={(draft) => {
+                        const openPicker = (date: Date, platforms: Platform[]) => {
+                            setPickerSlotDate(date);
+                            setPickerSlotPlatforms(platforms);
+                            setPickerDraftContent(draft.content);
+                            setPickerThreadDraft(undefined);
+                            setIsPickerOpen(true);
+                        };
                         if (weeklySchedule) {
                             const slots = getUpcomingSlotsFromSchedule(weeklySchedule, 1, timezone);
-                            if (slots.length > 0) {
-                                setPickerSlotDate(slots[0].date);
-                                setPickerSlotPlatforms(slots[0].platforms as Platform[]);
-                                setPickerDraftContent(draft.content);
-                                setIsPickerOpen(true);
-                                return;
-                            }
+                            if (slots.length > 0) { openPicker(slots[0].date, slots[0].platforms as Platform[]); return; }
                         }
                         const nextHour = new Date();
                         nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
-                        setPickerSlotDate(nextHour);
-                        setPickerSlotPlatforms(connectedPlatforms);
-                        setPickerDraftContent(draft.content);
-                        setIsPickerOpen(true);
+                        openPicker(nextHour, connectedPlatforms);
+                    }}
+                    onThreadDraftClick={(thread) => {
+                        const openPicker = (date: Date, platforms: Platform[]) => {
+                            setPickerSlotDate(date);
+                            setPickerSlotPlatforms(platforms);
+                            setPickerDraftContent(undefined);
+                            setPickerThreadDraft({ hook: thread.hook, posts: thread.posts.map(p => p.content) });
+                            setIsPickerOpen(true);
+                        };
+                        if (weeklySchedule) {
+                            const slots = getUpcomingSlotsFromSchedule(weeklySchedule, 1, timezone);
+                            if (slots.length > 0) { openPicker(slots[0].date, slots[0].platforms as Platform[]); return; }
+                        }
+                        const nextHour = new Date();
+                        nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+                        openPicker(nextHour, connectedPlatforms);
                     }}
                 />
             )}
@@ -243,9 +258,10 @@ export default function SchedulePage() {
                     slotDate={pickerSlotDate}
                     slotPlatforms={pickerSlotPlatforms as SchedulePlatform[]}
                     initialDraftContent={pickerDraftContent}
+                    initialThreadDraft={pickerThreadDraft}
                     timezone={timezone}
-                    onClose={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); }}
-                    onScheduled={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); refreshPosts(); }}
+                    onClose={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); setPickerThreadDraft(undefined); }}
+                    onScheduled={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); setPickerThreadDraft(undefined); refreshPosts(); }}
                 />
             )}
             {detailPost && (

@@ -99,9 +99,10 @@ interface SlotContentPickerProps {
     onClose: () => void;
     onScheduled: () => void;
     initialDraftContent?: string;
+    initialThreadDraft?: { hook: string; posts: string[] };
 }
 
-export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, onClose, onScheduled, initialDraftContent }: SlotContentPickerProps) {
+export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, onClose, onScheduled, initialDraftContent, initialThreadDraft }: SlotContentPickerProps) {
     const [scheduledAt, setScheduledAt] = useState<Date>(slotDate);
     const [platforms, setPlatforms] = useState<SchedulePlatform[]>(slotPlatforms);
     const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
@@ -149,10 +150,10 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
         setSchedulingItemId(null);
         setExpandedBlogId(null);
         setBlogContent({});
-        setView(initialDraftContent ? 'create' : 'list');
-        setCreateType('short_post');
+        setView(initialDraftContent || initialThreadDraft ? 'create' : 'list');
+        setCreateType(initialThreadDraft ? 'thread' : 'short_post');
         setCreateText(initialDraftContent || '');
-        setThreadPosts(['']);
+        setThreadPosts(initialThreadDraft ? [initialThreadDraft.hook, ...initialThreadDraft.posts] : ['']);
         setCreateImages([]);
         setShowCreateImagePicker(false);
         setCreateCta('');

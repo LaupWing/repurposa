@@ -16,7 +16,7 @@
 ## 🟡 Active
 
 ### Thread Draft Click-to-Schedule
-- [ ] Clicking a thread draft in DraftsTab should open SlotContentPicker with thread content pre-filled (short posts already do this)
+- [x] Clicking a thread draft in DraftsTab should open SlotContentPicker with thread content pre-filled (short posts already do this)
 
 ### Visuals — Expand Format Options
 - [ ] More layout presets — quote card, stat card, list card
