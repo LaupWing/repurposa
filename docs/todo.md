@@ -35,15 +35,13 @@
 - [ ] Threads — API access for production
 
 ## Nice to Have (Later)
+- [ ] Optimistic updates — apply edits to UI immediately, revert on API error (ScheduledPostDetail save, short post edits, thread edits)
 - [ ] Webhook/SSE instead of polling for blog generation
 - [ ] Video tab
 - [ ] Version history modal (connect to real PostVersion data)
 - [ ] Swipe files / content library
 - [ ] Custom prompts per user
 - [ ] Queue pattern for `generate-outline` / `generate-topics`
-
-## Nice to Have (Later)
-- [ ] Optimistic updates — apply edits to UI immediately, revert on API error (ScheduledPostDetail save, short post edits, thread edits)
 
 ## Completed
 - Language system (Phases 1–4): detection, content_lang selector, generation, Snelstack publish translation, WP sync translation — using `content_lang` from profile, no per-post language column needed
