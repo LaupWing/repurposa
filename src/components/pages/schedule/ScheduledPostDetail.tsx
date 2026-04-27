@@ -8,6 +8,7 @@ import { TimezoneLabel } from '@/components/TimezoneLabel';
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
 import { AITextPopup } from '@/components/AITextPopup';
 import AutoRepostModal from '@/components/repurpose/modals/SchedulePostModal/AutoRepostModal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { useExistingRepost } from '@/hooks/useAutoRepost';
 import type { RepostPlatform } from '@/hooks/useAutoRepost';
 
@@ -37,6 +38,7 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
     const [editText, setEditText] = useState(post.content);
     const [isSaving, setIsSaving] = useState(false);
     const [isUnscheduling, setIsUnscheduling] = useState(false);
+    const [showUnscheduleConfirm, setShowUnscheduleConfirm] = useState(false);
     const [isEditingTime, setIsEditingTime] = useState(false);
     const [scheduledAt, setScheduledAt] = useState(() => new Date(post.scheduledAt));
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -102,6 +104,7 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
     };
 
     return (
+        <>
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50" onClick={onClose} />
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden flex flex-col">
@@ -266,7 +269,7 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
                 {/* Footer actions */}
                 <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 bg-gray-50">
                     <button
-                        onClick={handleUnschedule}
+                        onClick={() => setShowUnscheduleConfirm(true)}
                         disabled={isUnscheduling}
                         className="px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                     >
@@ -295,5 +298,17 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
                 </div>
             </div>
         </div>
+
+        <ConfirmModal
+            isOpen={showUnscheduleConfirm}
+            title="Unschedule Post"
+            description="Remove this post from the queue? It won't be deleted — you can reschedule it anytime."
+            confirmLabel="Unschedule"
+            variant="warning"
+            isLoading={isUnscheduling}
+            onConfirm={handleUnschedule}
+            onCancel={() => setShowUnscheduleConfirm(false)}
+        />
+        </>
     );
 }

@@ -1,7 +1,9 @@
+import { useState } from "@wordpress/element";
 import { Clock, FileText, List, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ShortPost as ApiShortPost, ThreadItem } from "@/types";
 import { deleteShortPost, deleteThread } from "@/services/repurposeApi";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 interface DraftsTabProps {
     drafts: ApiShortPost[];
@@ -13,6 +15,30 @@ interface DraftsTabProps {
 }
 
 export function DraftsTab({ drafts, threadDrafts, isLoading, onDraftsChange, onThreadDraftsChange, onDraftClick }: DraftsTabProps) {
+    const [draftToDelete, setDraftToDelete] = useState<{ type: 'short' | 'thread'; id: number } | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleConfirmDelete = async () => {
+        if (!draftToDelete) return;
+        setIsDeleting(true);
+        try {
+            if (draftToDelete.type === 'short') {
+                await deleteShortPost(draftToDelete.id);
+                onDraftsChange((prev) => prev.filter((d) => d.id !== draftToDelete.id));
+                toast.success("Draft deleted");
+            } else {
+                await deleteThread(draftToDelete.id);
+                onThreadDraftsChange((prev) => prev.filter((t) => t.id !== draftToDelete.id));
+                toast.success("Thread draft deleted");
+            }
+        } catch {
+            toast.error("Failed to delete draft");
+        } finally {
+            setIsDeleting(false);
+            setDraftToDelete(null);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="space-y-3 animate-pulse">
@@ -71,16 +97,7 @@ export function DraftsTab({ drafts, threadDrafts, isLoading, onDraftsChange, onT
                         </div>
                         <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                                onClick={async (e) => {
-                                    e.stopPropagation();
-                                    try {
-                                        await deleteShortPost(draft.id);
-                                        onDraftsChange((prev) => prev.filter((d) => d.id !== draft.id));
-                                        toast.success("Draft deleted");
-                                    } catch {
-                                        toast.error("Failed to delete draft");
-                                    }
-                                }}
+                                onClick={(e) => { e.stopPropagation(); setDraftToDelete({ type: 'short', id: draft.id }); }}
                                 className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                 title="Delete"
                             >
@@ -120,16 +137,7 @@ export function DraftsTab({ drafts, threadDrafts, isLoading, onDraftsChange, onT
                         </div>
                         <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                                onClick={async (e) => {
-                                    e.stopPropagation();
-                                    try {
-                                        await deleteThread(thread.id);
-                                        onThreadDraftsChange((prev) => prev.filter((t) => t.id !== thread.id));
-                                        toast.success("Thread draft deleted");
-                                    } catch {
-                                        toast.error("Failed to delete thread draft");
-                                    }
-                                }}
+                                onClick={(e) => { e.stopPropagation(); setDraftToDelete({ type: 'thread', id: thread.id }); }}
                                 className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                 title="Delete"
                             >
@@ -139,6 +147,16 @@ export function DraftsTab({ drafts, threadDrafts, isLoading, onDraftsChange, onT
                     </div>
                 );
             })}
+        <ConfirmModal
+            isOpen={!!draftToDelete}
+            title="Delete Draft"
+            description={draftToDelete?.type === 'thread' ? "Delete this thread draft? This cannot be undone." : "Delete this short post draft? This cannot be undone."}
+            confirmLabel="Delete"
+            variant="danger"
+            isLoading={isDeleting}
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setDraftToDelete(null)}
+        />
         </div>
     );
 }

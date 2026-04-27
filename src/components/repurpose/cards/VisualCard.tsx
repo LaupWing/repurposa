@@ -5,6 +5,7 @@ import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import type { Visual } from '@/types';
 import { VisualPreview, GRADIENT_PRESETS } from '@/components/repurpose/modals/VisualPreviewModal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface VisualCardProps {
     visual: Visual;
@@ -33,6 +34,7 @@ export default function VisualCard({
 
     const [menuOpen, setMenuOpen] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const copyRef = useRef<HTMLDivElement>(null);
 
@@ -101,6 +103,7 @@ export default function VisualCard({
     }, [captureVisual]);
 
     return (
+        <>
         <div
             ref={isHighlighted ? onHighlightRef : undefined}
             className={`group relative rounded-xl border bg-white shadow-sm transition-all hover:border-blue-300 hover:shadow-md ${
@@ -264,7 +267,7 @@ export default function VisualCard({
                                         Publish Now
                                     </button>
                                     <button
-                                        onClick={() => { onDelete(); setMenuOpen(false); }}
+                                        onClick={() => { setShowDeleteConfirm(true); setMenuOpen(false); }}
                                         className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                                     >
                                         <Trash2 size={14} />
@@ -277,5 +280,16 @@ export default function VisualCard({
                 </div>
             </div>
         </div>
+
+        <ConfirmModal
+            isOpen={showDeleteConfirm}
+            title="Delete Visual"
+            description="Delete this visual? This cannot be undone."
+            confirmLabel="Delete"
+            variant="danger"
+            onConfirm={() => { setShowDeleteConfirm(false); onDelete(); }}
+            onCancel={() => setShowDeleteConfirm(false)}
+        />
+        </>
     );
 }

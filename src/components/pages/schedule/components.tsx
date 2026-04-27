@@ -111,6 +111,7 @@ export function ScheduledPostCard({
     timezone?: string;
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
+    const [showUnscheduleConfirm, setShowUnscheduleConfirm] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -129,6 +130,7 @@ export function ScheduledPostCard({
     }, [menuOpen]);
 
     return (
+        <>
         <div
             onClick={onClick}
             className="group flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
@@ -209,8 +211,8 @@ export function ScheduledPostCard({
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onDelete(post.id, post.ids);
                                 setMenuOpen(false);
+                                setShowUnscheduleConfirm(true);
                             }}
                             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                         >
@@ -221,6 +223,17 @@ export function ScheduledPostCard({
                 )}
             </div>
         </div>
+
+        <ConfirmModal
+            isOpen={showUnscheduleConfirm}
+            title="Unschedule Post"
+            description="Remove this post from the queue? It won't be deleted — you can reschedule it anytime."
+            confirmLabel="Unschedule"
+            variant="warning"
+            onConfirm={() => { setShowUnscheduleConfirm(false); onDelete(post.id, post.ids); }}
+            onCancel={() => setShowUnscheduleConfirm(false)}
+        />
+        </>
     );
 }
 
