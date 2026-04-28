@@ -27,6 +27,7 @@ import {
 import { RiTwitterXFill, RiLinkedinFill, RiThreadsFill, RiInstagramFill, RiFacebookFill } from 'react-icons/ri';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getAnalyticsSummary, getAnalyticsPosts, getPostSnapshots, getDailyTotals } from '@/services/analyticsApi';
+import { getPublishingSchedule } from '@/services/scheduleApi';
 import { stagger } from '@/components/onboarding/stagger';
 import type { DailyTotal } from '@/services/analyticsApi';
 import type { AnalyticsSummary, AnalyticsPost, AnalyticsSnapshot } from '@/services/analyticsApi';
@@ -322,7 +323,7 @@ const CHART_METRICS = [
 type TimeMode = 'hours' | 'time';
 type RangeMode = '24h' | 'all';
 
-function GrowthChart({ scheduledPostId, publishedAt }: { scheduledPostId: number; publishedAt: string }) {
+function GrowthChart({ scheduledPostId, publishedAt, timezone }: { scheduledPostId: number; publishedAt: string; timezone: string }) {
     const [snapshots, setSnapshots] = useState<AnalyticsSnapshot[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeMetric, setActiveMetric] = useState<string>('views');
@@ -364,12 +365,12 @@ function GrowthChart({ scheduledPostId, publishedAt }: { scheduledPostId: number
         const fetchedAt = new Date(s.fetched_at);
         const hoursAfter = Math.round((fetchedAt.getTime() - pubTime) / (1000 * 60 * 60));
         const daysAfter = Math.round((fetchedAt.getTime() - pubTime) / (1000 * 60 * 60 * 24));
-        const timeStr = fetchedAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        const timeStr = fetchedAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone: timezone });
 
         let label: string;
         if (timeMode === 'time') {
             label = rangeMode === 'all'
-                ? fetchedAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                ? fetchedAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: timezone })
                 : timeStr;
         } else {
             label = rangeMode === 'all' ? `${daysAfter}d` : `${hoursAfter}h`;
@@ -400,7 +401,7 @@ function GrowthChart({ scheduledPostId, publishedAt }: { scheduledPostId: number
             const pubAt24 = new Date(pubTime + 24 * 60 * 60 * 1000);
             chartData.push({
                 label: timeMode === 'time'
-                    ? pubAt24.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+                    ? pubAt24.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone: timezone })
                     : '24h',
                 views: extrapolate(lastSnap.views, prevSnap.views),
                 likes: extrapolate(lastSnap.likes, prevSnap.likes),
@@ -491,7 +492,7 @@ function GrowthChart({ scheduledPostId, publishedAt }: { scheduledPostId: number
     );
 }
 
-function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: Platform | 'all' }) {
+function BlogPostCard({ post, forcePlatform, timezone }: { post: BlogPost; forcePlatform: Platform | 'all'; timezone: string }) {
     const availablePlatforms = post.platforms.map(p => p.platform);
     const defaultPlatform = forcePlatform !== 'all' && availablePlatforms.includes(forcePlatform)
         ? forcePlatform
@@ -520,7 +521,7 @@ function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: 
                     {post.postType === 'visual' && <><Image size={13} /> Visual</>}
                 </span>
                 <span className="text-[10px] text-gray-400">
-                    {new Date(data.publishedAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    {new Date(data.publishedAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: timezone })}
                 </span>
             </div>
 
@@ -570,7 +571,7 @@ function BlogPostCard({ post, forcePlatform }: { post: BlogPost; forcePlatform: 
             {/* Growth chart (expandable) */}
             {showChart && (
                 <div className="mb-4 pb-1">
-                    <GrowthChart scheduledPostId={data.scheduledPostId} publishedAt={data.publishedAt} />
+                    <GrowthChart scheduledPostId={data.scheduledPostId} publishedAt={data.publishedAt} timezone={timezone} />
                 </div>
             )}
 
@@ -622,8 +623,13 @@ export default function AnalyticsPage() {
     const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [sortBy, setSortBy] = useState<'recent' | 'views' | 'likes' | 'engagement'>('recent');
+    const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
 
     useEffect(() => {
+        getPublishingSchedule().then(data => {
+            if (data.timezone) setTimezone(data.timezone);
+        }).catch(() => {});
+
         setIsLoading(true);
         Promise.all([
             getAnalyticsSummary('all'),
@@ -761,7 +767,7 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-2 gap-4">
                     {visiblePosts.map((post, i) => (
                         <div key={post.id} {...stagger(i + 3, false)}>
-                            <BlogPostCard post={post} forcePlatform={platformFilter} />
+                            <BlogPostCard post={post} forcePlatform={platformFilter} timezone={timezone} />
                         </div>
                     ))}
                 </div>

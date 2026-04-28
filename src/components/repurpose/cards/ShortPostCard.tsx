@@ -176,6 +176,7 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
     const handleSaveEdit = () => {
         onEdit(editContent);
         setIsEditing(false);
+        toast.success('Post saved');
     };
 
     const handleCancelEdit = () => {
