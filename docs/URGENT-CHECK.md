@@ -7,13 +7,10 @@ Verified in production log — scheduler running correctly:
 - `05:18` — 5 jobs dispatched
 - `06:00` — 0 jobs (all posts within fetch interval, none due)
 
-## Post #96 Published Twice on LinkedIn
-**Date added: 2026-04-28**
+## ✅ Post #96 Published Twice — CONFIRMED MANUAL 2026-04-28
 
-- `schedulable_id: 96` published twice at 02:35 and 02:38 on Apr 28
-- Duplicate publish bug — same post, same platform, 3 minutes apart
-- Fix was deployed (delete failed records before Publish Now retry) but this happened AFTER that fix
-- Needs investigation — may be a scheduled post firing twice from the queue
+Both #94 and #96 duplicate publishes on Apr 28 were manual retries by the user, not a queue bug.
 
-## Debug Log to Remove
-- `FetchSinglePostAnalytics.php` line 28 has a temporary debug log — remove once hourly run is confirmed working
+## ✅ Debug Log Removed — 2026-04-28
+
+Temporary debug log in `FetchSinglePostAnalytics.php` removed after scheduler confirmed working.
