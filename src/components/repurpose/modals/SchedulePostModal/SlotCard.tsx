@@ -121,11 +121,6 @@ export default function SlotCard({
                                         <Clock size={7} className="text-white" />
                                     </span>
                                 )}
-                                {state.kind === 'failed' && (
-                                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                                        <AlertTriangle size={7} className="text-white" />
-                                    </span>
-                                )}
                             </button>
                         </Tooltip>
                     );

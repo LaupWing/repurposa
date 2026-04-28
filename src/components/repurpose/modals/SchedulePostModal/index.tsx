@@ -9,11 +9,12 @@ import {
     X,
     Trash2,
     Repeat2,
+    Zap,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
-import { getPublishingSchedule, createScheduledPost, updateScheduledPost, getScheduledPosts, deleteScheduledPost, getRepostSchedule } from '@/services/scheduleApi';
+import { getPublishingSchedule, createScheduledPost, updateScheduledPost, getScheduledPosts, deleteScheduledPost, getRepostSchedule, publishNow } from '@/services/scheduleApi';
 import { getSocialAccounts } from '@/services/profileApi';
 import { renderVisual } from '@/services/repurposeApi';
 import type { SocialAccount, ScheduledPost as ScheduledPostType, ShortPostSchedule, Visual } from '@/types';
@@ -75,6 +76,7 @@ export default function SchedulePostModal({
     const [useCustom, setUseCustom] = useState(false);
     const [slotPage, setSlotPage] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isPublishingNow, setIsPublishingNow] = useState(false);
     const [removingId, setRemovingId] = useState<number | null>(null);
     const [initialSelection, setInitialSelection] = useState<{ slotIndex: number | null; platforms: SchedulePlatform[] } | null>(null);
     const repost = useAutoRepost(socialAccounts, selectedPlatforms);
@@ -347,6 +349,43 @@ export default function SchedulePostModal({
         }
     };
 
+    const handlePublishNow = async () => {
+        const accountIds = selectedPlatforms
+            .map(p => socialAccounts.find(a => a.platform === UI_TO_API_PLATFORM[p]))
+            .filter(Boolean)
+            .map(a => a!.id);
+
+        if (accountIds.length === 0) {
+            toast.error('No platforms selected');
+            return;
+        }
+
+        setIsPublishingNow(true);
+        try {
+            const res = await publishNow({
+                social_account_ids: accountIds,
+                schedulable_type: contentType,
+                schedulable_id: post.id,
+            });
+
+            const failed = res.results.filter(r => r.status === 'failed');
+            const succeeded = res.results.filter(r => r.status === 'published' || r.status === 'partial');
+
+            if (succeeded.length > 0) {
+                toast.success(`Published to ${succeeded.length} platform${succeeded.length > 1 ? 's' : ''}`);
+            }
+            failed.forEach(r => toast.error(`${r.platform}: ${r.error}`));
+
+            if (succeeded.length > 0) onScheduled([]);
+        } catch (error) {
+            toast.error('Publish failed', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsPublishingNow(false);
+        }
+    };
+
     // Visual rendering
     const visualSlides = visual ? (Array.isArray(visual.content) ? visual.content : [visual.content]) : [];
     const gradientPreset = visual ? (GRADIENT_PRESETS.find(g => g.id === visual.settings.gradient_id) || GRADIENT_PRESETS[0]) : GRADIENT_PRESETS[0];
@@ -587,6 +626,14 @@ export default function SchedulePostModal({
                                 {removingId !== null ? 'Removing...' : 'Unschedule'}
                             </button>
                         )}
+                        <button
+                            onClick={handlePublishNow}
+                            disabled={isPublishingNow || isSubmitting || selectedPlatforms.length === 0}
+                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            <Zap size={14} />
+                            {isPublishingNow ? 'Publishing...' : 'Publish Now'}
+                        </button>
                     </div>
                     <div className="flex items-center gap-3">
                         <button
