@@ -13,7 +13,7 @@ import {
 import { toast } from 'sonner';
 import type { Platform, PostType, PostStatus, DayOfWeek, TimeSlot, DaySchedule, ScheduledPost } from './types';
 import { PLATFORMS, POST_TYPES } from './types';
-import { formatTime, generateSlotId } from './helpers';
+import { formatTime, generateSlotId, PLATFORM_ORDER } from './helpers';
 
 // ============================================
 // BADGES & INDICATORS
@@ -307,7 +307,7 @@ export function EmptySlotCard({ timeLabel, platforms, onClick }: { timeLabel: st
             {/* Platforms + empty label */}
             <div className="flex-1 flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
-                    {platforms.map((platformId) => {
+                    {[...platforms].sort((a, b) => PLATFORM_ORDER.indexOf(a) - PLATFORM_ORDER.indexOf(b)).map((platformId) => {
                         const p = PLATFORMS.find((pl) => pl.id === platformId);
                         if (!p) return null;
                         return (

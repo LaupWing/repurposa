@@ -48,7 +48,7 @@ export function mapApiPost(apiPost: ApiScheduledPost): ScheduledPost {
     };
 }
 
-const PLATFORM_ORDER: Platform[] = ['x', 'linkedin', 'threads', 'instagram', 'facebook'];
+export const PLATFORM_ORDER: Platform[] = ['x', 'linkedin', 'threads', 'instagram', 'facebook'];
 
 export function groupScheduledPosts(posts: ScheduledPost[]): ScheduledPost[] {
     const groups = new Map<string, ScheduledPost>();
