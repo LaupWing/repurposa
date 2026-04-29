@@ -127,9 +127,9 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
     const [threadPosts, setThreadPosts] = useState<string[]>(['']);
     const threadPostRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
-    // Images & CTA for short post composer
-    const [createImages, setCreateImages] = useState<MediaItem[]>([]);
-    const [showCreateImagePicker, setShowCreateImagePicker] = useState(false);
+    // Media & CTA for short post composer
+    const [createMedia, setCreateMedia] = useState<MediaItem[]>([]);
+    const [showMediaPicker, setShowMediaPicker] = useState(false);
     const [createCta, setCreateCta] = useState('');
     const [showCtaField, setShowCtaField] = useState(false);
     const createCtaRef = useRef<HTMLTextAreaElement>(null);
@@ -156,8 +156,8 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
         setCreateType(initialThreadDraft ? 'thread' : 'short_post');
         setCreateText(initialDraftContent || '');
         setThreadPosts(initialThreadDraft ? [initialThreadDraft.hook, ...initialThreadDraft.posts] : ['']);
-        setCreateImages([]);
-        setShowCreateImagePicker(false);
+        setCreateMedia([]);
+        setShowMediaPicker(false);
         setCreateCta('');
         setShowCtaField(false);
         setThreadPostImages({});
@@ -447,20 +447,20 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                         />
                                     </div>
 
-                                    {/* Image Grid */}
-                                    {createImages.length > 0 && (
+                                    {/* Media Grid */}
+                                    {createMedia.length > 0 && (
                                         <ImageGrid
-                                            media={createImages}
-                                            onRemove={(i) => setCreateImages(prev => prev.filter((_, idx) => idx !== i))}
+                                            media={createMedia}
+                                            onRemove={(i) => setCreateMedia(prev => prev.filter((_, idx) => idx !== i))}
                                             onReorder={(from, to) => {
-                                                setCreateImages(prev => {
+                                                setCreateMedia(prev => {
                                                     const updated = [...prev];
                                                     const [moved] = updated.splice(from, 1);
                                                     updated.splice(to, 0, moved);
                                                     return updated;
                                                 });
                                             }}
-                                            onAddClick={() => setShowCreateImagePicker(true)}
+                                            onAddClick={() => setShowMediaPicker(true)}
                                         />
                                     )}
 
@@ -487,8 +487,8 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <button
-                                                onClick={() => setShowCreateImagePicker(true)}
-                                                disabled={createImages.length >= 4}
+                                                onClick={() => setShowMediaPicker(true)}
+                                                disabled={createMedia.length >= 4}
                                                 className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
                                             >
                                                 <ImagePlus size={14} />
@@ -562,7 +562,10 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                                 }
                                                 setIsPublishing(true);
                                                 try {
-                                                    const result = await createStandaloneShortPost({ content: createText.trim() });
+                                                    const result = await createStandaloneShortPost({
+                                                        content: createText.trim(),
+                                                        media: createMedia.length > 0 ? createMedia.map(m => m.url) : undefined,
+                                                    });
                                                     await publishNow({
                                                         social_account_ids: accountIds,
                                                         schedulable_type: 'short_post',
@@ -593,6 +596,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                                 try {
                                                     const result = await createStandaloneShortPost({
                                                         content: createText.trim(),
+                                                        media: createMedia.length > 0 ? createMedia.map(m => m.url) : undefined,
                                                         social_account_ids: accountIds,
                                                         scheduled_at: scheduledAt.toISOString(),
                                                     });
@@ -627,11 +631,11 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                     })()}
 
                                     <ImagePickerModal
-                                        isOpen={showCreateImagePicker}
-                                        onClose={() => setShowCreateImagePicker(false)}
+                                        isOpen={showMediaPicker}
+                                        onClose={() => setShowMediaPicker(false)}
                                         onSelect={(url, type, mime) => {
-                                            setCreateImages(prev => [...prev, { url, type, mime }]);
-                                            setShowCreateImagePicker(false);
+                                            setCreateMedia(prev => [...prev, { url, type, mime }]);
+                                            setShowMediaPicker(false);
                                         }}
                                     />
                                 </div>
@@ -785,7 +789,10 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                                 try {
                                                     const result = await createStandaloneThread({
                                                         hook: filledPosts[0],
-                                                        posts: filledPosts.slice(1).map(content => ({ content })),
+                                                        posts: filledPosts.slice(1).map((content, i) => ({
+                                                            content,
+                                                            media: threadPostImages[i + 1]?.length > 0 ? threadPostImages[i + 1].map(m => m.url) : null,
+                                                        })),
                                                     });
                                                     await publishNow({
                                                         social_account_ids: accountIds,
@@ -821,7 +828,10 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                                 try {
                                                     const result = await createStandaloneThread({
                                                         hook: filledPosts[0],
-                                                        posts: filledPosts.slice(1).map(content => ({ content })),
+                                                        posts: filledPosts.slice(1).map((content, i) => ({
+                                                            content,
+                                                            media: threadPostImages[i + 1]?.length > 0 ? threadPostImages[i + 1].map(m => m.url) : null,
+                                                        })),
                                                         social_account_ids: accountIds,
                                                         scheduled_at: scheduledAt.toISOString(),
                                                     });

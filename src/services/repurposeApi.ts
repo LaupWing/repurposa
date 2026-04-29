@@ -57,6 +57,7 @@ export async function getStandaloneShortPosts(): Promise<ShortPost[]> {
 
 export async function createStandaloneShortPost(data: {
     content: string;
+    media?: string[];
     social_account_ids?: number[];
     scheduled_at?: string;
 }): Promise<{ short_post: ShortPost; scheduled_posts: import('@/types').ScheduledPost[] }> {
@@ -74,7 +75,7 @@ export async function getStandaloneThreads(): Promise<ThreadItem[]> {
 
 export async function createStandaloneThread(data: {
     hook: string;
-    posts: { content: string }[];
+    posts: { content: string; media?: string[] | null }[];
     social_account_ids?: number[];
     scheduled_at?: string;
 }): Promise<{ thread: ThreadItem; scheduled_posts: import('@/types').ScheduledPost[] }> {
