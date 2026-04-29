@@ -84,7 +84,11 @@ export default function ImagePickerModal({
                 const response = await apiFetch<MediaItem[]>({
                     path: '/wp/v2/media?per_page=100&orderby=date&order=desc',
                 });
-                setImages(response.filter(m => m.media_type === 'image' || m.media_type === 'video'));
+                setImages(response.filter(m =>
+                    m.media_type === 'image' ||
+                    m.media_type === 'video' ||
+                    (m.mime_type && (m.mime_type.startsWith('image/') || m.mime_type.startsWith('video/')))
+                ));
             } catch (error) {
                 console.error('Failed to fetch images:', error);
             } finally {
@@ -114,7 +118,7 @@ export default function ImagePickerModal({
 
                 setImages(prev => [uploaded, ...prev]);
                 setSelectedImage(uploaded.source_url);
-                setSelectedMediaType(uploaded.media_type === 'video' ? 'video' : 'image');
+                setSelectedMediaType((uploaded.media_type === 'video' || uploaded.mime_type?.startsWith('video/')) ? 'video' : 'image');
                 setSelectedMime(uploaded.mime_type);
             }
         } catch (error) {
@@ -437,7 +441,7 @@ export default function ImagePickerModal({
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                     <div>
                         <h3 className="font-semibold text-lg text-gray-900">
-                            Choose Image
+                            Choose Media
                         </h3>
                         <p className="text-sm text-gray-500 mt-0.5">
                             Select from library or generate with AI
@@ -524,7 +528,7 @@ export default function ImagePickerModal({
                                 <div className="relative flex-1">
                                 <input
                                     type="text"
-                                    placeholder="Search images..."
+                                    placeholder="Search media..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="w-full h-10 pl-10 pr-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -554,7 +558,7 @@ export default function ImagePickerModal({
                                                 key={image.id}
                                                 onClick={() => {
                                                     setSelectedImage(image.source_url);
-                                                    setSelectedMediaType(image.media_type === 'video' ? 'video' : 'image');
+                                                    setSelectedMediaType((image.media_type === 'video' || image.mime_type?.startsWith('video/')) ? 'video' : 'image');
                                                     setSelectedMime(image.mime_type);
                                                     setShowModifyInput(false);
                                                 }}
@@ -564,7 +568,7 @@ export default function ImagePickerModal({
                                                         : 'border-transparent hover:border-gray-300'
                                                 }`}
                                             >
-                                                {image.media_type === 'video' ? (
+                                                {(image.media_type === 'video' || image.mime_type?.startsWith('video/')) ? (
                                                     <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center gap-1 px-1">
                                                         <Play size={20} className="text-white shrink-0" />
                                                         <span className="text-[10px] text-gray-400 text-center truncate w-full">{image.title.rendered}</span>
@@ -948,7 +952,7 @@ export default function ImagePickerModal({
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
                         >
                             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                            {isSaving ? 'Saving...' : 'Select Image'}
+                            {isSaving ? 'Saving...' : 'Select Media'}
                         </button>
                     </div>
                 </div>
