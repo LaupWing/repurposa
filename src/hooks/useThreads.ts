@@ -65,14 +65,14 @@ export function useThreads(
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
             ));
-            updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
+            updateThread(thread.id, { posts: postsToApi(updatedPosts) }).catch(() => toast.error('Failed to save'));
         },
         onDeletePost: (postIndex: number) => {
             const updatedPosts = thread.posts.filter((_, i) => i !== postIndex);
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
             ));
-            updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
+            updateThread(thread.id, { posts: postsToApi(updatedPosts) }).catch(() => toast.error('Failed to save'));
         },
         onInsertPost: (afterIndex: number) => {
             const updatedPosts = [...thread.posts.slice(0, afterIndex + 1), { content: '', media: null }, ...thread.posts.slice(afterIndex + 1)];
@@ -92,7 +92,7 @@ export function useThreads(
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t
             ));
-            updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
+            updateThread(thread.id, { posts: postsToApi(updatedPosts) }).catch(() => toast.error('Failed to save'));
             toast.success('CTA saved');
         },
         onAddImage: (postIndex: number, url: string, type: 'image' | 'video' = 'image', mime?: string) => {
