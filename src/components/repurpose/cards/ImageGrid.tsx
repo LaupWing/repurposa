@@ -42,16 +42,16 @@ function SortableImage({ id, src, type, pending, onRemove }: { id: string; src: 
             {...listeners}
         >
             {type === 'video' ? (
-                <video src={src} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                <video
+                    src={src}
+                    className="w-full h-full object-cover"
+                    controls
+                    playsInline
+                    preload="metadata"
+                    onPointerDown={(e) => e.stopPropagation()}
+                />
             ) : (
                 <img src={src} alt="" className="w-full h-full object-cover" />
-            )}
-            {type === 'video' && !pending && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
-                        <Play size={14} className="text-white ml-0.5" />
-                    </div>
-                </div>
             )}
             {pending && (
                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
