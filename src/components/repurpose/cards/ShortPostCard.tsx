@@ -82,10 +82,10 @@ interface ShortPostCardProps {
     onEditCta: (content: string) => void;
     onSchedule: () => void;
     onPublishNow: () => void;
-    onAddImage: (imageUrl: string) => void;
+    onAddImage: (url: string, type: 'image' | 'video', mime?: string) => void;
     onRemoveImage: (imageIndex: number) => void;
     onReorderImages: (from: number, to: number) => void;
-    onAddCtaImage: (imageUrl: string) => void;
+    onAddCtaImage: (url: string, type: 'image' | 'video', mime?: string) => void;
     onRemoveCtaImage: (imageIndex: number) => void;
     onReorderCtaImages: (from: number, to: number) => void;
     onVisualSaved?: (visual: Visual) => void;
@@ -176,6 +176,7 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
     const handleSaveEdit = () => {
         onEdit(editContent);
         setIsEditing(false);
+
         toast.success('Post saved');
     };
 
@@ -719,16 +720,16 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
             <ImagePickerModal
                 isOpen={showImagePicker}
                 onClose={() => setShowImagePicker(false)}
-                onSelect={(imageUrl) => {
-                    onAddImage(imageUrl);
+                onSelect={(url, type, mime) => {
+                    onAddImage(url, type, mime);
                     setShowImagePicker(false);
                 }}
             />
             <ImagePickerModal
                 isOpen={showCtaImagePicker}
                 onClose={() => setShowCtaImagePicker(false)}
-                onSelect={(imageUrl) => {
-                    onAddCtaImage(imageUrl);
+                onSelect={(url, type, mime) => {
+                    onAddCtaImage(url, type, mime);
                     setShowCtaImagePicker(false);
                 }}
             />

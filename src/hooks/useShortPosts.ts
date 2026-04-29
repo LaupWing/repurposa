@@ -151,8 +151,8 @@ export function useShortPosts(
             setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, cta_content: content } : p));
             updateShortPost(pattern.id, { cta_content: { content, media: pattern.cta_media.length > 0 ? pattern.cta_media : null } }).catch(() => toast.error('Failed to save'));
         },
-        onAddImage: (imageUrl: string) => {
-            const newMedia: MediaItem[] = [...pattern.media, { url: imageUrl, type: 'image' as const }].slice(0, 4);
+        onAddImage: (url: string, type: 'image' | 'video' = 'image', mime?: string) => {
+            const newMedia: MediaItem[] = [...pattern.media, { url, type, mime }].slice(0, 4);
             setShortPosts(prev => prev.map(p => p.id === pattern.id ? { ...p, media: newMedia } : p));
             syncShortPostMedia(pattern.id, newMedia);
         },

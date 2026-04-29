@@ -7,13 +7,15 @@
 
 import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { X, Search, Check, Loader2, Image as ImageIcon, Sparkles, Wand2, MoveHorizontal, Sun, Palette, PenTool, Eraser, Focus, Maximize2, Minimize2, Upload } from 'lucide-react';
+import { X, Search, Check, Loader2, Image as ImageIcon, Sparkles, Wand2, MoveHorizontal, Sun, Palette, PenTool, Eraser, Focus, Maximize2, Minimize2, Upload, Play } from 'lucide-react';
 import { apiRequest } from '@/services/client';
 
 interface MediaItem {
     id: number;
     source_url: string;
     alt_text: string;
+    media_type: string;
+    mime_type?: string;
     media_details: {
         width: number;
         height: number;
@@ -30,7 +32,7 @@ interface MediaItem {
 interface ImagePickerModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (imageUrl: string) => void;
+    onSelect: (url: string, type: 'image' | 'video', mime?: string) => void;
     currentImage?: string;
 }
 
@@ -47,6 +49,8 @@ export default function ImagePickerModal({
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedImage, setSelectedImage] = useState<string | null>(currentImage || null);
+    const [selectedMediaType, setSelectedMediaType] = useState<'image' | 'video'>('image');
+    const [selectedMime, setSelectedMime] = useState<string | undefined>(undefined);
 
     // AI Generate state
     const [generatePrompt, setGeneratePrompt] = useState('');
@@ -78,9 +82,9 @@ export default function ImagePickerModal({
             setIsLoading(true);
             try {
                 const response = await apiFetch<MediaItem[]>({
-                    path: '/wp/v2/media?media_type=image&per_page=50&orderby=date&order=desc',
+                    path: '/wp/v2/media?per_page=100&orderby=date&order=desc',
                 });
-                setImages(response);
+                setImages(response.filter(m => m.media_type === 'image' || m.media_type === 'video'));
             } catch (error) {
                 console.error('Failed to fetch images:', error);
             } finally {
@@ -93,7 +97,7 @@ export default function ImagePickerModal({
 
     // Upload file to WordPress media library
     const handleUploadFiles = useCallback(async (files: FileList | File[]) => {
-        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
         if (imageFiles.length === 0) return;
 
         setIsUploading(true);
@@ -110,6 +114,8 @@ export default function ImagePickerModal({
 
                 setImages(prev => [uploaded, ...prev]);
                 setSelectedImage(uploaded.source_url);
+                setSelectedMediaType(uploaded.media_type === 'video' ? 'video' : 'image');
+                setSelectedMime(uploaded.mime_type);
             }
         } catch (error) {
             console.error('Failed to upload image:', error);
@@ -206,7 +212,7 @@ export default function ImagePickerModal({
                     body: formData,
                 });
 
-                onSelect(uploaded.source_url);
+                onSelect(uploaded.source_url, 'image', uploaded.mime_type);
                 onClose();
             } catch (error) {
                 console.error('Failed to save generated image:', error);
@@ -216,7 +222,7 @@ export default function ImagePickerModal({
             return;
         }
 
-        onSelect(selectedImage);
+        onSelect(selectedImage, selectedMediaType, selectedMime);
         onClose();
     };
 
@@ -494,7 +500,7 @@ export default function ImagePickerModal({
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,video/*"
                                 multiple
                                 className="hidden"
                                 onChange={(e) => {
@@ -548,6 +554,8 @@ export default function ImagePickerModal({
                                                 key={image.id}
                                                 onClick={() => {
                                                     setSelectedImage(image.source_url);
+                                                    setSelectedMediaType(image.media_type === 'video' ? 'video' : 'image');
+                                                    setSelectedMime(image.mime_type);
                                                     setShowModifyInput(false);
                                                 }}
                                                 className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
@@ -556,11 +564,18 @@ export default function ImagePickerModal({
                                                         : 'border-transparent hover:border-gray-300'
                                                 }`}
                                             >
-                                                <img
-                                                    src={getThumbnailUrl(image)}
-                                                    alt={image.alt_text || image.title.rendered}
-                                                    className="w-full h-full object-cover"
-                                                />
+                                                {image.media_type === 'video' ? (
+                                                    <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center gap-1 px-1">
+                                                        <Play size={20} className="text-white shrink-0" />
+                                                        <span className="text-[10px] text-gray-400 text-center truncate w-full">{image.title.rendered}</span>
+                                                    </div>
+                                                ) : (
+                                                    <img
+                                                        src={getThumbnailUrl(image)}
+                                                        alt={image.alt_text || image.title.rendered}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                )}
                                                 {selectedImage === image.source_url && (
                                                     <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
                                                         <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -693,7 +708,7 @@ export default function ImagePickerModal({
                 </div>
 
                 {/* Modify with AI Input - shows above footer when active */}
-                {showModifyInput && selectedImage && activeTab === 'library' && (
+                {showModifyInput && selectedImage && activeTab === 'library' && selectedMediaType !== 'video' && (
                     <div className={`relative px-6 py-4 border-t border-gray-200 bg-blue-50 overflow-visible ${isModifyExpanded ? 'flex-1 flex flex-col' : ''}`}>
 
                         {/* Preview of modified image */}
@@ -918,7 +933,7 @@ export default function ImagePickerModal({
                         Cancel
                     </button>
                     <div className="flex items-center gap-3">
-                        {selectedImage && activeTab === 'library' && !showModifyInput && (
+                        {selectedImage && activeTab === 'library' && !showModifyInput && selectedMediaType !== 'video' && (
                             <button
                                 onClick={() => setShowModifyInput(true)}
                                 className="flex items-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"

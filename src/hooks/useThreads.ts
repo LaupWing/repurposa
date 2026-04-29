@@ -95,9 +95,9 @@ export function useThreads(
             updateThread(thread.id, { posts: updatedPosts }).catch(() => toast.error('Failed to save'));
             toast.success('CTA saved');
         },
-        onAddImage: (postIndex: number, imageUrl: string) => {
+        onAddImage: (postIndex: number, url: string, type: 'image' | 'video' = 'image', mime?: string) => {
             const updatedPosts = thread.posts.map((p, i) =>
-                i === postIndex ? { ...p, media: [...(p.media || []), { url: imageUrl, type: 'image' as const }].slice(0, 4) } : p
+                i === postIndex ? { ...p, media: [...(p.media || []), { url, type, mime }].slice(0, 4) } : p
             );
             setThreads(prev => prev.map(t =>
                 t.id === thread.id ? { ...t, posts: updatedPosts } : t

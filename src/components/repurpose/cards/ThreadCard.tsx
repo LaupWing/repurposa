@@ -85,7 +85,7 @@ function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onIns
     onEdit: (content: string) => void;
     onDelete: () => void;
     onInsertBelow: () => void;
-    onAddImage: (imageUrl: string) => void;
+    onAddImage: (url: string, type: 'image' | 'video', mime?: string) => void;
     onRemoveImage: (imageIndex: number) => void;
     onReorderImages: (from: number, to: number) => void;
     autoEdit?: boolean;
@@ -270,8 +270,8 @@ function ThreadPostItem({ post, idx, isLast, hideInsert, onEdit, onDelete, onIns
             <ImagePickerModal
                 isOpen={showImagePicker}
                 onClose={() => setShowImagePicker(false)}
-                onSelect={(imageUrl) => {
-                    onAddImage(imageUrl);
+                onSelect={(url, type, mime) => {
+                    onAddImage(url, type, mime);
                     setShowImagePicker(false);
                 }}
             />
@@ -302,7 +302,7 @@ interface ThreadCardProps {
     onDelete: () => void;
     onInsertCtaPost: (afterIndex: number, content: string) => void;
     onGenerateCta: (content: string[]) => Promise<string | null>;
-    onAddImage: (postIndex: number, imageUrl: string) => void;
+    onAddImage: (postIndex: number, url: string, type: 'image' | 'video', mime?: string) => void;
     onRemoveImage: (postIndex: number, imageIndex: number) => void;
     onReorderImages: (postIndex: number, from: number, to: number) => void;
     blogId?: number;
@@ -607,7 +607,7 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                                     onEdit={(content) => onEditPost(idx, content)}
                                     onDelete={() => handleDeletePost(idx)}
                                     onInsertBelow={() => handleInsertPost(idx)}
-                                    onAddImage={(url) => onAddImage(idx, url)}
+                                    onAddImage={(url, type, mime) => onAddImage(idx, url, type, mime)}
                                     onRemoveImage={(imgIdx) => onRemoveImage(idx, imgIdx)}
                                     onReorderImages={(from, to) => onReorderImages(idx, from, to)}
                                     autoEdit={autoEditIndex === idx}
