@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { getBlogs } from '@/services/blogApi';
 import { getShortPosts, getThreads, getVisuals, createStandaloneShortPost, createStandaloneThread } from '@/services/repurposeApi';
 import { getSocialAccounts } from '@/services/profileApi';
-import { createScheduledPost } from '@/services/scheduleApi';
+import { createScheduledPost, publishNow } from '@/services/scheduleApi';
 import { SCHEDULE_PLATFORMS, UI_TO_API_PLATFORM, PLATFORM_CHAR_LIMITS, getUnsupportedReason, getDateInTz, getTimeInTz, slotToDate } from '@/components/repurpose/modals/schedule-utils';
 import { TimezoneLabel } from '@/components/TimezoneLabel';
 import type { SchedulePlatform } from '@/components/repurpose/modals/schedule-utils';
@@ -14,7 +14,7 @@ import ImagePickerModal from '@/components/ImagePickerModal';
 import { ImageGrid } from '@/components/repurpose/cards/ImageGrid';
 import AutoRepostModal from '@/components/repurpose/modals/SchedulePostModal/AutoRepostModal';
 import { useAutoRepost } from '@/hooks/useAutoRepost';
-import type { BlogPost, ShortPost, ThreadItem, Visual, SocialAccount } from '@/types';
+import type { BlogPost, ShortPost, ThreadItem, Visual, SocialAccount, MediaItem } from '@/types';
 
 // ============================================
 // HELPER COMPONENTS
@@ -114,6 +114,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
     const [blogContent, setBlogContent] = useState<Record<number, BlogContent>>({});
     const [loadingBlogId, setLoadingBlogId] = useState<number | null>(null);
     const [isScheduling, setIsScheduling] = useState(false);
+    const [isPublishing, setIsPublishing] = useState(false);
     const [schedulingItemId, setSchedulingItemId] = useState<string | null>(null);
     const [blogContentTab, setBlogContentTab] = useState<Record<number, 'short_post' | 'thread' | 'visual'>>({});
     const [contentPage, setContentPage] = useState<Record<string, number>>({});
@@ -127,14 +128,14 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
     const threadPostRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
     // Images & CTA for short post composer
-    const [createImages, setCreateImages] = useState<string[]>([]);
+    const [createImages, setCreateImages] = useState<MediaItem[]>([]);
     const [showCreateImagePicker, setShowCreateImagePicker] = useState(false);
     const [createCta, setCreateCta] = useState('');
     const [showCtaField, setShowCtaField] = useState(false);
     const createCtaRef = useRef<HTMLTextAreaElement>(null);
 
     // Images for thread posts (per-post)
-    const [threadPostImages, setThreadPostImages] = useState<Record<number, string[]>>({});
+    const [threadPostImages, setThreadPostImages] = useState<Record<number, MediaItem[]>>({});
     const [threadImagePickerIdx, setThreadImagePickerIdx] = useState<number | null>(null);
 
     // Auto-repost
@@ -147,6 +148,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
         setPlatforms(slotPlatforms);
         setIsEditingTime(false);
         setIsScheduling(false);
+        setIsPublishing(false);
         setSchedulingItemId(null);
         setExpandedBlogId(null);
         setBlogContent({});
@@ -540,13 +542,48 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                         </div>
                                     )}
 
-                                    {/* Create & Schedule */}
+                                    {/* Create & Schedule / Publish Now */}
                                     {(() => {
                                         const spError = platforms.map(p => getUnsupportedReason(p, 'short_post', createText.length, null, socialAccounts)).find(Boolean);
+                                        const accountIds = platforms
+                                            .map(platformId => {
+                                                const apiPlatform = UI_TO_API_PLATFORM[platformId];
+                                                return socialAccounts.find(a => a.platform === apiPlatform)?.id;
+                                            })
+                                            .filter((id): id is number => id !== undefined);
                                         return (
-                                    <div className="mt-4 flex justify-end">
+                                    <div className="mt-4 flex items-center justify-between">
                                         <button
-                                            disabled={!createText.trim() || isScheduling || platforms.length === 0 || !!spError}
+                                            disabled={!createText.trim() || isPublishing || isScheduling || platforms.length === 0 || !!spError}
+                                            onClick={async () => {
+                                                if (platforms.length === 0) {
+                                                    toast.error('Select at least one platform');
+                                                    return;
+                                                }
+                                                setIsPublishing(true);
+                                                try {
+                                                    const result = await createStandaloneShortPost({ content: createText.trim() });
+                                                    await publishNow({
+                                                        social_account_ids: accountIds,
+                                                        schedulable_type: 'short_post',
+                                                        schedulable_id: result.short_post.id,
+                                                    });
+                                                    const platformNames = platforms.map(id => SCHEDULE_PLATFORMS.find(p => p.id === id)?.name).filter(Boolean).join(', ');
+                                                    toast.success('Post published!', { description: platformNames });
+                                                    onScheduled();
+                                                    onClose();
+                                                } catch {
+                                                    toast.error('Failed to publish post');
+                                                } finally {
+                                                    setIsPublishing(false);
+                                                }
+                                            }}
+                                            className="px-4 py-2 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        >
+                                            {isPublishing ? <Loader2 size={12} className="animate-spin" /> : 'Publish Now'}
+                                        </button>
+                                        <button
+                                            disabled={!createText.trim() || isScheduling || isPublishing || platforms.length === 0 || !!spError}
                                             onClick={async () => {
                                                 if (platforms.length === 0) {
                                                     toast.error('Select at least one platform');
@@ -554,13 +591,6 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                                 }
                                                 setIsScheduling(true);
                                                 try {
-                                                    const accountIds = platforms
-                                                        .map(platformId => {
-                                                            const apiPlatform = UI_TO_API_PLATFORM[platformId];
-                                                            return socialAccounts.find(a => a.platform === apiPlatform)?.id;
-                                                        })
-                                                        .filter((id): id is number => id !== undefined);
-
                                                     const result = await createStandaloneShortPost({
                                                         content: createText.trim(),
                                                         social_account_ids: accountIds,
@@ -599,8 +629,8 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                     <ImagePickerModal
                                         isOpen={showCreateImagePicker}
                                         onClose={() => setShowCreateImagePicker(false)}
-                                        onSelect={(url) => {
-                                            setCreateImages(prev => [...prev, url]);
+                                        onSelect={(url, type, mime) => {
+                                            setCreateImages(prev => [...prev, { url, type, mime }]);
                                             setShowCreateImagePicker(false);
                                         }}
                                     />
@@ -686,7 +716,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                                                 onClick={() => {
                                                                     setThreadPosts(prev => prev.filter((_, i) => i !== idx));
                                                                     setThreadPostImages(prev => {
-                                                                        const updated: Record<number, string[]> = {};
+                                                                        const updated: Record<number, MediaItem[]> = {};
                                                                         Object.entries(prev).forEach(([key, val]) => {
                                                                             const k = Number(key);
                                                                             if (k < idx) updated[k] = val;
@@ -720,9 +750,17 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                         </button>
                                     </div>
 
-                                    {/* Create & Schedule */}
+                                    {/* Create & Schedule / Publish Now */}
                                     {(() => {
                                         const threadError = platforms.map(p => getUnsupportedReason(p, 'thread', undefined, threadPosts.filter(t => t.trim()), socialAccounts)).find(Boolean);
+                                        const filledPosts = threadPosts.filter(p => p.trim());
+                                        const isDisabled = !threadPosts[0]?.trim() || filledPosts.length < 2 || platforms.length === 0 || !!threadError;
+                                        const accountIds = platforms
+                                            .map(platformId => {
+                                                const apiPlatform = UI_TO_API_PLATFORM[platformId];
+                                                return socialAccounts.find(a => a.platform === apiPlatform)?.id;
+                                            })
+                                            .filter((id): id is number => id !== undefined);
                                         return (
                                     <>
                                     {threadError && (
@@ -731,28 +769,56 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                             {threadError}
                                         </div>
                                     )}
-                                    <div className="mt-4 flex justify-end">
+                                    <div className="mt-4 flex items-center justify-between">
                                         <button
-                                            disabled={!threadPosts[0]?.trim() || threadPosts.filter(p => p.trim()).length < 2 || isScheduling || platforms.length === 0 || !!threadError}
+                                            disabled={isDisabled || isPublishing || isScheduling}
                                             onClick={async () => {
                                                 if (platforms.length === 0) {
                                                     toast.error('Select at least one platform');
                                                     return;
                                                 }
-                                                const filledPosts = threadPosts.filter(p => p.trim());
+                                                if (filledPosts.length < 2) {
+                                                    toast.error('A thread needs at least 2 posts');
+                                                    return;
+                                                }
+                                                setIsPublishing(true);
+                                                try {
+                                                    const result = await createStandaloneThread({
+                                                        hook: filledPosts[0],
+                                                        posts: filledPosts.slice(1).map(content => ({ content })),
+                                                    });
+                                                    await publishNow({
+                                                        social_account_ids: accountIds,
+                                                        schedulable_type: 'thread',
+                                                        schedulable_id: result.thread.id,
+                                                    });
+                                                    const platformNames = platforms.map(id => SCHEDULE_PLATFORMS.find(p => p.id === id)?.name).filter(Boolean).join(', ');
+                                                    toast.success('Thread published!', { description: platformNames });
+                                                    onScheduled();
+                                                    onClose();
+                                                } catch {
+                                                    toast.error('Failed to publish thread');
+                                                } finally {
+                                                    setIsPublishing(false);
+                                                }
+                                            }}
+                                            className="px-4 py-2 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        >
+                                            {isPublishing ? <Loader2 size={12} className="animate-spin" /> : 'Publish Now'}
+                                        </button>
+                                        <button
+                                            disabled={isDisabled || isScheduling || isPublishing}
+                                            onClick={async () => {
+                                                if (platforms.length === 0) {
+                                                    toast.error('Select at least one platform');
+                                                    return;
+                                                }
                                                 if (filledPosts.length < 2) {
                                                     toast.error('A thread needs at least 2 posts');
                                                     return;
                                                 }
                                                 setIsScheduling(true);
                                                 try {
-                                                    const accountIds = platforms
-                                                        .map(platformId => {
-                                                            const apiPlatform = UI_TO_API_PLATFORM[platformId];
-                                                            return socialAccounts.find(a => a.platform === apiPlatform)?.id;
-                                                        })
-                                                        .filter((id): id is number => id !== undefined);
-
                                                     const result = await createStandaloneThread({
                                                         hook: filledPosts[0],
                                                         posts: filledPosts.slice(1).map(content => ({ content })),
@@ -793,11 +859,11 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                     <ImagePickerModal
                                         isOpen={threadImagePickerIdx !== null}
                                         onClose={() => setThreadImagePickerIdx(null)}
-                                        onSelect={(url) => {
+                                        onSelect={(url, type, mime) => {
                                             const idx = threadImagePickerIdx!;
                                             setThreadPostImages(prev => ({
                                                 ...prev,
-                                                [idx]: [...(prev[idx] || []), url],
+                                                [idx]: [...(prev[idx] || []), { url, type, mime }],
                                             }));
                                             setThreadImagePickerIdx(null);
                                         }}
