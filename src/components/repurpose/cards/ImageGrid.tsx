@@ -37,9 +37,9 @@ function SortableImage({ id, src, type, pending, onRemove }: { id: string; src: 
         <div
             ref={setNodeRef}
             style={style}
-            className="relative group/img cursor-grab active:cursor-grabbing w-full h-full"
+            className={`relative group/img w-full h-full ${type === 'video' ? '' : 'cursor-grab active:cursor-grabbing'}`}
             {...attributes}
-            {...listeners}
+            {...(type === 'video' ? {} : listeners)}
         >
             {type === 'video' ? (
                 <video
@@ -48,7 +48,6 @@ function SortableImage({ id, src, type, pending, onRemove }: { id: string; src: 
                     controls
                     playsInline
                     preload="metadata"
-                    onPointerDown={(e) => e.stopPropagation()}
                 />
             ) : (
                 <img src={src} alt="" className="w-full h-full object-cover" />
