@@ -1,5 +1,13 @@
 # Urgent Checks
 
+## 🔴 Twitter API Credits Depleted — 2026-04-30
+
+Thread publishing stops at tweet 3 with `402 CreditsDepleted`. No code bug — the Twitter developer account has run out of API credits. Top up at developer.twitter.com → billing.
+
+## 🔴 Schedule Page — "Publish Now" Buttons Not Clickable — 2026-04-30
+
+Social media platform buttons on the schedule page are unresponsive. Cannot manually trigger publish from the UI.
+
 ## ✅ Analytics Hourly Scheduler — CONFIRMED 2026-04-28
 
 Verified in production log — scheduler running correctly:
