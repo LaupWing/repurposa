@@ -2,6 +2,12 @@
 
 ## 🔴 Urgent
 
+### Bug Fixes
+
+-   [ ] **Schedule page — "Publish Now" buttons not clickable** — social media platform buttons unresponsive
+-   [ ] **Remove diagnostic logs** from `TwitterProvider` + `ThreadsProvider` once thread publishing confirmed working end-to-end (memory, timing, per-APPEND, per-poll logs)
+-   [ ] **Auto-retry thread jobs after SIGKILL** — increasing `$tries` doesn't work because the `publishing` guard returns early. Fix: in `failed()`, if partial progress exists and attempts < 3, reset to `pending` and dispatch a new job with a short delay. This gives automatic resume without manual UI retry.
+
 ### QA / Testing
 
 -   [ ] End-to-end test: visuals generate → preview → schedule → publish
