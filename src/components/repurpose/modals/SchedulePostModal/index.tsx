@@ -79,14 +79,40 @@ export default function SchedulePostModal({
     const [isPublishingNow, setIsPublishingNow] = useState(false);
     const [removingId, setRemovingId] = useState<number | null>(null);
     const [initialSelection, setInitialSelection] = useState<{ slotIndex: number | null; platforms: SchedulePlatform[] } | null>(null);
+    const [showPublishPopover, setShowPublishPopover] = useState(false);
+    const [publishNowPlatforms, setPublishNowPlatforms] = useState<SchedulePlatform[]>([]);
     const repost = useAutoRepost(socialAccounts, selectedPlatforms);
+    const publishNowRepost = useAutoRepost(socialAccounts, publishNowPlatforms);
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const publishPopoverRef = useRef<HTMLDivElement>(null);
 
     // Compute platform states (no slot context — for global checks)
     const globalStates = useMemo(() => {
         if (!post) return new Map<SchedulePlatform, PlatformState>();
         return buildPlatformStates(post, contentType, threadPosts, socialAccounts, existingScheduled);
     }, [post, contentType, threadPosts, socialAccounts, existingScheduled]);
+
+    useEffect(() => {
+        if (!showPublishPopover) return;
+        const handler = (e: MouseEvent) => {
+            if (publishPopoverRef.current && !publishPopoverRef.current.contains(e.target as Node)) {
+                setShowPublishPopover(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showPublishPopover]);
+
+    const openPublishPopover = () => {
+        const available = SCHEDULE_PLATFORMS
+            .filter(p => {
+                const state = globalStates.get(p.id);
+                return state && state.kind !== 'disconnected' && state.kind !== 'unsupported';
+            })
+            .map(p => p.id);
+        setPublishNowPlatforms(available);
+        setShowPublishPopover(true);
+    };
 
     // Determine initial selection based on scenarios
     const getInitialSelection = (slots: UpcomingSlot[], accounts: SocialAccount[], scheduled: ScheduledPostType[]) => {
@@ -349,8 +375,9 @@ export default function SchedulePostModal({
         }
     };
 
-    const handlePublishNow = async () => {
-        const accountIds = selectedPlatforms
+    const handlePublishNow = async (platforms: SchedulePlatform[]) => {
+        setShowPublishPopover(false);
+        const accountIds = platforms
             .map(p => socialAccounts.find(a => a.platform === UI_TO_API_PLATFORM[p]))
             .filter(Boolean)
             .map(a => a!.id);
@@ -373,6 +400,7 @@ export default function SchedulePostModal({
 
             if (succeeded.length > 0) {
                 toast.success(`Published to ${succeeded.length} platform${succeeded.length > 1 ? 's' : ''}`);
+                await publishNowRepost.createSchedules(succeeded.map(r => ({ id: r.id, platform: r.platform })));
             }
             failed.forEach(r => toast.error(`${r.platform}: ${r.error}`));
 
@@ -551,7 +579,10 @@ export default function SchedulePostModal({
                             <TimezoneLabel timezone={timezone} />
                         </div>
                     ) : (
-                        <div>
+                        <div className="relative">
+                            {showPublishPopover && (
+                                <div className="absolute -inset-x-5 inset-y-0 bg-white/80 z-10 pointer-events-none" />
+                            )}
                             <label className="block text-sm font-medium text-gray-700 mb-2">Next available slots</label>
                             <div className="grid grid-cols-2 gap-2 overflow-visible">
                                 {pageSlots.map((slot, idx) => {
@@ -626,14 +657,75 @@ export default function SchedulePostModal({
                                 {removingId !== null ? 'Removing...' : 'Unschedule'}
                             </button>
                         )}
-                        <button
-                            onClick={handlePublishNow}
-                            disabled={isPublishingNow || isSubmitting || selectedPlatforms.length === 0}
-                            className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            <Zap size={14} />
-                            {isPublishingNow ? 'Publishing...' : 'Publish Now'}
-                        </button>
+                        <div className="relative" ref={publishPopoverRef}>
+                            {showPublishPopover && (
+                                <div className="absolute bottom-full left-0 mb-2 w-52 bg-white rounded-xl shadow-2xl border border-gray-200 p-3 z-50">
+                                    {publishNowPlatforms.some(p => p === 'x' || p === 'threads') && (
+                                        <Tooltip text="Auto-Repost" delay={0} placement="top">
+                                            <button
+                                                onClick={() => publishNowRepost.toggle()}
+                                                className={`absolute -top-2.5 -right-2.5 flex items-center gap-1 px-1.5 rounded-full text-[11px] font-medium border transition-all z-10 ${
+                                                    publishNowRepost.enabled
+                                                        ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                                                        : 'bg-white text-blue-600 border-blue-300 hover:bg-blue-50'
+                                                }`}
+                                            >
+                                                <Repeat2 size={12} />
+                                                RT
+                                            </button>
+                                        </Tooltip>
+                                    )}
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-xs font-medium text-gray-500">Publish to</p>
+                                        <p className="text-xs text-gray-400">
+                                            {new Date().toLocaleTimeString('en-US', { timeZone: timezone, hour: 'numeric', minute: '2-digit' })}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+                                        {SCHEDULE_PLATFORMS.map(p => {
+                                            const state = globalStates.get(p.id);
+                                            const unavailable = !state || state.kind === 'disconnected' || state.kind === 'unsupported';
+                                            const active = publishNowPlatforms.includes(p.id);
+                                            return (
+                                                <Tooltip key={p.id} text={p.name} delay={0} placement="top">
+                                                    <button
+                                                        disabled={unavailable}
+                                                        onClick={() => setPublishNowPlatforms(prev =>
+                                                            active ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                                                        )}
+                                                        className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${
+                                                            unavailable
+                                                                ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                                                : active
+                                                                    ? `${p.bg} text-white`
+                                                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                                        }`}
+                                                    >
+                                                        {p.icon}
+                                                    </button>
+                                                </Tooltip>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        onClick={() => handlePublishNow(publishNowPlatforms)}
+                                        disabled={publishNowPlatforms.length === 0 || isPublishingNow}
+                                        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <Zap size={12} />
+                                        {isPublishingNow ? 'Publishing...' : 'Publish'}
+                                    </button>
+                                </div>
+                            )}
+                            <button
+                                onClick={openPublishPopover}
+                                disabled={isPublishingNow || isSubmitting}
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <Zap size={14} />
+                                {isPublishingNow ? 'Publishing...' : 'Publish Now'}
+                            </button>
+                        </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <button
@@ -672,6 +764,15 @@ export default function SchedulePostModal({
                 availablePlatforms={repost.availablePlatforms}
                 onSave={repost.save}
                 onClose={repost.closeModal}
+            />}
+            {publishNowRepost.showModal && <AutoRepostModal
+                isOpen
+                publishDate={new Date()}
+                intervals={publishNowRepost.intervals}
+                platforms={publishNowRepost.platforms}
+                availablePlatforms={publishNowRepost.availablePlatforms}
+                onSave={publishNowRepost.save}
+                onClose={publishNowRepost.closeModal}
             />}
         </div>
     );
