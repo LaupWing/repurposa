@@ -629,7 +629,7 @@ export default function SchedulePostModal({
                         <button
                             onClick={handlePublishNow}
                             disabled={isPublishingNow || isSubmitting || selectedPlatforms.length === 0}
-                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <Zap size={14} />
                             {isPublishingNow ? 'Publishing...' : 'Publish Now'}

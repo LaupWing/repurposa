@@ -1,6 +1,6 @@
 {
   "name": "repurposa",
-  "version": "1.0.31",
+  "version": "1.0.32",
   "description": "Create blog posts with AI and repurpose them into social media content",
   "scripts": {
     "build": "wp-scripts build",
