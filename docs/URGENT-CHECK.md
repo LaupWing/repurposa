@@ -4,6 +4,8 @@
 
 Thread publishing stops at tweet 3 with `402 CreditsDepleted`. No code bug — the Twitter developer account has run out of API credits. Top up at developer.twitter.com → billing.
 
+**Root cause identified:** today's multiple thread publishing attempts (23 tweets × several runs) burned through the monthly credit balance mid-thread. Normal daily spend is $0.08–$0.30 (analytics reads + 2–3 posts). One full thread run = ~$0.35 extra.
+
 ## 🔴 Schedule Page — "Publish Now" Buttons Not Clickable — 2026-04-30
 
 Social media platform buttons on the schedule page are unresponsive. Cannot manually trigger publish from the UI.

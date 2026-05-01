@@ -7,6 +7,11 @@
 -   [ ] **Schedule page — "Publish Now" buttons not clickable** — social media platform buttons unresponsive
 -   [ ] **Remove diagnostic logs** from `TwitterProvider` + `ThreadsProvider` once thread publishing confirmed working end-to-end (memory, timing, per-APPEND, per-poll logs)
 -   [ ] **Auto-retry thread jobs after SIGKILL** — increasing `$tries` doesn't work because the `publishing` guard returns early. Fix: in `failed()`, if partial progress exists and attempts < 3, reset to `pending` and dispatch a new job with a short delay. This gives automatic resume without manual UI retry.
+-   [ ] **Twitter $0.20/URL tweet — platform-aware CTA + email fallback**
+    - X raised URL tweet cost to $0.20 on Apr 20 2026 (1900% increase, applies to all URLs incl. t.co). Ref: [TechCrunch](https://techcrunch.com/2026/04/22/x-makes-it-more-expensive-to-post-links-through-its-api/)
+    - Our auto-generated CTA reply links to the blog post → costs $0.20 every Twitter publish. Threads unaffected.
+    - **Fix:** platform-aware CTA — Twitter gets "Follow for more" (no URL), Threads keeps blog link as-is
+    - **Email fallback** — after Twitter publish, email user the original blog-link CTA text in a formatted block so they can copy-paste it as a native reply on X (native posting = free, no API cost). No clipboard API needed in email — just display the text clearly.
 
 ### QA / Testing
 
