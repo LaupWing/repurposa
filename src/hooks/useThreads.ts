@@ -62,10 +62,11 @@ export function useThreads(
     const getCardProps = (thread: ThreadItem) => ({
         onEditPost: (postIndex: number, content: string) => {
             const updatedPosts = thread.posts.map((p, i) => i === postIndex ? { ...p, content } : p);
+            const hookUpdate = postIndex === 0 ? { hook: content } : {};
             setThreads(prev => prev.map(t =>
-                t.id === thread.id ? { ...t, posts: updatedPosts } : t
+                t.id === thread.id ? { ...t, posts: updatedPosts, ...hookUpdate } : t
             ));
-            updateThread(thread.id, { posts: postsToApi(updatedPosts) }).catch(() => toast.error('Failed to save'));
+            updateThread(thread.id, { posts: postsToApi(updatedPosts), ...hookUpdate }).catch(() => toast.error('Failed to save'));
         },
         onDeletePost: (postIndex: number) => {
             const updatedPosts = thread.posts.filter((_, i) => i !== postIndex);

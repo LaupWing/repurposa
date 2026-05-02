@@ -5,7 +5,6 @@
 ### Bug Fixes
 
 -   [ ] **Schedule page — "Publish Now" buttons not clickable** — social media platform buttons unresponsive
--   [ ] **Remove diagnostic logs** from `TwitterProvider` + `ThreadsProvider` once thread publishing confirmed working end-to-end (memory, timing, per-APPEND, per-poll logs)
 -   [ ] **Auto-retry thread jobs after SIGKILL** — increasing `$tries` doesn't work because the `publishing` guard returns early. Fix: in `failed()`, if partial progress exists and attempts < 3, reset to `pending` and dispatch a new job with a short delay. This gives automatic resume without manual UI retry.
 -   [ ] **Twitter $0.20/URL tweet — platform-aware CTA + email fallback**
     - X raised URL tweet cost to $0.20 on Apr 20 2026 (1900% increase, applies to all URLs incl. t.co). Ref: [TechCrunch](https://techcrunch.com/2026/04/22/x-makes-it-more-expensive-to-post-links-through-its-api/)
@@ -68,6 +67,9 @@
 -   [ ] Queue pattern for `generate-outline` / `generate-topics`
 
 ## Completed
+
+-   Thread publishing nginx timeout fix — `SocialPublishController` now dispatches job instead of running publish synchronously; diagnostic logs reduced to milestones
+-   Thread hook syncs with first post on edit — `onEditPost` at index 0 now also updates `hook` in local state and API call
 
 -   Language system (Phases 1–4): detection, content_lang selector, generation, Snelstack publish translation, WP sync translation — using `content_lang` from profile, no per-post language column needed
 -   Auto-repost backend + frontend

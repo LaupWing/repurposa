@@ -1,5 +1,17 @@
 # Urgent Checks
 
+## ✅ Thread Publishing Silently Dying — FIXED 2026-05-02
+
+**Root cause:** `SocialPublishController` called `$provider->publish()` synchronously inside the PHP-FPM HTTP request. nginx killed the request after 60s (`fastcgi_read_timeout`). A 22-post thread takes 160s+ — it was always going to die.
+
+**Fix:** Controller now creates a `pending` ScheduledPost record and dispatches `PublishToSocialPlatform` job immediately, returning `{ status: "publishing" }` to the frontend. Both "Publish Now" and scheduled cron now go through the same job/queue path — no HTTP request involved in the actual publish.
+
+**Frontend:** `SchedulePostModal` treats `publishing` response as queued success (toast). `PublishNowResult.status` type updated to include `publishing`.
+
+**Diagnostic logs** in `TwitterProvider` reduced to vital milestones only (removed per-segment APPEND, per-chunk memory/gc, temp file noise).
+
+---
+
 ## 🔴 Twitter API Credits Depleted — 2026-04-30
 
 Thread publishing stops at tweet 3 with `402 CreditsDepleted`. No code bug — the Twitter developer account has run out of API credits. Top up at developer.twitter.com → billing.
