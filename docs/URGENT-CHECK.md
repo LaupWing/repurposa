@@ -1,5 +1,20 @@
 # Urgent Checks
 
+## ✅ Publish Now — Repost Schedule Never Created — FIXED 2026-05-02
+
+**Root cause:** `handlePublishNow` only called `publishNowRepost.createSchedules()` when the response contained `status: 'published'`. But `SocialPublishController` always returns `status: 'publishing'` (job dispatched to queue, not done yet). So `createSchedules()` never ran → no `repost_schedules` row → job's `createReposts()` found nothing and exited silently.
+
+**The full flow for repost to work:**
+1. Frontend creates `repost_schedules` row (via `createSchedules()`) **before or right as** the job is dispatched
+2. Job runs → `createReposts()` looks up `$post->repostSchedule` → finds the row → creates individual `reposts` rows (one per interval)
+3. Cron job later processes each `reposts` row and fires the actual retweet
+
+`createReposts()` in the job **only creates `reposts` rows** — it never creates the `repost_schedules` row. That's the frontend's job.
+
+**Fix:** `SchedulePostModal/index.tsx` — moved `createSchedules()` call to fire on `queued` results (not just `succeeded`). Scheduled posts go through the same queue path, so the schedule is always created before the job finishes.
+
+**Why scheduling worked:** the scheduled flow calls `repost.createSchedules()` immediately after `createScheduledPost()` resolves — before the job ever fires. Publish Now didn't do the same.
+
 ## ✅ Thread Publishing Silently Dying — FIXED 2026-05-02
 
 **Root cause:** `SocialPublishController` called `$provider->publish()` synchronously inside the PHP-FPM HTTP request. nginx killed the request after 60s (`fastcgi_read_timeout`). A 22-post thread takes 160s+ — it was always going to die.

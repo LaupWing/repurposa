@@ -401,6 +401,7 @@ export default function SchedulePostModal({
 
             if (queued.length > 0) {
                 toast.success(`Publishing ${queued.length} platform${queued.length > 1 ? 's' : ''}…`);
+                await publishNowRepost.createSchedules(queued.map(r => ({ id: r.id, platform: r.platform })));
             }
             if (succeeded.length > 0) {
                 toast.success(`Published to ${succeeded.length} platform${succeeded.length > 1 ? 's' : ''}`);
