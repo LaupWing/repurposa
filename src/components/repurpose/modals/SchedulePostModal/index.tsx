@@ -95,6 +95,7 @@ export default function SchedulePostModal({
     useEffect(() => {
         if (!showPublishPopover) return;
         const handler = (e: MouseEvent) => {
+            if (publishNowRepost.showModal) return;
             if (publishPopoverRef.current && !publishPopoverRef.current.contains(e.target as Node)) {
                 setShowPublishPopover(false);
             }
