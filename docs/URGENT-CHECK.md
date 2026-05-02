@@ -1,5 +1,13 @@
 # Urgent Checks
 
+## ✅ Threads Video UNKNOWN Error — FIXED 2026-05-03
+
+**Root cause:** Meta's server-side video fetcher has an implicit download timeout (~6s). Files over ~8 MB from a VPS time out before Meta finishes downloading → `status: ERROR, error_message: UNKNOWN`. Undocumented — official spec only says 1 GB max.
+
+**Fix:** Lowered Threads target bitrate 5 Mbps → **2 Mbps** in `ThreadsProvider`. All compressed outputs now stay under ~6 MB regardless of video duration. Also added graceful fallback: UNKNOWN video containers retry as text-only so the thread continues.
+
+**⚠️ Outstanding:** VideoCompressor runs inside the publish job (~60s/video). Move compression to save-time before onboarding real users. See [`docs/VIDEO-PUBLISHING.md`](VIDEO-PUBLISHING.md).
+
 ## ✅ Publish Now — Repost Schedule Never Created — FIXED 2026-05-02
 
 **Root cause:** `handlePublishNow` only called `publishNowRepost.createSchedules()` when the response contained `status: 'published'`. But `SocialPublishController` always returns `status: 'publishing'` (job dispatched to queue, not done yet). So `createSchedules()` never ran → no `repost_schedules` row → job's `createReposts()` found nothing and exited silently.

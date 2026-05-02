@@ -64,3 +64,11 @@ TypeScript is configured with `@/*` mapping to `src/*` for imports.
 - `REPURPOSA_VERSION` - Plugin version
 - `REPURPOSA_PLUGIN_DIR` - Server path to plugin directory
 - `REPURPOSA_PLUGIN_URL` - URL to plugin directory
+
+---
+
+## Laravel Backend
+
+Path: `/Users/locnguyen/Desktop/projects/web_projects/laravel/ai-blog-tool`
+
+The plugin is a thin UI layer. All AI generation, social publishing, scheduling, and analytics live in the Laravel backend. See `docs/` for detailed notes on specific subsystems (e.g. [`docs/VIDEO-PUBLISHING.md`](docs/VIDEO-PUBLISHING.md)).
