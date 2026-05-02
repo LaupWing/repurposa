@@ -82,7 +82,21 @@ export async function publishNow(data: {
     schedulable_type: 'short_post' | 'thread' | 'visual';
     schedulable_id: number;
 }): Promise<PublishNowResponse> {
-    return apiRequest<PublishNowResponse>('/social/publish', data as Record<string, unknown>);
+    const t0 = new Date().toISOString();
+    console.log('[publishNow] request', t0, data);
+    try {
+        const result = await apiRequest<PublishNowResponse>('/social/publish', data as Record<string, unknown>);
+        console.log('[publishNow] success', new Date().toISOString(), result);
+        return result;
+    } catch (err: unknown) {
+        console.error('[publishNow] error', new Date().toISOString(), {
+            requestedAt: t0,
+            message: err instanceof Error ? err.message : String(err),
+            isCors: err instanceof TypeError && err.message.toLowerCase().includes('fetch'),
+            err,
+        });
+        throw err;
+    }
 }
 
 // ============================================
