@@ -29,7 +29,7 @@ $api = $repurposa_updater->getVcsApi();
 $api->enableReleaseAssets();
 
 // Define plugin constants
-define('REPURPOSA_VERSION', '1.0.33');
+define('REPURPOSA_VERSION', '1.0.39');
 define('REPURPOSA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('REPURPOSA_PLUGIN_URL', plugin_dir_url(__FILE__));
 
