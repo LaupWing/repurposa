@@ -102,7 +102,7 @@ export default function SchedulePostModal({
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
-    }, [showPublishPopover]);
+    }, [showPublishPopover, publishNowRepost.showModal]);
 
     const openPublishPopover = () => {
         const available = SCHEDULE_PLATFORMS
