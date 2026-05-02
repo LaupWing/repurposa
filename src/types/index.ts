@@ -260,7 +260,8 @@ export interface ScheduledPost {
 
 export interface PublishNowResult {
     platform: string;
-    status: 'published' | 'failed';
+    status: 'published' | 'publishing' | 'failed' | 'partial';
+    scheduled_post_id?: number;
     error?: string;
 }
 

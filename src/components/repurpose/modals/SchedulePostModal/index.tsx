@@ -396,15 +396,19 @@ export default function SchedulePostModal({
             });
 
             const failed = res.results.filter(r => r.status === 'failed');
+            const queued = res.results.filter(r => r.status === 'publishing');
             const succeeded = res.results.filter(r => r.status === 'published' || r.status === 'partial');
 
+            if (queued.length > 0) {
+                toast.success(`Publishing ${queued.length} platform${queued.length > 1 ? 's' : ''}…`);
+            }
             if (succeeded.length > 0) {
                 toast.success(`Published to ${succeeded.length} platform${succeeded.length > 1 ? 's' : ''}`);
                 await publishNowRepost.createSchedules(succeeded.map(r => ({ id: r.id, platform: r.platform })));
             }
             failed.forEach(r => toast.error(`${r.platform}: ${r.error}`));
 
-            if (succeeded.length > 0) onScheduled([]);
+            if (queued.length > 0 || succeeded.length > 0) onScheduled([]);
         } catch (error) {
             toast.error('Publish failed', {
                 description: error instanceof Error ? error.message : 'Please try again.',
