@@ -402,11 +402,11 @@ export default function SchedulePostModal({
 
             if (queued.length > 0) {
                 toast.success(`Publishing ${queued.length} platform${queued.length > 1 ? 's' : ''}…`);
-                await publishNowRepost.createSchedules(queued.map(r => ({ id: r.id, platform: r.platform })));
+                await publishNowRepost.createSchedules(queued.map(r => ({ id: r.scheduled_post_id, platform: r.platform })));
             }
             if (succeeded.length > 0) {
                 toast.success(`Published to ${succeeded.length} platform${succeeded.length > 1 ? 's' : ''}`);
-                await publishNowRepost.createSchedules(succeeded.map(r => ({ id: r.id, platform: r.platform })));
+                await publishNowRepost.createSchedules(succeeded.map(r => ({ id: r.scheduled_post_id, platform: r.platform })));
             }
             failed.forEach(r => toast.error(`${r.platform}: ${r.error}`));
 
