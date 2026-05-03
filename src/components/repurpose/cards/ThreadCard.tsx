@@ -442,7 +442,7 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="w-full px-4 pt-4 pb-4 flex items-start gap-3 text-left hover:bg-gray-50 cursor-pointer"
             >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white shadow-sm">
                     {index + 1}
                 </div>
                 <div className="min-w-0 flex-1">
