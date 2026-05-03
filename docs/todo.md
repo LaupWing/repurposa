@@ -6,7 +6,7 @@
 
 -   [ ] **Schedule page — "Publish Now" buttons not clickable** — social media platform buttons unresponsive
 -   [ ] **Auto-retry thread jobs after SIGKILL** — increasing `$tries` doesn't work because the `publishing` guard returns early. Fix: in `failed()`, if partial progress exists and attempts < 3, reset to `pending` and dispatch a new job with a short delay. This gives automatic resume without manual UI retry.
--   [ ] **VideoCompressor — move to save-time** — currently runs inside the publish job (~60s/video, blocks worker, will crush VPS at scale). Move compression to a background job triggered when the thread is saved. Store compressed URL in posts JSON. Publish job skips ffmpeg if compressed URL exists. See [`docs/VIDEO-PUBLISHING.md`](VIDEO-PUBLISHING.md).
+-   [ ] **Test R2 URLs with Threads** — `compressed_videos` table + `CompressVideoJob` done. Backfill run on 2026-05-03. Need to publish thread #5 to Threads and confirm no UNKNOWN error with `r2.dev` URLs. See [`docs/VIDEO-PUBLISHING.md`](VIDEO-PUBLISHING.md).
 -   [ ] **Twitter $0.20/URL tweet — platform-aware CTA + email fallback**
     - X raised URL tweet cost to $0.20 on Apr 20 2026 (1900% increase, applies to all URLs incl. t.co). Ref: [TechCrunch](https://techcrunch.com/2026/04/22/x-makes-it-more-expensive-to-post-links-through-its-api/)
     - Our auto-generated CTA reply links to the blog post → costs $0.20 every Twitter publish. Threads unaffected.

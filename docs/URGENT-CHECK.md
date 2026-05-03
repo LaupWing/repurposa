@@ -1,5 +1,17 @@
 # Urgent Checks
 
+## 🟡 Video Compression at Save-Time — BUILT 2026-05-03, R2 Test Pending
+
+**What was built:**
+- `compressed_videos` table — stores `original_url`, `compressed_url`, `compression_status` per video
+- `CompressedVideo` model
+- `CompressVideoJob` — dispatched on thread/short post save, compresses video via ffmpeg, stores to R2 `compressed/` folder
+- `PublishToSocialPlatform` — checks all videos are `done` in `compressed_videos` before publishing to Threads, releases every 30s if not, `retryUntil(30min)`
+- `ThreadsProvider` — removed all inline ffmpeg calls, uses `resolveVideoUrl()` to look up `compressed_url` from `CompressedVideo` by `original_url`
+- Backfill command: `php artisan media:backfill-compression` — run 2026-05-03, dispatched 16 jobs for thread #5 videos
+
+**Outstanding:** Test that Threads accepts `r2.dev` URLs (`pub-58db5c8381df4c99b94589b1411b8040.r2.dev`). If UNKNOWN → set up custom domain on R2 bucket. If works → fully done. See [`docs/VIDEO-PUBLISHING.md`](VIDEO-PUBLISHING.md).
+
 ## ✅ Threads Video UNKNOWN Error — FIXED 2026-05-03
 
 **Root cause:** Meta's server-side video fetcher has an implicit download timeout (~6s). Files over ~8 MB from a VPS time out before Meta finishes downloading → `status: ERROR, error_message: UNKNOWN`. Undocumented — official spec only says 1 GB max.

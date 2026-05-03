@@ -47,8 +47,13 @@ Files stored in Laravel `public/tmp/videos/` — Nginx serves them directly, no 
 
 ---
 
-## ⚠️ Known scaling problem
+## ✅ Save-time compression — DONE 2026-05-03
 
-VideoCompressor runs inside the publish job — ~60s per compressed video. A 23-post thread with 10+ videos takes 15–20 minutes total. Queue worker kills at 600s and resumes from last saved post (works, but requires multiple restarts). At scale: concurrent ffmpeg processes will crush the VPS.
+VideoCompressor no longer runs inside the publish job. Flow:
 
-**The right fix (not yet done):** compress when the thread is *saved*, not when it *publishes*. Store compressed URL in the posts JSON. Publish job skips ffmpeg if a compressed URL already exists.
+1. Thread/short post saved → `CompressVideoJob` dispatched per video → runs on `compression` queue (max 2 workers)
+2. Job compresses video, uploads to R2 `compressed/` folder, stores result in `compressed_videos` table
+3. Publish job checks `compressed_videos` for all video URLs before proceeding — releases every 30s if not done yet (`retryUntil 30min`)
+4. `ThreadsProvider::resolveVideoUrl()` looks up `compressed_url` from `CompressedVideo` — no ffmpeg at publish time
+
+**Pending:** confirm Threads accepts `r2.dev` URLs. If UNKNOWN → add custom domain to R2 bucket.
