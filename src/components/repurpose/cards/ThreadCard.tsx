@@ -396,6 +396,9 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
 
     return (
         <div className="group relative mb-4">
+            <div className="absolute -top-2 -left-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white shadow-sm z-10">
+                {index + 1}
+            </div>
         <div className="relative rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:border-blue-300 hover:shadow-md">
             {/* Schedule status badge - top right */}
             {thread.scheduled_posts && thread.scheduled_posts.length > 0 && (() => {
@@ -442,9 +445,6 @@ export default function ThreadCard({ thread, index, onEditPost, onDeletePost, on
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="w-full px-4 pt-4 pb-4 flex items-start gap-3 text-left hover:bg-gray-50 cursor-pointer"
             >
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white shadow-sm">
-                    {index + 1}
-                </div>
                 <div className="min-w-0 flex-1">
                     {/* Emotions */}
                     <div className="mb-1.5 flex flex-wrap items-center gap-1.5">

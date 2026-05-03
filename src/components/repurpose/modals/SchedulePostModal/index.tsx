@@ -410,7 +410,21 @@ export default function SchedulePostModal({
             }
             failed.forEach(r => toast.error(`${r.platform}: ${r.error}`));
 
-            if (queued.length > 0 || succeeded.length > 0) onScheduled([]);
+            const publishNowScheduled: ShortPostSchedule[] = [
+                ...queued.map(r => ({
+                    id: r.scheduled_post_id!,
+                    platform: r.platform,
+                    status: 'publishing' as const,
+                    scheduled_at: new Date().toISOString(),
+                })),
+                ...succeeded.map(r => ({
+                    id: r.scheduled_post_id!,
+                    platform: r.platform,
+                    status: 'published' as const,
+                    scheduled_at: new Date().toISOString(),
+                })),
+            ];
+            if (publishNowScheduled.length > 0) onScheduled(publishNowScheduled);
         } catch (error) {
             toast.error('Publish failed', {
                 description: error instanceof Error ? error.message : 'Please try again.',
