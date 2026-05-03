@@ -10,7 +10,7 @@
 - `ThreadsProvider` — removed all inline ffmpeg calls, uses `resolveVideoUrl()` to look up `compressed_url` from `CompressedVideo` by `original_url`
 - Backfill command: `php artisan media:backfill-compression` — run 2026-05-03, dispatched 16 jobs for thread #5 videos
 
-**Outstanding:** Test that Threads accepts `r2.dev` URLs (`pub-58db5c8381df4c99b94589b1411b8040.r2.dev`). If UNKNOWN → set up custom domain on R2 bucket. If works → fully done. See [`docs/VIDEO-PUBLISHING.md`](VIDEO-PUBLISHING.md).
+**Outstanding:** Test that Threads accepts `r2.dev` URLs (`pub-58db5c8381df4c99b94589b1411b8040.r2.dev`). If UNKNOWN → set up custom domain on R2 bucket. If works → fully done.
 
 ## ✅ Threads Video UNKNOWN Error — FIXED 2026-05-03
 
@@ -18,7 +18,7 @@
 
 **Fix:** Lowered Threads target bitrate 5 Mbps → **2 Mbps** in `ThreadsProvider`. All compressed outputs now stay under ~6 MB regardless of video duration. Also added graceful fallback: UNKNOWN video containers retry as text-only so the thread continues.
 
-**⚠️ Outstanding:** VideoCompressor runs inside the publish job (~60s/video). Move compression to save-time before onboarding real users. See [`docs/VIDEO-PUBLISHING.md`](VIDEO-PUBLISHING.md).
+**⚠️ Outstanding:** VideoCompressor move to save-time — done 2026-05-03. See 🟡 entry above.
 
 ## ✅ Publish Now — Repost Schedule Never Created — FIXED 2026-05-02
 
