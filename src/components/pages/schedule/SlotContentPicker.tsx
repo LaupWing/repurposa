@@ -100,9 +100,10 @@ interface SlotContentPickerProps {
     onScheduled: () => void;
     initialDraftContent?: string;
     initialThreadDraft?: { hook: string; posts: string[] };
+    initialVisual?: Visual;
 }
 
-export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, onClose, onScheduled, initialDraftContent, initialThreadDraft }: SlotContentPickerProps) {
+export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, onClose, onScheduled, initialDraftContent, initialThreadDraft, initialVisual }: SlotContentPickerProps) {
     const [scheduledAt, setScheduledAt] = useState<Date>(slotDate);
     const [platforms, setPlatforms] = useState<SchedulePlatform[]>(slotPlatforms);
     const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
@@ -118,6 +119,9 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
     const [schedulingItemId, setSchedulingItemId] = useState<string | null>(null);
     const [blogContentTab, setBlogContentTab] = useState<Record<number, 'short_post' | 'thread' | 'visual'>>({});
     const [contentPage, setContentPage] = useState<Record<string, number>>({});
+
+    // Preselected visual (from drafts tab)
+    const [preselectedVisual, setPreselectedVisual] = useState<Visual | null>(null);
 
     // Create new state
     const [view, setView] = useState<'list' | 'create'>('list');
@@ -152,6 +156,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
         setSchedulingItemId(null);
         setExpandedBlogId(null);
         setBlogContent({});
+        setPreselectedVisual(initialVisual || null);
         setView(initialDraftContent || initialThreadDraft ? 'create' : 'list');
         setCreateType(initialThreadDraft ? 'thread' : 'short_post');
         setCreateText(initialDraftContent || '');
@@ -216,7 +221,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
         }
     };
 
-    const scheduleContent = async (contentId: number, contentType: 'short_post' | 'thread' | 'visual', blogId: number) => {
+    const scheduleContent = async (contentId: number, contentType: 'short_post' | 'thread' | 'visual', blogId: number | null) => {
         if (platforms.length === 0) {
             toast.error('Select at least one platform');
             return;
@@ -235,7 +240,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                     scheduled_at: isoDate,
                     schedulable_type: contentType,
                     schedulable_id: contentId,
-                    post_id: blogId,
+                    ...(blogId ? { post_id: blogId } : {}),
                 });
             });
             const results = (await Promise.all(promises)).filter(Boolean);
@@ -884,6 +889,31 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                     ) : (
                         /* ===== LIST VIEW ===== */
                         <>
+                    {/* Preselected visual — shown when opened from Drafts tab */}
+                    {preselectedVisual && (
+                        <div className="border-b border-gray-100 px-5 py-3 bg-blue-50/50">
+                            <p className="text-[10px] font-medium text-blue-500 uppercase tracking-wide mb-2">Schedule this visual</p>
+                            <div className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-blue-200">
+                                <MiniVisualPreview visual={preselectedVisual} />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-700 line-clamp-2">
+                                        {Array.isArray(preselectedVisual.content) ? preselectedVisual.content[0] : preselectedVisual.content}
+                                    </p>
+                                    <span className="text-[10px] text-gray-400">
+                                        {Array.isArray(preselectedVisual.content) ? `${preselectedVisual.content.length} slides` : '1 slide'}
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => scheduleContent(preselectedVisual.id, 'visual', preselectedVisual.post_id ?? 0)}
+                                    disabled={isScheduling}
+                                    className="shrink-0 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {schedulingItemId === `visual-${preselectedVisual.id}` ? <Loader2 size={12} className="animate-spin" /> : 'Schedule'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Create new row */}
                     <div className="border-b border-gray-100">
                         <button

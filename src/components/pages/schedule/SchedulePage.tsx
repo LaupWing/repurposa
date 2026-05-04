@@ -14,8 +14,8 @@ import {
     getScheduledPosts,
     deleteScheduledPost,
 } from "@/services/scheduleApi";
-import type { ShortPost as ApiShortPost, ThreadItem } from "@/types";
-import { getStandaloneShortPosts, getStandaloneThreads } from "@/services/repurposeApi";
+import type { ShortPost as ApiShortPost, ThreadItem, Visual } from "@/types";
+import { getStandaloneShortPosts, getStandaloneThreads, getStandaloneVisuals } from "@/services/repurposeApi";
 import type { Platform, TabType, WeeklySchedule, ScheduledPost } from "./types";
 import { API_TO_UI_PLATFORM } from "./types";
 import { mapApiPost, groupScheduledPosts, mapScheduleFromApi, getUpcomingSlotsFromSchedule } from "./helpers";
@@ -38,6 +38,7 @@ export default function SchedulePage() {
     const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
     const [drafts, setDrafts] = useState<ApiShortPost[]>([]);
     const [threadDrafts, setThreadDrafts] = useState<ThreadItem[]>([]);
+    const [visualDrafts, setVisualDrafts] = useState<Visual[]>([]);
     const [isLoadingDrafts, setIsLoadingDrafts] = useState(false);
 
     // SlotContentPicker state
@@ -46,6 +47,7 @@ export default function SchedulePage() {
     const [pickerSlotPlatforms, setPickerSlotPlatforms] = useState<Platform[]>([]);
     const [pickerDraftContent, setPickerDraftContent] = useState<string | undefined>(undefined);
     const [pickerThreadDraft, setPickerThreadDraft] = useState<{ hook: string; posts: string[] } | undefined>(undefined);
+    const [pickerVisual, setPickerVisual] = useState<Visual | undefined>(undefined);
     const [detailPost, setDetailPost] = useState<ScheduledPost | null>(null);
 
     const connectedPlatforms: Platform[] = socialConnections
@@ -78,10 +80,11 @@ export default function SchedulePage() {
             .finally(() => setIsLoadingPosts(false));
 
         setIsLoadingDrafts(true);
-        Promise.all([getStandaloneShortPosts(), getStandaloneThreads()])
-            .then(([shortPosts, threads]) => {
+        Promise.all([getStandaloneShortPosts(), getStandaloneThreads(), getStandaloneVisuals()])
+            .then(([shortPosts, threads, visuals]) => {
                 setDrafts(shortPosts);
                 setThreadDrafts(threads);
+                setVisualDrafts(visuals);
             })
             .catch(() => {})
             .finally(() => setIsLoadingDrafts(false));
@@ -110,7 +113,7 @@ export default function SchedulePage() {
     const tabs: { id: TabType; label: string; icon: typeof Calendar; badge?: string | number }[] = [
         { id: "queue", label: "Queue", icon: Calendar, badge: queuePosts.length > 0 ? queuePosts.length : undefined },
         { id: "published", label: "Published", icon: CheckCircle },
-        { id: "drafts", label: "Drafts", icon: FileText, badge: (drafts.length + threadDrafts.length) > 0 ? drafts.length + threadDrafts.length : undefined },
+        { id: "drafts", label: "Drafts", icon: FileText, badge: (drafts.length + threadDrafts.length + visualDrafts.length) > 0 ? drafts.length + threadDrafts.length + visualDrafts.length : undefined },
         { id: "times", label: "Publishing Times", icon: Clock, badge: totalSlots > 0 ? `${totalSlots}/wk` : undefined },
     ];
 
@@ -204,9 +207,11 @@ export default function SchedulePage() {
                 <DraftsTab
                     drafts={drafts}
                     threadDrafts={threadDrafts}
+                    visualDrafts={visualDrafts}
                     isLoading={isLoadingDrafts}
                     onDraftsChange={setDrafts}
                     onThreadDraftsChange={setThreadDrafts}
+                    onVisualDraftsChange={setVisualDrafts}
                     onDraftClick={(draft) => {
                         const openPicker = (date: Date, platforms: Platform[]) => {
                             setPickerSlotDate(date);
@@ -239,6 +244,20 @@ export default function SchedulePage() {
                         nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
                         openPicker(nextHour, connectedPlatforms);
                     }}
+                    onVisualDraftClick={(visual) => {
+                        const date = weeklySchedule
+                            ? (getUpcomingSlotsFromSchedule(weeklySchedule, 1, timezone)[0]?.date ?? (() => { const d = new Date(); d.setHours(d.getHours() + 1, 0, 0, 0); return d; })())
+                            : (() => { const d = new Date(); d.setHours(d.getHours() + 1, 0, 0, 0); return d; })();
+                        const platforms = weeklySchedule
+                            ? ((getUpcomingSlotsFromSchedule(weeklySchedule, 1, timezone)[0]?.platforms ?? connectedPlatforms) as Platform[])
+                            : connectedPlatforms;
+                        setPickerSlotDate(date);
+                        setPickerSlotPlatforms(platforms);
+                        setPickerDraftContent(undefined);
+                        setPickerThreadDraft(undefined);
+                        setPickerVisual(visual);
+                        setIsPickerOpen(true);
+                    }}
                 />
             )}
             {activeTab === "times" && (
@@ -259,8 +278,9 @@ export default function SchedulePage() {
                     initialDraftContent={pickerDraftContent}
                     initialThreadDraft={pickerThreadDraft}
                     timezone={timezone}
-                    onClose={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); setPickerThreadDraft(undefined); }}
-                    onScheduled={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); setPickerThreadDraft(undefined); refreshPosts(); }}
+                    initialVisual={pickerVisual}
+                    onClose={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); setPickerThreadDraft(undefined); setPickerVisual(undefined); }}
+                    onScheduled={() => { setIsPickerOpen(false); setPickerDraftContent(undefined); setPickerThreadDraft(undefined); setPickerVisual(undefined); refreshPosts(); }}
                 />
             )}
             {detailPost && (

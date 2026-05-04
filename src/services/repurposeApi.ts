@@ -68,6 +68,11 @@ export async function deleteShortPost(shortPostId: number): Promise<void> {
     await apiRequest<void>(`/repurpose/short-posts/${shortPostId}`, {}, 'DELETE');
 }
 
+export async function getStandaloneVisuals(): Promise<Visual[]> {
+    const response = await apiRequest<{ visuals: Visual[] }>('/visuals/standalone', {}, 'GET');
+    return response.visuals;
+}
+
 export async function getStandaloneThreads(): Promise<ThreadItem[]> {
     const response = await apiRequest<{ threads: ThreadItem[] }>('/repurpose/threads/standalone', {}, 'GET');
     return response.threads;
