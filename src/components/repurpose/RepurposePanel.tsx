@@ -4,13 +4,13 @@
  * Panel for generating short posts, threads, visuals from blog content.
  */
 
-import { useEffect, useRef } from '@wordpress/element';
+import { useEffect, useRef, useState } from '@wordpress/element';
 import {
     Image,
     Video,
     Plus,
 } from 'lucide-react';
-import type { ShortPost, ThreadItem, Visual } from '@/types';
+import type { ShortPost, ShortPostSchedule, ThreadItem, Visual } from '@/types';
 import { GeneratingOverlay } from '@/components/GeneratingOverlay';
 import { VisualPreviewModal } from './modals/VisualPreviewModal';
 import ShortPostCard from './cards/ShortPostCard';
@@ -119,77 +119,49 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
 
     // --- Render ---
 
+    const getShortPostStage = (post: ShortPost): 'draft' | 'scheduled' | 'published' => {
+        const schedules = post.scheduled_posts ?? [];
+        if (schedules.length === 0) return 'draft';
+        if (schedules.some(s => s.status === 'published')) return 'published';
+        return 'scheduled';
+    };
+
     const renderContent = () => {
         switch (initialTab) {
             case 'short':
                 return sp.shortPosts.length === 0 ? (
                     <EmptyState type="short" onGenerate={sp.onGenerateClick} isGenerating={sp.isGenerating} isPublished={isPublished} />
                 ) : (
-                    <div>
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Generated Short Posts</h3>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                    {sp.shortPosts.length} short posts
-                                </span>
-                                <button
-                                    onClick={() => sp.setShowAddModal(true)}
-                                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                                >
-                                    <Plus size={14} />
-                                    Add
-                                </button>
-                            </div>
-                        </div>
-                        <div className="pl-2">
-                            {sp.shortPosts.map((pattern, index) => (
-                                <ShortPostCard
-                                    key={pattern.id}
-                                    pattern={pattern}
-                                    index={index}
-                                    blogId={blogId}
-                                    {...sp.getCardProps(pattern)}
-                                    onSchedule={() => sched.scheduleShortPost(pattern)}
-                                    onPublishNow={() => sched.publishShortPost(pattern)}
-                                    onVisualSaved={(visual) => handleShortPostVisualSaved(pattern, visual)}
-                                    cardVisuals={vis.visuals.filter(v => v.source_type === 'short_post' && v.source_id === pattern.id)}
-                                    onGoToVisual={(visualId) => {
-                                        onHighlightVisual?.(visualId);
-                                        onSwitchTab?.('visuals');
-                                    }}
-                                    autoEdit={pattern.id === editShortPostId}
-                                    isPublished={isPublished}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                    <ShortPostsWithTabs
+                        shortPosts={sp.shortPosts}
+                        getStage={getShortPostStage}
+                        blogId={blogId}
+                        getCardProps={sp.getCardProps}
+                        onSchedule={(p) => sched.scheduleShortPost(p)}
+                        onPublishNow={(p) => sched.publishShortPost(p)}
+                        onVisualSaved={(p, v) => handleShortPostVisualSaved(p, v)}
+                        visuals={vis.visuals}
+                        onGoToVisual={(visualId) => { onHighlightVisual?.(visualId); onSwitchTab?.('visuals'); }}
+                        editShortPostId={editShortPostId}
+                        isPublished={isPublished}
+                        onAddClick={() => sp.setShowAddModal(true)}
+                    />
                 );
 
             case 'threads':
                 return th.threads.length === 0 ? (
                     <EmptyState type="threads" onGenerate={th.handleGenerateThreads} isGenerating={th.isGeneratingThreads} />
                 ) : (
-                    <div>
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-500">Thread Variations</h3>
-                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                {th.threads.length} generated
-                            </span>
-                        </div>
-                        {th.threads.map((thread, index) => (
-                            <ThreadCard
-                                key={thread.id}
-                                thread={thread}
-                                index={index}
-                                {...th.getCardProps(thread)}
-                                onSchedule={() => sched.scheduleThread(thread)}
-                                onPublishNow={() => sched.publishThread(thread)}
-                                blogId={blogId}
-                                isPublished={isPublished}
-                                onVisualSaved={handleThreadVisualSaved}
-                            />
-                        ))}
-                    </div>
+                    <ThreadsWithTabs
+                        threads={th.threads}
+                        getStage={getShortPostStage}
+                        getCardProps={th.getCardProps}
+                        onSchedule={(t) => sched.scheduleThread(t)}
+                        onPublishNow={(t) => sched.publishThread(t)}
+                        blogId={blogId}
+                        isPublished={isPublished}
+                        onVisualSaved={handleThreadVisualSaved}
+                    />
                 );
 
             case 'visuals': {
@@ -243,41 +215,22 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
 
                 return (
                     <>
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Visuals</h3>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                    {vis.visuals.length} visual{vis.visuals.length !== 1 ? 's' : ''}
-                                </span>
-                                <button
-                                    onClick={() => vis.setShowSourcePicker(true)}
-                                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                                >
-                                    <Plus size={14} />
-                                    Create
-                                </button>
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                            {vis.visuals.map((visual, index) => (
-                                <VisualCard
-                                    key={visual.id}
-                                    visual={visual}
-                                    index={index}
-                                    isHighlighted={vis.highlightVisualId === visual.id}
-                                    onHighlightRef={(el) => {
-                                        if (el) {
-                                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                            setTimeout(() => vis.setHighlightVisualId(null), 2000);
-                                        }
-                                    }}
-                                    onEdit={() => vis.setViewingVisual(visual)}
-                                    onSchedule={() => sched.scheduleVisual(visual)}
-                                    onPublishNow={() => sched.publishVisual(visual)}
-                                    onDelete={() => vis.setDeletingVisualId(visual.id)}
-                                />
-                            ))}
-                        </div>
+                        <VisualsWithTabs
+                            visuals={vis.visuals}
+                            getStage={getShortPostStage}
+                            highlightVisualId={vis.highlightVisualId}
+                            onHighlightRef={(el) => {
+                                if (el) {
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    setTimeout(() => vis.setHighlightVisualId(null), 2000);
+                                }
+                            }}
+                            onEdit={(visual) => vis.setViewingVisual(visual)}
+                            onSchedule={(visual) => sched.scheduleVisual(visual)}
+                            onPublishNow={(visual) => sched.publishVisual(visual)}
+                            onDelete={(visual) => vis.setDeletingVisualId(visual.id)}
+                            onCreateClick={() => vis.setShowSourcePicker(true)}
+                        />
 
                         {vis.viewingVisual && (
                             <VisualPreviewModal
@@ -386,6 +339,296 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
                 {renderContent()}
             </div>
+        </div>
+    );
+}
+
+// ============================================
+// SHORT POSTS WITH TABS
+// ============================================
+
+type ShortPostStage = 'draft' | 'scheduled' | 'published';
+
+interface ShortPostsWithTabsProps {
+    shortPosts: ShortPost[];
+    getStage: (post: ShortPost) => ShortPostStage;
+    blogId?: number;
+    getCardProps: (post: ShortPost) => Record<string, unknown>;
+    onSchedule: (post: ShortPost) => void;
+    onPublishNow: (post: ShortPost) => void;
+    onVisualSaved: (post: ShortPost, visual: Visual) => void;
+    visuals: Visual[];
+    onGoToVisual: (visualId: number) => void;
+    editShortPostId?: number;
+    isPublished?: boolean;
+    onAddClick: () => void;
+}
+
+function ShortPostsWithTabs({
+    shortPosts,
+    getStage,
+    blogId,
+    getCardProps,
+    onSchedule,
+    onPublishNow,
+    onVisualSaved,
+    visuals,
+    onGoToVisual,
+    editShortPostId,
+    isPublished,
+    onAddClick,
+}: ShortPostsWithTabsProps) {
+    const [activeStage, setActiveStage] = useState<ShortPostStage>('draft');
+
+    const counts = {
+        draft: shortPosts.filter(p => getStage(p) === 'draft').length,
+        scheduled: shortPosts.filter(p => getStage(p) === 'scheduled').length,
+        published: shortPosts.filter(p => getStage(p) === 'published').length,
+    };
+
+    const filtered = shortPosts.filter(p => getStage(p) === activeStage);
+
+    const tabs: { key: ShortPostStage; label: string }[] = [
+        { key: 'draft', label: 'Draft' },
+        { key: 'scheduled', label: 'Scheduled' },
+        { key: 'published', label: 'Published' },
+    ];
+
+    return (
+        <div>
+            <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Generated Short Posts</h3>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                        {shortPosts.length} short posts
+                    </span>
+                    <button
+                        onClick={onAddClick}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                        <Plus size={14} />
+                        Add
+                    </button>
+                </div>
+            </div>
+
+            {/* Stage tabs */}
+            <div className="flex gap-1 mb-4 border-b border-gray-100">
+                {tabs.map(({ key, label }) => (
+                    <button
+                        key={key}
+                        onClick={() => setActiveStage(key)}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                            activeStage === key
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        {label}
+                        {counts[key] > 0 && (
+                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none ${
+                                activeStage === key
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-gray-100 text-gray-500'
+                            }`}>
+                                {counts[key]}
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            {/* Posts list */}
+            {filtered.length === 0 ? (
+                <div className="py-10 text-center text-sm text-gray-400">
+                    No {activeStage} posts
+                </div>
+            ) : (
+                <div className="pl-2">
+                    {filtered.map((pattern, index) => (
+                        <ShortPostCard
+                            key={pattern.id}
+                            pattern={pattern}
+                            index={index}
+                            blogId={blogId}
+                            {...(getCardProps(pattern) as any)}
+                            onSchedule={() => onSchedule(pattern)}
+                            onPublishNow={() => onPublishNow(pattern)}
+                            onVisualSaved={(visual: Visual) => onVisualSaved(pattern, visual)}
+                            cardVisuals={visuals.filter(v => v.source_type === 'short_post' && v.source_id === pattern.id)}
+                            onGoToVisual={onGoToVisual}
+                            autoEdit={pattern.id === editShortPostId}
+                            isPublished={isPublished}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ============================================
+// THREADS WITH TABS
+// ============================================
+
+interface ThreadsWithTabsProps {
+    threads: ThreadItem[];
+    getStage: (item: { scheduled_posts?: ShortPostSchedule[] }) => ShortPostStage;
+    getCardProps: (thread: ThreadItem) => Record<string, unknown>;
+    onSchedule: (thread: ThreadItem) => void;
+    onPublishNow: (thread: ThreadItem) => void;
+    blogId?: number;
+    isPublished?: boolean;
+    onVisualSaved: (visual: Visual) => void;
+}
+
+function ThreadsWithTabs({ threads, getStage, getCardProps, onSchedule, onPublishNow, blogId, isPublished, onVisualSaved }: ThreadsWithTabsProps) {
+    const [activeStage, setActiveStage] = useState<ShortPostStage>('draft');
+
+    const counts = {
+        draft: threads.filter(t => getStage(t) === 'draft').length,
+        scheduled: threads.filter(t => getStage(t) === 'scheduled').length,
+        published: threads.filter(t => getStage(t) === 'published').length,
+    };
+
+    const filtered = threads.filter(t => getStage(t) === activeStage);
+    const tabs: { key: ShortPostStage; label: string }[] = [
+        { key: 'draft', label: 'Draft' },
+        { key: 'scheduled', label: 'Scheduled' },
+        { key: 'published', label: 'Published' },
+    ];
+
+    return (
+        <div>
+            <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-medium text-gray-500">Thread Variations</h3>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">{threads.length} generated</span>
+            </div>
+            <div className="flex gap-1 mb-4 border-b border-gray-100">
+                {tabs.map(({ key, label }) => (
+                    <button
+                        key={key}
+                        onClick={() => setActiveStage(key)}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                            activeStage === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        {label}
+                        {counts[key] > 0 && (
+                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none ${
+                                activeStage === key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                            }`}>{counts[key]}</span>
+                        )}
+                    </button>
+                ))}
+            </div>
+            {filtered.length === 0 ? (
+                <div className="py-10 text-center text-sm text-gray-400">No {activeStage} threads</div>
+            ) : (
+                filtered.map((thread, index) => (
+                    <ThreadCard
+                        key={thread.id}
+                        thread={thread}
+                        index={index}
+                        {...(getCardProps(thread) as any)}
+                        onSchedule={() => onSchedule(thread)}
+                        onPublishNow={() => onPublishNow(thread)}
+                        blogId={blogId}
+                        isPublished={isPublished}
+                        onVisualSaved={onVisualSaved}
+                    />
+                ))
+            )}
+        </div>
+    );
+}
+
+// ============================================
+// VISUALS WITH TABS
+// ============================================
+
+interface VisualsWithTabsProps {
+    visuals: Visual[];
+    getStage: (item: { scheduled_posts?: ShortPostSchedule[] }) => ShortPostStage;
+    highlightVisualId: number | null;
+    onHighlightRef: (el: HTMLDivElement | null) => void;
+    onEdit: (visual: Visual) => void;
+    onSchedule: (visual: Visual) => void;
+    onPublishNow: (visual: Visual) => void;
+    onDelete: (visual: Visual) => void;
+    onCreateClick: () => void;
+}
+
+function VisualsWithTabs({ visuals, getStage, highlightVisualId, onHighlightRef, onEdit, onSchedule, onPublishNow, onDelete, onCreateClick }: VisualsWithTabsProps) {
+    const [activeStage, setActiveStage] = useState<ShortPostStage>('draft');
+
+    const counts = {
+        draft: visuals.filter(v => getStage(v) === 'draft').length,
+        scheduled: visuals.filter(v => getStage(v) === 'scheduled').length,
+        published: visuals.filter(v => getStage(v) === 'published').length,
+    };
+
+    const filtered = visuals.filter(v => getStage(v) === activeStage);
+    const tabs: { key: ShortPostStage; label: string }[] = [
+        { key: 'draft', label: 'Draft' },
+        { key: 'scheduled', label: 'Scheduled' },
+        { key: 'published', label: 'Published' },
+    ];
+
+    return (
+        <div>
+            <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Visuals</h3>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                        {visuals.length} visual{visuals.length !== 1 ? 's' : ''}
+                    </span>
+                    <button
+                        onClick={onCreateClick}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                        <Plus size={14} />
+                        Create
+                    </button>
+                </div>
+            </div>
+            <div className="flex gap-1 mb-4 border-b border-gray-100">
+                {tabs.map(({ key, label }) => (
+                    <button
+                        key={key}
+                        onClick={() => setActiveStage(key)}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                            activeStage === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        {label}
+                        {counts[key] > 0 && (
+                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none ${
+                                activeStage === key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                            }`}>{counts[key]}</span>
+                        )}
+                    </button>
+                ))}
+            </div>
+            {filtered.length === 0 ? (
+                <div className="py-10 text-center text-sm text-gray-400">No {activeStage} visuals</div>
+            ) : (
+                <div className="space-y-4">
+                    {filtered.map((visual, index) => (
+                        <VisualCard
+                            key={visual.id}
+                            visual={visual}
+                            index={index}
+                            isHighlighted={highlightVisualId === visual.id}
+                            onHighlightRef={onHighlightRef}
+                            onEdit={() => onEdit(visual)}
+                            onSchedule={() => onSchedule(visual)}
+                            onPublishNow={() => onPublishNow(visual)}
+                            onDelete={() => onDelete(visual)}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
