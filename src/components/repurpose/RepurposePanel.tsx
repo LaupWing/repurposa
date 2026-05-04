@@ -459,6 +459,7 @@ function ShortPostsWithTabs({
                             onGoToVisual={onGoToVisual}
                             autoEdit={pattern.id === editShortPostId}
                             isPublished={isPublished}
+                            stage={activeStage}
                         />
                     ))}
                 </div>

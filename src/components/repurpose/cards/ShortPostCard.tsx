@@ -18,6 +18,8 @@ import {
     Loader2,
     Sparkles,
     MessageSquarePlus,
+    Eye,
+    ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '@wordpress/components';
@@ -93,11 +95,13 @@ interface ShortPostCardProps {
     onGoToVisual?: (visualId: number) => void;
     autoEdit?: boolean;
     isPublished?: boolean;
+    stage?: 'draft' | 'scheduled' | 'published';
     onAcceptCta: (editedContent?: string) => void;
     onRejectCta: () => void;
 }
 
-export default function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onPublishNow, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, cardVisuals, onGoToVisual, autoEdit, isPublished, onAcceptCta, onRejectCta }: ShortPostCardProps) {
+export default function ShortPostCard({ pattern, index, blogId, onDelete, onDeleteCta, onAddCta, onEdit, onEditCta, onSchedule, onPublishNow, onAddImage, onRemoveImage, onReorderImages, onAddCtaImage, onRemoveCtaImage, onReorderCtaImages, onVisualSaved, cardVisuals, onGoToVisual, autoEdit, isPublished, stage, onAcceptCta, onRejectCta }: ShortPostCardProps) {
+    const isPublishedStage = stage === 'published';
     const [copied, setCopied] = useState(false);
     const [copiedCta, setCopiedCta] = useState(false);
     const [isEditing, setIsEditing] = useState(!!autoEdit);
@@ -119,7 +123,9 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
     const [showVisualsPopover, setShowVisualsPopover] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showCtaPopover, setShowCtaPopover] = useState(false);
+    const [showPublishedPopover, setShowPublishedPopover] = useState(false);
     const [isWritingCta, setIsWritingCta] = useState(false);
+    const publishedPopoverRef = useRef<HTMLDivElement>(null);
     const [writeCtaContent, setWriteCtaContent] = useState('');
     const menuRef = useRef<HTMLDivElement>(null);
     const ctaPopoverRef = useRef<HTMLDivElement>(null);
@@ -157,6 +163,18 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
         document.addEventListener('mousedown', handleClick);
         return () => document.removeEventListener('mousedown', handleClick);
     }, [showCtaPopover]);
+
+    // Close published popover on outside click
+    useEffect(() => {
+        if (!showPublishedPopover) return;
+        const handleClick = (e: MouseEvent) => {
+            if (publishedPopoverRef.current && !publishedPopoverRef.current.contains(e.target as Node)) {
+                setShowPublishedPopover(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [showPublishedPopover]);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(pattern.content);
@@ -400,6 +418,97 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
 
                         {/* Right - Actions */}
                         <div className="flex items-center gap-1">
+                            {/* Published stage: eye + schedule only */}
+                            {isPublishedStage ? (
+                                <>
+                                    {/* Eye — view published posts popover */}
+                                    <div className="relative" ref={publishedPopoverRef}>
+                                        <button
+                                            onClick={() => setShowPublishedPopover(!showPublishedPopover)}
+                                            className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${
+                                                showPublishedPopover ? 'bg-gray-100 text-gray-600' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                                            }`}
+                                            title="View published posts"
+                                        >
+                                            <Eye size={14} />
+                                        </button>
+                                        {showPublishedPopover && pattern.scheduled_posts && pattern.scheduled_posts.length > 0 && (
+                                            <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-30">
+                                                <p className="px-3 py-1.5 text-[10px] font-medium text-gray-400 uppercase tracking-wide">Published on</p>
+                                                {pattern.scheduled_posts.filter(sp => sp.status === 'published').map(sp => {
+                                                    const platformIcons: Record<string, React.ReactNode> = {
+                                                        twitter: createElement(RiTwitterXFill, { size: 13 }),
+                                                        linkedin: createElement(RiLinkedinFill, { size: 13 }),
+                                                        threads: createElement(RiThreadsFill, { size: 13 }),
+                                                        instagram: createElement(RiInstagramFill, { size: 13 }),
+                                                        facebook: createElement(RiFacebookFill, { size: 13 }),
+                                                    };
+                                                    return (
+                                                        <div key={sp.id} className="flex items-center justify-between px-3 py-1.5">
+                                                            <div className="flex items-center gap-2 text-sm text-gray-700 capitalize">
+                                                                <span className="text-gray-500">{platformIcons[sp.platform]}</span>
+                                                                {sp.platform === 'twitter' ? 'X (Twitter)' : sp.platform}
+                                                            </div>
+                                                            {sp.platform_post_url ? (
+                                                                <a
+                                                                    href={sp.platform_post_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700"
+                                                                    onClick={() => setShowPublishedPopover(false)}
+                                                                >
+                                                                    Open <ExternalLink size={11} />
+                                                                </a>
+                                                            ) : (
+                                                                <span className="text-[11px] text-gray-400">No link</span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* Schedule — reschedule to other platforms */}
+                                    <button
+                                        onClick={onSchedule}
+                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                        title="Schedule to more platforms"
+                                    >
+                                        <Calendar size={14} />
+                                    </button>
+                                    {/* More menu — published: copy + delete only */}
+                                    <div className="relative" ref={menuRef}>
+                                        <button
+                                            onClick={() => setMenuOpen(!menuOpen)}
+                                            className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${
+                                                menuOpen ? 'bg-gray-100 text-gray-600' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                                            }`}
+                                        >
+                                            <MoreHorizontal size={14} />
+                                        </button>
+                                        {menuOpen && (
+                                            <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-30">
+                                                <button
+                                                    onClick={() => { handleCopy(); setMenuOpen(false); }}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                >
+                                                    {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                                                    {copied ? 'Copied!' : 'Copy'}
+                                                </button>
+                                                <div className="border-t border-gray-100 my-1" />
+                                                <button
+                                                    onClick={() => { setShowDeleteConfirm(true); setMenuOpen(false); }}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            ) : (
+                                <>
                             <button
                                 onClick={() => setIsEditing(true)}
                                 className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
@@ -516,6 +625,8 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                                     </div>
                                 )}
                             </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}

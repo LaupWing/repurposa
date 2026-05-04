@@ -116,6 +116,7 @@ export interface ShortPostSchedule {
     platform: string;
     status: 'pending' | 'publishing' | 'published' | 'failed';
     scheduled_at: string;
+    platform_post_url?: string | null;
 }
 
 export interface ShortPostCta {
