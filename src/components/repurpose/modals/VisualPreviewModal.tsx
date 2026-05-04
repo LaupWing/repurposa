@@ -43,6 +43,8 @@ import type { VisualSettings } from '@/types';
 // CONSTANTS
 // ============================================
 
+const INSTAGRAM_CAROUSEL_LIMIT = 20;
+
 const PLATFORM_LIMITS = [
     { name: 'X', limit: 280 },
     { name: 'LinkedIn', limit: 3000 },
@@ -864,6 +866,14 @@ export function VisualPreviewModal({ isOpen, onClose, content, blogId, sourceTyp
                 <div className="flex-1 overflow-y-auto p-6">
                     {modalTab === 'visual' ? (
                         <>
+                            {editablePosts.length > INSTAGRAM_CAROUSEL_LIMIT && (
+                                <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                                    <AlertTriangle size={13} className="flex-shrink-0" />
+                                    <span>
+                                        <span className="font-semibold">Instagram limit:</span> Only the first {INSTAGRAM_CAROUSEL_LIMIT} slides will be published. Slides {INSTAGRAM_CAROUSEL_LIMIT + 1}–{editablePosts.length} are shown faded.
+                                    </span>
+                                </div>
+                            )}
                             {/* Controls */}
                             <div className="flex flex-wrap items-end gap-3 mb-4">
                                 <SelectDropdown
@@ -1029,6 +1039,10 @@ export function VisualPreviewModal({ isOpen, onClose, content, blogId, sourceTyp
                             <div className="flex items-center justify-center">
                                 {/* Card + badge + text size */}
                                 <div className="relative">
+                                    {(() => {
+                                        const isOverLimit = currentPostIndex >= INSTAGRAM_CAROUSEL_LIMIT;
+                                        return (
+                                        <>
                                     <div className="absolute -top-3 right-3 z-10 flex items-center gap-1.5">
                                         {editablePosts.length > 1 && (
                                             <button
@@ -1053,14 +1067,15 @@ export function VisualPreviewModal({ isOpen, onClose, content, blogId, sourceTyp
                                                 <Trash2 size={10} />
                                             </button>
                                         )}
-                                        <div className="rounded-full bg-black/70 px-2.5 py-0.5 text-xs font-medium text-white shadow-sm">
+                                        <div className={`rounded-full px-2.5 py-0.5 text-xs font-medium text-white shadow-sm ${isOverLimit ? 'bg-amber-500' : 'bg-black/70'}`}>
                                             Slide {currentPostIndex + 1} of {editablePosts.length}
+                                            {isOverLimit && ' · Over Instagram limit'}
                                         </div>
                                     </div>
                                     <div className="relative">
                                         {/* Preview + edit overlay */}
                                         <div className="group">
-                                            <div ref={editingPostIndex === currentPostIndex ? undefined : previewRef}>
+                                            <div ref={editingPostIndex === currentPostIndex ? undefined : previewRef} className={isOverLimit ? 'opacity-50' : ''}>
                                                 <VisualPreview
                                                     content={editablePosts[currentPostIndex]}
                                                     displayName={displayName}
@@ -1080,6 +1095,14 @@ export function VisualPreviewModal({ isOpen, onClose, content, blogId, sourceTyp
                                                     onEditChange={setEditDraft}
                                                 />
                                             </div>
+                                            {isOverLimit && (
+                                                <div className="absolute inset-0 flex items-end justify-center pb-6 pointer-events-none">
+                                                    <div className="flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1 text-xs font-medium text-white shadow-md">
+                                                        <AlertTriangle size={12} />
+                                                        Won't be published to Instagram
+                                                    </div>
+                                                </div>
+                                            )}
                                             {editingPostIndex !== currentPostIndex && (
                                                 <div
                                                     className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors rounded-2xl cursor-pointer"
@@ -1206,6 +1229,9 @@ export function VisualPreviewModal({ isOpen, onClose, content, blogId, sourceTyp
                                             )}
                                         </div>
                                     )}
+                                    </>
+                                    );
+                                })()}
                                 </div>
 
                             </div>
