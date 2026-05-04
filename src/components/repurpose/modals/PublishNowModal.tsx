@@ -158,29 +158,33 @@ export default function PublishNowModal({
                 post_id: postId,
             });
 
-            const succeeded = response.results.filter((r) => r.status === 'published');
+            const queued = response.results.filter((r) => r.status === 'publishing');
+            const succeeded = response.results.filter((r) => r.status === 'published' || r.status === 'partial');
             const failed = response.results.filter((r) => r.status === 'failed');
 
+            const platformName = (platform: string) => {
+                const uiId = API_TO_UI_PLATFORM[platform] || platform;
+                return SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || platform;
+            };
+
+            if (queued.length > 0) {
+                toast.success(`Publishing ${queued.length} platform${queued.length > 1 ? 's' : ''}…`);
+            }
             if (succeeded.length > 0) {
-                const names = succeeded.map((r) => {
-                    const uiId = API_TO_UI_PLATFORM[r.platform] || r.platform;
-                    return SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || r.platform;
-                }).join(', ');
-                toast.success('Published!', { description: names });
+                toast.success('Published!', { description: succeeded.map((r) => platformName(r.platform)).join(', ') });
             }
             if (failed.length > 0) {
-                const names = failed.map((r) => {
-                    const uiId = API_TO_UI_PLATFORM[r.platform] || r.platform;
-                    return SCHEDULE_PLATFORMS.find((p) => p.id === uiId)?.name || r.platform;
-                }).join(', ');
-                toast.error(`Failed on ${names}`, { description: failed[0].error || 'Please try again.' });
+                toast.error(`Failed on ${failed.map((r) => platformName(r.platform)).join(', ')}`, {
+                    description: failed[0].error || 'Please try again.',
+                });
             }
 
-            if (succeeded.length > 0) {
-                onPublished?.(succeeded.map((r) => ({
-                    id: 0, // not returned from publish API
+            const notified = [...queued, ...succeeded];
+            if (notified.length > 0) {
+                onPublished?.(notified.map((r) => ({
+                    id: r.scheduled_post_id ?? 0,
                     platform: r.platform,
-                    status: 'published' as const,
+                    status: r.status === 'published' ? 'published' as const : 'publishing' as const,
                     scheduled_at: new Date().toISOString(),
                 })));
             }
