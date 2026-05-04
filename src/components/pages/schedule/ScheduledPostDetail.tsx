@@ -37,7 +37,7 @@ interface ScheduledPostDetailProps {
 
 export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone }: ScheduledPostDetailProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const editType = post.postType === 'thread' ? 'thread' : 'short_post';
+    const editType = post.postType === 'thread' ? 'thread' : post.postType === 'visual' ? 'visual' : 'short_post';
     // Short post edit state
     const [editText, setEditText] = useState(post.content);
     const [editImages, setEditImages] = useState<string[]>([]);
@@ -600,7 +600,7 @@ export default function ScheduledPostDetail({ isOpen, onClose, onUpdated, post, 
                         {isUnscheduling ? <Loader2 size={12} className="animate-spin" /> : 'Unschedule'}
                     </button>
 
-                    {!isEditing && (
+                    {!isEditing && editType !== 'visual' && (
                         isStandalone ? (
                             <button
                                 onClick={handleStartEdit}

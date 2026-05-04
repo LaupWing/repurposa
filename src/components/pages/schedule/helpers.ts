@@ -34,6 +34,8 @@ export function mapApiPost(apiPost: ApiScheduledPost): ScheduledPost {
         platforms: [uiPlatform],
         postType: (apiPost.schedulable_type === 'thread'
             ? 'thread'
+            : apiPost.schedulable_type === 'visual'
+            ? 'visual'
             : 'short') as ScheduledPost['postType'],
         threadCount:
             apiPost.schedulable_type === 'thread'

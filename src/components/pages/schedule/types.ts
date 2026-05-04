@@ -1,5 +1,5 @@
 import { createElement } from '@wordpress/element';
-import { MessageSquare, ListOrdered } from 'lucide-react';
+import { MessageSquare, ListOrdered, Image } from 'lucide-react';
 import {
     RiTwitterXFill,
     RiLinkedinFill,
@@ -13,7 +13,7 @@ import {
 // ============================================
 
 export type Platform = 'x' | 'linkedin' | 'threads' | 'instagram' | 'facebook';
-export type PostType = 'short' | 'thread';
+export type PostType = 'short' | 'thread' | 'visual';
 export type PostStatus = 'pending' | 'publishing' | 'published' | 'failed';
 export type TabType = 'queue' | 'published' | 'drafts' | 'times';
 export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
@@ -95,6 +95,7 @@ export const PLATFORMS: {
 export const POST_TYPES: { id: PostType; label: string; icon: React.ReactNode }[] = [
     { id: 'short', label: 'Short Post', icon: createElement(MessageSquare, { size: 13 }) },
     { id: 'thread', label: 'Thread', icon: createElement(ListOrdered, { size: 13 }) },
+    { id: 'visual', label: 'Visual', icon: createElement(Image, { size: 13 }) },
 ];
 
 export const API_TO_UI_PLATFORM: Record<string, Platform> = {
