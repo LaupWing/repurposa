@@ -43,7 +43,7 @@ import type { VisualSettings } from '@/types';
 // CONSTANTS
 // ============================================
 
-const INSTAGRAM_CAROUSEL_LIMIT = 20;
+const INSTAGRAM_CAROUSEL_LIMIT = 10; // Instagram Graph API carousel max (consumer app allows 20 but Graph API does not)
 
 const PLATFORM_LIMITS = [
     { name: 'X', limit: 280 },
