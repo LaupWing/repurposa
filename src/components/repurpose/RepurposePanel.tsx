@@ -122,7 +122,7 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
     const getShortPostStage = (post: ShortPost): 'draft' | 'scheduled' | 'published' => {
         const schedules = post.scheduled_posts ?? [];
         if (schedules.length === 0) return 'draft';
-        if (schedules.some(s => s.status === 'published')) return 'published';
+        if (schedules.some(s => s.status === 'published' || s.status === 'failed')) return 'published';
         return 'scheduled';
     };
 

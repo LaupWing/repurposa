@@ -633,7 +633,7 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
             </div>
 
             {/* CTA states: writing manually, generating, or pending AI result */}
-            {!pattern.cta_content && (isWritingCta || pattern.is_generating_cta || pattern.pending_cta) && (
+            {!isPublishedStage && !pattern.cta_content && (isWritingCta || pattern.is_generating_cta || pattern.pending_cta) && (
                 <div className="ml-6 mt-2">
                     {pattern.is_generating_cta ? (
                         <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg">
@@ -801,25 +801,29 @@ export default function ShortPostCard({ pattern, index, blogId, onDelete, onDele
                                     >
                                         {copiedCta ? <Check size={14} /> : <Copy size={14} />}
                                     </button>
-                                    <button
-                                        onClick={() => setShowCtaImagePicker(true)}
-                                        disabled={pattern.cta_media.length >= 4}
-                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                        <ImagePlus size={14} />
-                                    </button>
-                                    <button
-                                        onClick={() => { setEditCtaContent(pattern.cta_content || ''); setIsEditingCta(true); }}
-                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                                    >
-                                        <Pencil size={14} />
-                                    </button>
-                                    <button
-                                        onClick={onDeleteCta}
-                                        className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
+                                    {!isPublishedStage && (
+                                        <>
+                                            <button
+                                                onClick={() => setShowCtaImagePicker(true)}
+                                                disabled={pattern.cta_media.length >= 4}
+                                                className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                <ImagePlus size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => { setEditCtaContent(pattern.cta_content || ''); setIsEditingCta(true); }}
+                                                className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                            >
+                                                <Pencil size={14} />
+                                            </button>
+                                            <button
+                                                onClick={onDeleteCta}
+                                                className="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         )}
