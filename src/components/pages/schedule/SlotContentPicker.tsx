@@ -226,12 +226,17 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
             toast.error('Select at least one platform');
             return;
         }
+        const supportedPlatforms = platforms.filter(p => !getUnsupportedReason(p, contentType, undefined, null, socialAccounts));
+        if (supportedPlatforms.length === 0) {
+            toast.error('No supported platforms for this content type');
+            return;
+        }
         const itemKey = `${contentType}-${contentId}`;
         setIsScheduling(true);
         setSchedulingItemId(itemKey);
         try {
             const isoDate = scheduledAt.toISOString();
-            const promises = platforms.map(platformId => {
+            const promises = supportedPlatforms.map(platformId => {
                 const apiPlatform = UI_TO_API_PLATFORM[platformId];
                 const account = socialAccounts.find(a => a.platform === apiPlatform);
                 if (!account) return Promise.resolve(null);
@@ -248,7 +253,7 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
             // Create repost schedules for repostable platforms
             await repost.createSchedules(results.filter(Boolean).map(r => ({ id: r!.id, platform: r!.platform })));
 
-            const platformNames = platforms
+            const platformNames = supportedPlatforms
                 .map(id => SCHEDULE_PLATFORMS.find(p => p.id === id)?.name)
                 .filter(Boolean)
                 .join(', ');
@@ -1051,13 +1056,20 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                                                         const post = item as ShortPost;
                                                                         const scheduled = isScheduled(post.scheduled_posts);
                                                                         const itemKey = `short_post-${post.id}`;
+                                                                        const itemError = platforms.map(p => getUnsupportedReason(p, 'short_post', undefined, null, socialAccounts)).find(Boolean);
                                                                         return (
                                                                             <div key={post.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
                                                                                 <div className="flex-1 min-w-0">
                                                                                     <p className="text-xs text-gray-700 line-clamp-3 whitespace-pre-line">{post.content}</p>
-                                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                                                                                         {scheduled && <ScheduleBadge />}
                                                                                         <span className="text-[10px] text-gray-300">{post.content.length} chars</span>
+                                                                                        {itemError && (
+                                                                                            <span className="flex items-center gap-1 text-[10px] text-amber-600">
+                                                                                                <AlertTriangle size={10} />
+                                                                                                {itemError}
+                                                                                            </span>
+                                                                                        )}
                                                                                     </div>
                                                                                 </div>
                                                                                 <button
@@ -1074,12 +1086,19 @@ export default function SlotContentPicker({ isOpen, slotDate, slotPlatforms, tim
                                                                         const thread = item as ThreadItem;
                                                                         const scheduled = isScheduled(thread.scheduled_posts);
                                                                         const itemKey = `thread-${thread.id}`;
+                                                                        const itemError = platforms.map(p => getUnsupportedReason(p, 'thread', undefined, null, socialAccounts)).find(Boolean);
                                                                         return (
                                                                             <div key={thread.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
                                                                                 <div className="flex-1 min-w-0">
                                                                                     <p className="text-xs text-gray-700 line-clamp-2 whitespace-pre-line">{thread.hook}</p>
-                                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                                                                                         {scheduled && <ScheduleBadge />}
+                                                                                        {itemError && (
+                                                                                            <span className="flex items-center gap-1 text-[10px] text-amber-600">
+                                                                                                <AlertTriangle size={10} />
+                                                                                                {itemError}
+                                                                                            </span>
+                                                                                        )}
                                                                                     </div>
                                                                                     <ThreadChain thread={thread} />
                                                                                 </div>
