@@ -21,20 +21,47 @@ export function useThreads(
     const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
 
     const handleGenerateThreads = async () => {
+        // [threads-debug] TEMP logging — remove once prod thread-gen issue is fixed
+        console.log('[threads-debug] handleGenerateThreads called', {
+            blogId,
+            hasBlogContent: !!blogContent,
+            blogContentLength: blogContent?.length ?? 0,
+            existingThreadsCount: threads.length,
+            timestamp: new Date().toISOString(),
+        });
+
         if (!blogContent || !blogId) {
+            console.warn('[threads-debug] aborted — missing blogContent or blogId', { blogId, hasBlogContent: !!blogContent });
             toast.error('No blog content available to repurpose.');
             return;
         }
 
         setIsGeneratingThreads(true);
+        const startedAt = performance.now();
 
         try {
+            console.log('[threads-debug] calling generateThreads API…');
             const response = await generateThreads(blogId, blogContent);
+            const elapsedMs = Math.round(performance.now() - startedAt);
+            console.log('[threads-debug] generateThreads OK', {
+                elapsedMs,
+                threadsReturned: response?.threads?.length ?? 0,
+                response,
+            });
             setThreads(response.threads);
             onThreadsGenerated?.(response.threads);
             toast.success(`${response.threads.length} threads generated`);
         } catch (error) {
-            console.error('Failed to generate threads:', error);
+            const elapsedMs = Math.round(performance.now() - startedAt);
+            console.error('[threads-debug] generateThreads FAILED', {
+                elapsedMs,
+                error,
+                errorName: error instanceof Error ? error.name : typeof error,
+                errorMessage: error instanceof Error ? error.message : String(error),
+                errorStack: error instanceof Error ? error.stack : undefined,
+                // @ts-expect-error — surface attached metadata if apiRequest enriched the error
+                meta: (error && typeof error === 'object') ? (error as any).meta : undefined,
+            });
             toast.error('Failed to generate threads', {
                 description: error instanceof Error ? error.message : 'Please try again.',
             });
