@@ -32,6 +32,7 @@ export function useShortPosts(
         (initialShortPosts || []).map(shortPostToPattern)
     );
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isGeneratingMore, setIsGeneratingMore] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
 
@@ -82,6 +83,28 @@ export function useShortPosts(
             });
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleGenerateMoreShortPosts = async () => {
+        if (!blogContent || !blogId) {
+            toast.error('No blog content available to repurpose.');
+            return;
+        }
+
+        setIsGeneratingMore(true);
+
+        try {
+            const response = await generateShortPosts(blogId, blogContent);
+            setShortPosts(prev => [...prev, ...response.short_posts.map(shortPostToPattern)]);
+            toast.success(`${response.short_posts.length} more short posts generated`);
+        } catch (error) {
+            console.error('Failed to generate more short posts:', error);
+            toast.error('Failed to generate short posts', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsGeneratingMore(false);
         }
     };
 
@@ -190,12 +213,14 @@ export function useShortPosts(
     return {
         shortPosts,
         isGenerating,
+        isGeneratingMore,
         showConfirmModal,
         setShowConfirmModal,
         showAddModal,
         setShowAddModal,
         onGenerateClick,
         handleGenerateShortPosts,
+        handleGenerateMoreShortPosts,
         handleAddShortPost,
         getCardProps,
         incrementVisualCount,

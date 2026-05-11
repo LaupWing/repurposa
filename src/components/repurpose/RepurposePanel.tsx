@@ -9,6 +9,8 @@ import {
     Image,
     Video,
     Plus,
+    Loader2,
+    Sparkles,
 } from 'lucide-react';
 import type { ShortPost, ShortPostSchedule, ThreadItem, Visual } from '@/types';
 import { GeneratingOverlay } from '@/components/GeneratingOverlay';
@@ -145,6 +147,8 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                         editShortPostId={editShortPostId}
                         isPublished={isPublished}
                         onAddClick={() => sp.setShowAddModal(true)}
+                        onGenerateMore={sp.handleGenerateMoreShortPosts}
+                        isGeneratingMore={sp.isGeneratingMore}
                     />
                 );
 
@@ -362,6 +366,8 @@ interface ShortPostsWithTabsProps {
     editShortPostId?: number;
     isPublished?: boolean;
     onAddClick: () => void;
+    onGenerateMore: () => void;
+    isGeneratingMore: boolean;
 }
 
 function ShortPostsWithTabs({
@@ -377,6 +383,8 @@ function ShortPostsWithTabs({
     editShortPostId,
     isPublished,
     onAddClick,
+    onGenerateMore,
+    isGeneratingMore,
 }: ShortPostsWithTabsProps) {
     const [activeStage, setActiveStage] = useState<ShortPostStage>('draft');
 
@@ -398,18 +406,9 @@ function ShortPostsWithTabs({
         <div>
             <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-medium text-gray-500" style={{ margin: 0 }}>Generated Short Posts</h3>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                        {shortPosts.length} short posts
-                    </span>
-                    <button
-                        onClick={onAddClick}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                    >
-                        <Plus size={14} />
-                        Add
-                    </button>
-                </div>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                    {shortPosts.length} short posts
+                </span>
             </div>
 
             {/* Stage tabs */}
@@ -439,6 +438,15 @@ function ShortPostsWithTabs({
             </div>
 
             {/* Posts list */}
+            {activeStage === 'draft' && (
+                <button
+                    onClick={onAddClick}
+                    className="mb-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                    <Plus size={15} />
+                    Add Post
+                </button>
+            )}
             {filtered.length === 0 ? (
                 <div className="py-10 text-center text-sm text-gray-400">
                     No {activeStage} posts
@@ -463,6 +471,25 @@ function ShortPostsWithTabs({
                         />
                     ))}
                 </div>
+            )}
+            {activeStage === 'draft' && (
+                <button
+                    onClick={onGenerateMore}
+                    disabled={isGeneratingMore}
+                    className="mt-4 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                    {isGeneratingMore ? (
+                        <>
+                            <Loader2 size={15} className="animate-spin" />
+                            Generating...
+                        </>
+                    ) : (
+                        <>
+                            <Sparkles size={15} />
+                            Generate 10 more
+                        </>
+                    )}
+                </button>
             )}
         </div>
     );
