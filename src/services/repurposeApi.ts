@@ -188,3 +188,8 @@ export async function getSwipes(): Promise<Swipe[]> {
     const response = await apiRequest<{ data: Swipe[] }>('/repurpose/swipes', {}, 'GET');
     return response.data;
 }
+
+export async function getThreadSwipes(): Promise<ThreadSwipe[]> {
+    const response = await apiRequest<{ data: ThreadSwipe[] }>('/repurpose/thread-swipes', {}, 'GET');
+    return response.data;
+}

@@ -456,7 +456,7 @@ function ShortPostsWithTabs({
                     <button
                         onClick={onGenerateMore}
                         disabled={isGeneratingMore}
-                        className="flex items-center px-2.5 py-1 text-xs font-medium text-gray-600 border border-gray-200 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex items-center px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         {isGeneratingMore ? 'Generating...' : 'Generate 10 more'}
                     </button>
@@ -561,7 +561,7 @@ function ThreadsWithTabs({ threads, getStage, getCardProps, onSchedule, onPublis
                     <button
                         onClick={onGenerateMore}
                         disabled={isGeneratingMore}
-                        className="flex items-center px-2.5 py-1 text-xs font-medium text-gray-600 border border-gray-200 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex items-center px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         {isGeneratingMore ? 'Generating...' : 'Generate 3 more'}
                     </button>

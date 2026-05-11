@@ -67,11 +67,12 @@ export function useThreads(
         }
     };
 
-    const handleAddThread = (hook: string) => {
+    const handleAddThread = (posts: { content: string }[]) => {
+        const hook = posts[0]?.content || '';
         const newThread: ThreadItem = {
             id: Date.now(),
             hook,
-            posts: [{ content: hook, media: null }],
+            posts: posts.map(p => ({ content: p.content, media: null })),
             metadata: {
                 inspiration_id: 0,
                 hook_techniques: [],

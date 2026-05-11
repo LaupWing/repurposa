@@ -217,6 +217,18 @@ export interface Swipe {
     why_it_works: string;
 }
 
+export interface ThreadSwipe {
+    id: number;
+    user_id: number | null;
+    hook: string;
+    hook_techniques: string[];
+    structure: string;
+    posts: { content: string; media: unknown[] | null }[];
+    emotions: string[];
+    media: unknown[] | null;
+    why_it_works: string;
+}
+
 // ============================================
 // SOCIAL
 // ============================================
