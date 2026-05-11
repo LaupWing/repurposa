@@ -9,8 +9,6 @@ import {
     Image,
     Video,
     Plus,
-    Loader2,
-    Sparkles,
 } from 'lucide-react';
 import type { ShortPost, ShortPostSchedule, ThreadItem, Visual } from '@/types';
 import { GeneratingOverlay } from '@/components/GeneratingOverlay';
@@ -439,13 +437,22 @@ function ShortPostsWithTabs({
 
             {/* Posts list */}
             {activeStage === 'draft' && (
-                <button
-                    onClick={onAddClick}
-                    className="mb-3 flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                >
-                    <Plus size={14} />
-                    Add
-                </button>
+                <div className="mb-3 flex items-center gap-2">
+                    <button
+                        onClick={onAddClick}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                        <Plus size={14} />
+                        Add
+                    </button>
+                    <button
+                        onClick={onGenerateMore}
+                        disabled={isGeneratingMore}
+                        className="flex items-center px-2.5 py-1 text-xs font-medium text-gray-600 border border-gray-200 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        {isGeneratingMore ? 'Generating...' : 'Generate 10 more'}
+                    </button>
+                </div>
             )}
             {filtered.length === 0 ? (
                 <div className="py-10 text-center text-sm text-gray-400">
@@ -471,25 +478,6 @@ function ShortPostsWithTabs({
                         />
                     ))}
                 </div>
-            )}
-            {activeStage === 'draft' && (
-                <button
-                    onClick={onGenerateMore}
-                    disabled={isGeneratingMore}
-                    className="mt-3 flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-600 border border-gray-200 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                    {isGeneratingMore ? (
-                        <>
-                            <Loader2 size={13} className="animate-spin" />
-                            Generating...
-                        </>
-                    ) : (
-                        <>
-                            <Sparkles size={13} />
-                            Generate 10 more
-                        </>
-                    )}
-                </button>
             )}
         </div>
     );
