@@ -16,7 +16,7 @@ import { VisualPreviewModal } from './modals/VisualPreviewModal';
 import ShortPostCard from './cards/ShortPostCard';
 import ThreadCard from './cards/ThreadCard';
 import VisualCard from './cards/VisualCard';
-import { ConfirmGenerateModal, ConfirmDeleteModal, AddShortPostModal, SchedulePostModal, PublishNowModal, SourcePickerModal } from './modals';
+import { ConfirmGenerateModal, ConfirmDeleteModal, AddShortPostModal, AddThreadModal, SchedulePostModal, PublishNowModal, SourcePickerModal } from './modals';
 import { EmptyState, DependencyGate } from './EmptyState';
 import { useShortPosts } from '@/hooks/useShortPosts';
 import { useThreads } from '@/hooks/useThreads';
@@ -163,6 +163,9 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                         blogId={blogId}
                         isPublished={isPublished}
                         onVisualSaved={handleThreadVisualSaved}
+                        onAddClick={() => th.setShowAddModal(true)}
+                        onGenerateMore={th.handleGenerateMoreThreads}
+                        isGeneratingMore={th.isGeneratingMore}
                     />
                 );
 
@@ -309,6 +312,11 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                 isOpen={sp.showAddModal}
                 onClose={() => sp.setShowAddModal(false)}
                 onAdd={sp.handleAddShortPost}
+            />
+            <AddThreadModal
+                isOpen={th.showAddModal}
+                onClose={() => th.setShowAddModal(false)}
+                onAdd={th.handleAddThread}
             />
             <SchedulePostModal
                 isOpen={!!sched.schedulingPost}
@@ -496,9 +504,12 @@ interface ThreadsWithTabsProps {
     blogId?: number;
     isPublished?: boolean;
     onVisualSaved: (visual: Visual) => void;
+    onAddClick: () => void;
+    onGenerateMore: () => void;
+    isGeneratingMore: boolean;
 }
 
-function ThreadsWithTabs({ threads, getStage, getCardProps, onSchedule, onPublishNow, blogId, isPublished, onVisualSaved }: ThreadsWithTabsProps) {
+function ThreadsWithTabs({ threads, getStage, getCardProps, onSchedule, onPublishNow, blogId, isPublished, onVisualSaved, onAddClick, onGenerateMore, isGeneratingMore }: ThreadsWithTabsProps) {
     const [activeStage, setActiveStage] = useState<ShortPostStage>('draft');
 
     const counts = {
@@ -538,6 +549,24 @@ function ThreadsWithTabs({ threads, getStage, getCardProps, onSchedule, onPublis
                     </button>
                 ))}
             </div>
+            {activeStage === 'draft' && (
+                <div className="mb-3 flex items-center gap-2">
+                    <button
+                        onClick={onAddClick}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                        <Plus size={14} />
+                        Add
+                    </button>
+                    <button
+                        onClick={onGenerateMore}
+                        disabled={isGeneratingMore}
+                        className="flex items-center px-2.5 py-1 text-xs font-medium text-gray-600 border border-gray-200 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        {isGeneratingMore ? 'Generating...' : 'Generate 3 more'}
+                    </button>
+                </div>
+            )}
             {filtered.length === 0 ? (
                 <div className="py-10 text-center text-sm text-gray-400">No {activeStage} threads</div>
             ) : (

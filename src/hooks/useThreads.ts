@@ -19,6 +19,8 @@ export function useThreads(
 ) {
     const [threads, setThreads] = useState<ThreadItem[]>(initialThreads || []);
     const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
+    const [isGeneratingMore, setIsGeneratingMore] = useState(false);
+    const [showAddModal, setShowAddModal] = useState(false);
 
     const handleGenerateThreads = async () => {
         if (!blogContent || !blogId) {
@@ -41,6 +43,45 @@ export function useThreads(
         } finally {
             setIsGeneratingThreads(false);
         }
+    };
+
+    const handleGenerateMoreThreads = async () => {
+        if (!blogContent || !blogId) {
+            toast.error('No blog content available to repurpose.');
+            return;
+        }
+
+        setIsGeneratingMore(true);
+
+        try {
+            const response = await generateThreads(blogId, blogContent);
+            setThreads(prev => [...prev, ...response.threads]);
+            toast.success(`${response.threads.length} more threads generated`);
+        } catch (error) {
+            console.error('Failed to generate more threads:', error);
+            toast.error('Failed to generate threads', {
+                description: error instanceof Error ? error.message : 'Please try again.',
+            });
+        } finally {
+            setIsGeneratingMore(false);
+        }
+    };
+
+    const handleAddThread = (hook: string) => {
+        const newThread: ThreadItem = {
+            id: Date.now(),
+            hook,
+            posts: [{ content: hook, media: null }],
+            metadata: {
+                inspiration_id: 0,
+                hook_techniques: [],
+                structure: 'Custom',
+                emotions: [],
+                why_it_works: 'Manually created thread',
+            },
+        };
+        setThreads(prev => [...prev, newThread]);
+        toast.success('Thread added');
     };
 
     const addScheduledPosts = (threadId: number, newScheduledPosts: ShortPostSchedule[]) => {
@@ -153,7 +194,12 @@ export function useThreads(
     return {
         threads,
         isGeneratingThreads,
+        isGeneratingMore,
+        showAddModal,
+        setShowAddModal,
         handleGenerateThreads,
+        handleGenerateMoreThreads,
+        handleAddThread,
         getCardProps,
         addScheduledPosts,
         removeScheduledPost,
