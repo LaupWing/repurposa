@@ -19,7 +19,6 @@ export function useThreads(
 ) {
     const [threads, setThreads] = useState<ThreadItem[]>(initialThreads || []);
     const [isGeneratingThreads, setIsGeneratingThreads] = useState(false);
-    const [isGeneratingMore, setIsGeneratingMore] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
 
     const handleGenerateThreads = async () => {
@@ -51,7 +50,7 @@ export function useThreads(
             return;
         }
 
-        setIsGeneratingMore(true);
+        setIsGeneratingThreads(true);
 
         try {
             const response = await generateThreads(blogId, blogContent);
@@ -63,7 +62,7 @@ export function useThreads(
                 description: error instanceof Error ? error.message : 'Please try again.',
             });
         } finally {
-            setIsGeneratingMore(false);
+            setIsGeneratingThreads(false);
         }
     };
 
@@ -195,7 +194,6 @@ export function useThreads(
     return {
         threads,
         isGeneratingThreads,
-        isGeneratingMore,
         showAddModal,
         setShowAddModal,
         handleGenerateThreads,

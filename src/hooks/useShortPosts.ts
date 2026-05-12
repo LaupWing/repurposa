@@ -32,7 +32,6 @@ export function useShortPosts(
         (initialShortPosts || []).map(shortPostToPattern)
     );
     const [isGenerating, setIsGenerating] = useState(false);
-    const [isGeneratingMore, setIsGeneratingMore] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
 
@@ -92,7 +91,7 @@ export function useShortPosts(
             return;
         }
 
-        setIsGeneratingMore(true);
+        setIsGenerating(true);
 
         try {
             const response = await generateShortPosts(blogId, blogContent);
@@ -104,7 +103,7 @@ export function useShortPosts(
                 description: error instanceof Error ? error.message : 'Please try again.',
             });
         } finally {
-            setIsGeneratingMore(false);
+            setIsGenerating(false);
         }
     };
 
@@ -213,7 +212,6 @@ export function useShortPosts(
     return {
         shortPosts,
         isGenerating,
-        isGeneratingMore,
         showConfirmModal,
         setShowConfirmModal,
         showAddModal,

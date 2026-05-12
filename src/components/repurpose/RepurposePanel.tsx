@@ -146,7 +146,6 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                         isPublished={isPublished}
                         onAddClick={() => sp.setShowAddModal(true)}
                         onGenerateMore={sp.handleGenerateMoreShortPosts}
-                        isGeneratingMore={sp.isGeneratingMore}
                     />
                 );
 
@@ -165,7 +164,6 @@ export function RepurposePanel({ initialTab = 'short', blogContent, blogId, isPu
                         onVisualSaved={handleThreadVisualSaved}
                         onAddClick={() => th.setShowAddModal(true)}
                         onGenerateMore={th.handleGenerateMoreThreads}
-                        isGeneratingMore={th.isGeneratingMore}
                     />
                 );
 
@@ -373,7 +371,6 @@ interface ShortPostsWithTabsProps {
     isPublished?: boolean;
     onAddClick: () => void;
     onGenerateMore: () => void;
-    isGeneratingMore: boolean;
 }
 
 function ShortPostsWithTabs({
@@ -390,7 +387,6 @@ function ShortPostsWithTabs({
     isPublished,
     onAddClick,
     onGenerateMore,
-    isGeneratingMore,
 }: ShortPostsWithTabsProps) {
     const [activeStage, setActiveStage] = useState<ShortPostStage>('draft');
 
@@ -455,10 +451,9 @@ function ShortPostsWithTabs({
                     </button>
                     <button
                         onClick={onGenerateMore}
-                        disabled={isGeneratingMore}
-                        className="flex items-center px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex items-center px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                     >
-                        {isGeneratingMore ? 'Generating...' : 'Generate 10 more'}
+                        Generate 10 more
                     </button>
                 </div>
             )}
@@ -506,10 +501,9 @@ interface ThreadsWithTabsProps {
     onVisualSaved: (visual: Visual) => void;
     onAddClick: () => void;
     onGenerateMore: () => void;
-    isGeneratingMore: boolean;
 }
 
-function ThreadsWithTabs({ threads, getStage, getCardProps, onSchedule, onPublishNow, blogId, isPublished, onVisualSaved, onAddClick, onGenerateMore, isGeneratingMore }: ThreadsWithTabsProps) {
+function ThreadsWithTabs({ threads, getStage, getCardProps, onSchedule, onPublishNow, blogId, isPublished, onVisualSaved, onAddClick, onGenerateMore }: ThreadsWithTabsProps) {
     const [activeStage, setActiveStage] = useState<ShortPostStage>('draft');
 
     const counts = {
@@ -560,10 +554,9 @@ function ThreadsWithTabs({ threads, getStage, getCardProps, onSchedule, onPublis
                     </button>
                     <button
                         onClick={onGenerateMore}
-                        disabled={isGeneratingMore}
-                        className="flex items-center px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex items-center px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                     >
-                        {isGeneratingMore ? 'Generating...' : 'Generate 3 more'}
+                        Generate 3 more
                     </button>
                 </div>
             )}
